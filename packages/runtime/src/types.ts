@@ -1,3 +1,5 @@
+import type { Transform } from "@web3d/document";
+
 import type { SceneAsset, SceneDocument } from "./document-contract";
 
 export type JsonPrimitive = boolean | number | string | null;
@@ -52,6 +54,8 @@ export type DiagnosticCode =
   | "DATASOURCE_STREAM_RETIRED"
   | "DATASOURCE_STREAM_UNKNOWN"
   | "DOCUMENT_REFERENCE_INVALID"
+  | "ENTITY_HIDDEN"
+  | "ENTITY_NOT_FOUND"
   | "RENDERER_CONTEXT_LOST"
   | "RULE_EVALUATION_FAILED"
   | "TARGET_HIDDEN"
@@ -121,6 +125,15 @@ export type ViewerEvent =
   | { type: "diagnostic"; diagnostic: Diagnostic }
   | { type: "performance"; sample: PerformanceSample };
 
+export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
+
+export type AuthoringViewerEvent =
+  | ViewerEvent
+  | { type: "entity-selection-change"; entityId: string | null; origin: "viewport" | "api" }
+  | { type: "tool-change"; tool: AuthoringTool }
+  | { type: "transform-preview"; entityId: string; transform: Transform }
+  | { type: "transform-commit"; entityId: string; before: Transform; after: Transform };
+
 export interface FocusOptions {
   select?: boolean;
   durationMs?: number;
@@ -138,6 +151,11 @@ export interface ViewerSnapshot {
   alarms: readonly RuntimeAlarm[];
 }
 
+export interface AuthoringViewerSnapshot extends ViewerSnapshot {
+  selectedEntityId: string | null;
+  activeTool: AuthoringTool;
+}
+
 export interface CreateViewerOptions {
   source?: SceneSource;
   assetResolver?: AssetResolver;
@@ -147,6 +165,11 @@ export interface CreateViewerOptions {
   onEvent?: (event: ViewerEvent) => void;
 }
 
+export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, "onEvent"> {
+  initialTool?: AuthoringTool;
+  onEvent?: (event: AuthoringViewerEvent) => void;
+}
+
 export interface SceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
@@ -154,6 +177,20 @@ export interface SceneViewer {
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
   setView(viewId: string): Promise<void>;
   getSnapshot(): ViewerSnapshot;
+  getDiagnostics(): readonly Diagnostic[];
+  resize(): void;
+  dispose(): Promise<void>;
+}
+
+export interface AuthoringSceneViewer {
+  load(source: SceneSource): Promise<void>;
+  setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  selectEntity(entityId: string | null): void;
+  focusEntity(entityId: string, options?: FocusOptions): Promise<void>;
+  setTool(tool: AuthoringTool): void;
+  getTool(): AuthoringTool;
+  setView(viewId: string): Promise<void>;
+  getSnapshot(): AuthoringViewerSnapshot;
   getDiagnostics(): readonly Diagnostic[];
   resize(): void;
   dispose(): Promise<void>;

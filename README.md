@@ -7,15 +7,15 @@ domain model.
 
 ## Status
 
-The M0 vertical contract slice is implemented and locally verified. It includes the document
-contract, framework-neutral Three.js runtime, React wrapper, Studio contract console, and Factory
-Demo.
+The M1 Studio editing loop is implemented and locally verified. It includes the M0 document and
+runtime foundation plus local projects, transactional model import, scene editing, command history,
+autosave, and canonical JSON/ZIP exchange.
 
 This is not a production release. External developer testing, Firefox/Safari coverage, the fixed
-hardware performance benchmark, archive import/export, and the full Studio editing workflow remain
-future milestones.
+hardware performance benchmark, live-data authoring, and formal release packaging remain future
+milestones.
 
-See [M0 verification](docs/ssot/m0-verification.md) for the exact evidence and remaining limits.
+See [M1 verification](docs/ssot/m1-verification.md) for the exact evidence and remaining limits.
 
 ## Run Locally
 
@@ -40,14 +40,27 @@ pnpm dev
 - Viewer teardown owns renderer, asset, adapter, timer, listener, observer, and pending-load
   lifecycles, including React StrictMode remounts.
 
+## What M1 Adds
+
+- Local projects and content-addressed model assets are stored in IndexedDB without changing the
+  `SceneDocument 1.0.0` schema.
+- GLB and self-contained glTF files are inspected before confirmation and committed atomically with
+  their asset, entity, and target records.
+- Tree and viewport selection share stable entity IDs; rename, visibility, lock, transform,
+  duplicate, and delete edits flow through reversible document commands.
+- TransformControls preview does not change document revision; pointer release commits exactly one
+  command. Run mode blocks document commands.
+- JSON and ZIP import/export preserve the canonical local document, asset hashes, and `asset://`
+  URI contract.
+
 ## Workspace
 
-- `packages/document`: SceneDocument types, standalone AJV validation, semantic checks, and stable
-  serialization.
+- `packages/document`: SceneDocument types, standalone AJV validation, semantic checks, stable
+  serialization, document commands, history, and archive codecs.
 - `packages/runtime`: framework-neutral Three.js viewer, asset loading, data ordering, rules,
-  alarms, diagnostics, and lifecycle ownership.
-- `packages/react`: thin React lifecycle and imperative API wrapper around the runtime.
-- `apps/studio`: M0 contract console using the shared runtime.
+  alarms, diagnostics, authoring controls, and lifecycle ownership.
+- `packages/react`: thin React lifecycle and imperative API wrappers around the runtime.
+- `apps/studio`: local project authoring workspace using the shared runtime.
 - `apps/factory-demo`: independent reference host with factory-specific operations UI.
 - `apps/shared`: deterministic M0 fixture and mock telemetry scenario shared by both apps.
 
@@ -73,6 +86,9 @@ the ignored `artifacts/e2e/` directory.
 - [Technology decisions](docs/ssot/technology-decisions.md)
 - [Market and positioning](docs/ssot/market-and-positioning.md)
 - [M0 verification](docs/ssot/m0-verification.md)
+- [M1 architecture](docs/ssot/m1-architecture.md)
+- [M1 verification](docs/ssot/m1-verification.md)
+- [M1 Studio editing specification](specs/002-m1-studio-editing/spec.md)
 - [MVP product requirements](specs/001-product-foundation/spec.md)
 - [Product and interaction design](specs/001-product-foundation/product-design.md)
 - [Technical design](specs/001-product-foundation/technical-design.md)

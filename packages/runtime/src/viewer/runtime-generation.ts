@@ -11,9 +11,16 @@ export interface RuntimeTarget {
   readonly materials: readonly Material[];
 }
 
+export interface RuntimeEntity {
+  readonly entity: SceneEntity;
+  readonly object: Object3D;
+}
+
 export interface RuntimeGeneration {
   readonly root: Group;
+  readonly entities: ReadonlyMap<string, RuntimeEntity>;
   readonly targets: ReadonlyMap<string, RuntimeTarget>;
+  entityForObject(object: Object3D): string | undefined;
   targetForObject(object: Object3D): string | undefined;
   dispose(): void;
 }
@@ -25,38 +32,24 @@ export async function buildRuntimeGeneration(
 ): Promise<RuntimeGeneration> {
   const root = new Group();
   root.name = `document:${document.id}`;
-  const entityObjects = new Map<string, Object3D>();
+  const runtimeEntities = new Map<string, RuntimeEntity>();
   const assetNodes = new Map<string, ReadonlyMap<number, Object3D>>();
+  const entityObjects = new Map<string, Object3D>();
+  const objectEntities = new WeakMap<Object3D, string>();
   const originalMaterials = new Set<Material>();
   let disposed = false;
 
   try {
     for (const entity of document.entities) {
       signal.throwIfAborted();
-      if (entity.type === "group") {
-        const group = new Group();
-        applyEntity(group, entity);
-        entityObjects.set(entity.id, group);
-        continue;
-      }
-
-      const asset = document.assets.find((candidate) => candidate.id === entity.assetId);
-      if (asset === undefined) {
-        throw diagnosticError(
-          diagnostic(
-            "DOCUMENT_REFERENCE_INVALID",
-            "document",
-            "error",
-            `Entity ${entity.id} references missing asset ${entity.assetId}.`,
-            { entityId: entity.id, assetId: entity.assetId },
-          ),
-        );
-      }
-      const loaded = await loadGltfAsset(asset, resolver, signal);
-      collectMaterials(loaded.root, originalMaterials);
-      applyEntity(loaded.root, entity);
-      entityObjects.set(entity.id, loaded.root);
-      assetNodes.set(entity.id, loaded.nodesByIndex);
+      const object =
+        entity.type === "group"
+          ? createGroupEntity(entity)
+          : await createAssetEntity(entity, document, resolver, signal, originalMaterials);
+      runtimeEntities.set(entity.id, { entity, object });
+      entityObjects.set(entity.id, object);
+      if (entity.type === "asset") assetNodes.set(entity.id, objectNodes(object));
+      object.traverse((candidate) => objectEntities.set(candidate, entity.id));
     }
 
     for (const entity of document.entities) {
@@ -80,13 +73,7 @@ export async function buildRuntimeGeneration(
     const targetObjects = new Map<string, RuntimeTarget>();
     const objectTargets = new WeakMap<Object3D, string>();
     const meshOwners = new Map<Mesh, string>();
-    const orderedTargets = [...document.targets].sort((left, right) => {
-      if (left.nodeIndex === null && right.nodeIndex !== null) return -1;
-      if (left.nodeIndex !== null && right.nodeIndex === null) return 1;
-      return left.id.localeCompare(right.id, "en");
-    });
-
-    for (const target of orderedTargets) {
+    for (const target of stableTargets(document)) {
       const entityObject = entityObjects.get(target.entityId);
       const targetObject =
         target.nodeIndex === null
@@ -141,7 +128,17 @@ export async function buildRuntimeGeneration(
 
     return {
       root,
+      entities: runtimeEntities,
       targets: targetObjects,
+      entityForObject(object) {
+        let current: Object3D | null = object;
+        while (current !== null) {
+          const entityId = objectEntities.get(current);
+          if (entityId !== undefined) return entityId;
+          current = current.parent;
+        }
+        return undefined;
+      },
       targetForObject(object) {
         let current: Object3D | null = object;
         while (current !== null) {
@@ -171,6 +168,52 @@ export async function buildRuntimeGeneration(
     });
     throw error;
   }
+}
+
+async function createAssetEntity(
+  entity: Extract<SceneEntity, { type: "asset" }>,
+  document: SceneDocument,
+  resolver: AssetResolver,
+  signal: AbortSignal,
+  originalMaterials: Set<Material>,
+): Promise<Object3D> {
+  const asset = document.assets.find((candidate) => candidate.id === entity.assetId);
+  if (asset === undefined) {
+    throw diagnosticError(
+      diagnostic(
+        "DOCUMENT_REFERENCE_INVALID",
+        "document",
+        "error",
+        `Entity ${entity.id} references missing asset ${entity.assetId}.`,
+        { entityId: entity.id, assetId: entity.assetId },
+      ),
+    );
+  }
+  const loaded = await loadGltfAsset(asset, resolver, signal);
+  collectMaterials(loaded.root, originalMaterials);
+  applyEntity(loaded.root, entity);
+  return Object.assign(loaded.root, {
+    userData: { ...loaded.root.userData, web3dNodesByIndex: loaded.nodesByIndex },
+  });
+}
+
+function createGroupEntity(entity: SceneEntity): Object3D {
+  const group = new Group();
+  applyEntity(group, entity);
+  return group;
+}
+
+function stableTargets(document: SceneDocument) {
+  return [...document.targets].sort((left, right) => {
+    if (left.nodeIndex === null && right.nodeIndex !== null) return -1;
+    if (left.nodeIndex !== null && right.nodeIndex === null) return 1;
+    return left.id.localeCompare(right.id, "en");
+  });
+}
+
+function objectNodes(object: Object3D): ReadonlyMap<number, Object3D> {
+  return ((object.userData as { web3dNodesByIndex?: ReadonlyMap<number, Object3D> })
+    .web3dNodesByIndex ?? new Map()) as ReadonlyMap<number, Object3D>;
 }
 
 function collectMaterials(root: Object3D, output: Set<Material>): void {

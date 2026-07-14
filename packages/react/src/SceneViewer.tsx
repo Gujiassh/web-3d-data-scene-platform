@@ -85,18 +85,8 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
     useEffect(() => {
       const viewer = viewerRef.current;
       if (viewer === null) return;
-      const previous = adaptersRef.current;
-      const next = props.adapters ?? {};
-      adaptersRef.current = next;
-
-      for (const sourceId of Object.keys(previous)) {
-        if (!(sourceId in next)) void viewer.setAdapter(sourceId, null).catch(() => undefined);
-      }
-      for (const [sourceId, adapter] of Object.entries(next)) {
-        if (previous[sourceId] !== adapter) {
-          void viewer.setAdapter(sourceId, adapter).catch(() => undefined);
-        }
-      }
+      reconcileAdapters(viewer, adaptersRef.current, props.adapters ?? {});
+      adaptersRef.current = props.adapters ?? {};
     }, [props.adapters]);
 
     useImperativeHandle(
@@ -153,6 +143,21 @@ function dispatch(callbacks: ViewerCallbacks, event: ViewerEvent): void {
   if (event.type === "selection-change") callbacks.onSelectionChange?.(event);
   if (event.type === "alarm") callbacks.onAlarm?.(event);
   if (event.type === "diagnostic") callbacks.onDiagnostic?.(event.diagnostic);
+}
+
+function reconcileAdapters(
+  viewer: RuntimeViewer,
+  previous: Readonly<Record<string, DataAdapter>>,
+  next: Readonly<Record<string, DataAdapter>>,
+): void {
+  for (const sourceId of Object.keys(previous)) {
+    if (!(sourceId in next)) void viewer.setAdapter(sourceId, null).catch(() => undefined);
+  }
+  for (const [sourceId, adapter] of Object.entries(next)) {
+    if (previous[sourceId] !== adapter) {
+      void viewer.setAdapter(sourceId, adapter).catch(() => undefined);
+    }
+  }
 }
 
 function requiredViewer(ref: { readonly current: RuntimeViewer | null }): RuntimeViewer {

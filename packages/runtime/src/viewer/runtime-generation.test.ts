@@ -31,6 +31,8 @@ describe("buildRuntimeGeneration", () => {
     if (press !== undefined && conveyor !== undefined) {
       applyRuleEffects(press, [{ type: "color", value: "#B93632" }]);
       applyRuleEffects(conveyor, [{ type: "color", value: "#2E7D4D" }]);
+      expect(generation.entityForObject(press.object)).toBe("factory-cell");
+      expect(generation.entityForObject(conveyor.object)).toBe("factory-cell");
       expect(generation.targetForObject(press.object)).toBe("press-01");
       expect(generation.targetForObject(conveyor.object)).toBe("conveyor-01");
     }

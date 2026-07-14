@@ -1,3 +1,10 @@
+export { createAuthoringSceneViewer } from "./authoring/authoring-scene-viewer";
+export {
+  inspectGltf,
+  InspectGltfError,
+  MAX_GLTF_INSPECTION_BYTES,
+  type GltfInspectionSummary,
+} from "./assets/inspect-gltf";
 export { MockAdapter, type MockAdapterOptions, type MockScenarioStep } from "./data/mock-adapter";
 export {
   RuntimeValueStore,

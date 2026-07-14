@@ -7,8 +7,14 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataAdapter } from "../types";
+import type * as RuntimeGenerationModule from "./runtime-generation";
+import { SelectionOverlay } from "./selection-overlay";
 
-const runtime = vi.hoisted(() => ({ dispose: vi.fn(), reportError: vi.fn() }));
+const runtime = vi.hoisted(() => ({
+  dispose: vi.fn(),
+  generationDisposals: [] as Array<ReturnType<typeof vi.fn>>,
+  reportError: vi.fn(),
+}));
 
 vi.mock("three", async (importOriginal) => {
   const actual = (await importOriginal()) as typeof ThreeModule;
@@ -43,6 +49,19 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
   };
 });
 
+vi.mock("./runtime-generation", async (importOriginal) => {
+  const actual = await importOriginal<typeof RuntimeGenerationModule>();
+  return {
+    ...actual,
+    async buildRuntimeGeneration(...args: Parameters<typeof actual.buildRuntimeGeneration>) {
+      const generation = await actual.buildRuntimeGeneration(...args);
+      const dispose = vi.fn(generation.dispose);
+      runtime.generationDisposals.push(dispose);
+      return { ...generation, dispose };
+    },
+  };
+});
+
 import { createSceneViewer } from "./scene-viewer";
 
 const sceneUrl = new URL("../../../../assets/factory/public/m0-scene.json", import.meta.url);
@@ -51,6 +70,7 @@ const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb"
 describe("SceneViewer lifecycle", () => {
   beforeEach(() => {
     runtime.dispose.mockClear();
+    runtime.generationDisposals.length = 0;
     runtime.reportError.mockClear();
     vi.stubGlobal(
       "ResizeObserver",
@@ -101,6 +121,19 @@ describe("SceneViewer lifecycle", () => {
       lifecycle: "ready",
       revision: scene.revision,
     });
+    await viewer.dispose();
+  });
+
+  it("does not expose authoring state from the readonly snapshot object", async () => {
+    const { asset, scene } = await fixture();
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+
+    const snapshot = viewer.getSnapshot();
+    expect(snapshot).not.toHaveProperty("selectedEntityId");
+    expect(snapshot).not.toHaveProperty("activeTool");
     await viewer.dispose();
   });
 
@@ -159,6 +192,32 @@ describe("SceneViewer lifecycle", () => {
       revision: 2,
     });
     expect(active.start).toHaveBeenCalledTimes(2);
+    await viewer.dispose();
+  });
+
+  it("supersedes a load blocked in adapter start", async () => {
+    const { asset, scene } = await fixture();
+    const firstStart = deferred<void>();
+    const active = adapter("load-start");
+    active.start
+      .mockImplementationOnce(() => firstStart.promise)
+      .mockImplementationOnce(() => Promise.resolve());
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+
+    const firstLoad = viewer.load(scene);
+    await vi.waitFor(() => expect(active.start).toHaveBeenCalledOnce());
+    const latestLoad = viewer.load({ ...scene, revision: scene.revision + 1 });
+    await Promise.all([firstLoad, latestLoad]);
+
+    expect(active.stop).toHaveBeenCalledOnce();
+    expect(active.start).toHaveBeenCalledTimes(2);
+    expect(viewer.getSnapshot()).toMatchObject({
+      lifecycle: "ready",
+      revision: scene.revision + 1,
+    });
     await viewer.dispose();
   });
 
@@ -225,6 +284,69 @@ describe("SceneViewer lifecycle", () => {
     await viewer.dispose();
   });
 
+  it("cleans up an adapter whose start rejects", async () => {
+    const { asset, scene } = await fixture();
+    const unsubscribe = vi.fn();
+    const stop = vi.fn(() => Promise.resolve());
+    const broken: DataAdapter = {
+      sourceId: "factory-telemetry",
+      start: vi.fn(() => Promise.reject(new Error("start failed"))),
+      stop,
+      subscribe: vi.fn(() => unsubscribe),
+    };
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": broken },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+
+    await viewer.load(scene);
+
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(viewer.getSnapshot()).toMatchObject({
+      lifecycle: "ready",
+      connections: { "factory-telemetry": "error" },
+    });
+    await viewer.dispose();
+  });
+
+  it("continues adapter stop and reload when unsubscribe throws", async () => {
+    const { asset, scene } = await fixture();
+    const start = vi.fn(() => Promise.resolve());
+    const stop = vi.fn(() => Promise.resolve());
+    const unsubscribe = vi.fn(() => {
+      throw new Error("unsubscribe failed");
+    });
+    const active: DataAdapter = {
+      sourceId: "factory-telemetry",
+      start,
+      stop,
+      subscribe: vi.fn(() => unsubscribe),
+    };
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+    await viewer.setAdapter("factory-telemetry", active);
+
+    await viewer.load({ ...scene, revision: scene.revision + 1 });
+
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledTimes(2);
+    expect(viewer.getSnapshot()).toMatchObject({
+      lifecycle: "ready",
+      revision: scene.revision + 1,
+    });
+    expect(viewer.getDiagnostics()).toContainEqual(
+      expect.objectContaining({
+        code: "DATASOURCE_CONNECTION_FAILED",
+        message: expect.stringContaining("unsubscribe"),
+      }),
+    );
+    await viewer.dispose();
+  });
+
   it("does not reject load when a host ready handler throws", async () => {
     const { asset, scene } = await fixture();
     const viewer = createSceneViewer(fakeContainer(), {
@@ -276,6 +398,25 @@ describe("SceneViewer lifecycle", () => {
     await expect(loading).rejects.toMatchObject({ name: "AbortError" });
     dispose.mockRestore();
     parse.mockRestore();
+  });
+
+  it("transfers a committed generation before a post-commit dispose race", async () => {
+    const { asset, scene } = await fixture();
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+    const overlaySet = vi.spyOn(SelectionOverlay.prototype, "set").mockImplementationOnce(() => {
+      void viewer.dispose();
+      throw new Error("post-commit dispose race");
+    });
+    const loading = viewer.load({ ...scene, revision: scene.revision + 1 });
+    await expect(loading).rejects.toThrow("post-commit dispose race");
+    const committedDispose = runtime.generationDisposals.at(-1);
+    if (committedDispose === undefined) throw new Error("Committed generation was not built.");
+    await viewer.dispose();
+    expect(committedDispose).toHaveBeenCalledOnce();
+    overlaySet.mockRestore();
   });
 });
 

@@ -31,6 +31,9 @@
 
 ## M1：Studio 编辑闭环
 
+> 状态：Completed and accepted locally on 2026-07-14；实施规格见
+> `../002-m1-studio-editing/spec.md`
+
 ### 交付
 
 - 本地项目和 IndexedDB 资产存储。
@@ -41,9 +44,19 @@
 
 ### 退出门禁
 
-- FR-001 至 FR-005 的验收场景通过。
-- 导出导入往返一致。
-- 导入失败和存储不足不会损坏旧项目。
+- [x] FR-001 至 FR-005 的验收场景通过。
+- [x] 导出导入往返一致。
+- [x] 导入失败和存储不足不会损坏旧项目。
+
+### 验收记录
+
+- 104 个 Vitest tests 覆盖文档命令、项目原子保存、autosave、GLTF inspection、归档安全、
+  authoring runtime 和 M0 行为。
+- 7 个 Playwright Chromium tests 覆盖 M0 Factory、Studio 窄屏门禁和完整 M1 编辑、保存、
+  导入导出与失败恢复流程。
+- JSON/ZIP 下载产物经机器解析，canonical local document diff 为零，资产 SHA-256 与长度一致。
+- 独立数据合同和 frontend/runtime review findings 已全部关闭；完整证据与限制见
+  `docs/ssot/m1-verification.md`。
 
 ## M2：数据绑定与运行时
 

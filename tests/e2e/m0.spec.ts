@@ -66,30 +66,32 @@ test.describe("M0 browser acceptance", () => {
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("Studio shares the runtime contract and gates narrow viewports", async ({ page }) => {
+  test("Studio starts with a local authoring project and gates narrow viewports", async ({
+    page,
+  }) => {
     const runtimeErrors = observeRuntimeErrors(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("http://127.0.0.1:4173");
 
     const canvas = await readyCanvas(page);
     await expect(page.locator('canvas[data-web3d-viewer="true"]')).toHaveCount(1);
-    await expect(page.locator(".studio-connection")).toHaveText("online");
-    await expectRunningScene(page, canvas);
-    await expect(page.getByText("contract=valid asset_hash=verified targets=2")).toBeVisible();
-
-    await page.getByRole("button", { name: "Inspect" }).click();
-    await expect(page.locator(".studio-connection")).toHaveText("adapter paused");
-    await expect(page.locator(".source-summary small")).toHaveText("paused");
-    await page.getByRole("button", { name: "Run", exact: true }).click();
-    await expect(page.locator(".studio-connection")).toHaveText("online");
-    await expect(page.locator('canvas[data-web3d-viewer="true"]')).toHaveCount(1);
+    const emptyScene = await canvasMetrics(page, canvas);
+    expect(emptyScene.opaqueRatio).toBeGreaterThan(0.99);
+    expect(emptyScene.distinct).toBeGreaterThan(8);
+    await expect(page.getByTestId("save-state")).toHaveText("Saved locally");
+    await expect(page.getByTestId("document-revision")).toHaveText("revision 0");
+    await expect(page.getByTestId("viewport-mode")).toHaveText("EDIT / SELECT / NO SELECTION");
+    await expect(page.getByRole("treeitem")).toHaveCount(0);
+    await expect(page.getByText("No selection", { exact: true })).toBeVisible();
     await expect(page.locator(".diagnostics-title span")).toHaveText("0");
+    await expect(page.getByText("document=valid storage=indexeddb authoring=ready")).toBeVisible();
 
-    await page.getByTestId("tree-conveyor-01").click();
-    await expect(page.getByTestId("tree-conveyor-01")).toHaveClass(/is-selected/);
-    await expect(page.locator(".viewport-mode")).toContainText("CONVEYOR-01");
-    await expect(page.locator(".inspector-header .mono")).toHaveText("CONVEYOR-01");
-    await expect(page.getByText("/machines/CONVEYOR-01/status", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(page.getByTestId("viewport-mode")).toHaveText("RUN / SELECT / NO SELECTION");
+    await expect(page.getByRole("button", { name: "Import", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(page.getByTestId("viewport-mode")).toHaveText("EDIT / SELECT / NO SELECTION");
+    await expect(page.locator('canvas[data-web3d-viewer="true"]')).toHaveCount(1);
     await page.screenshot({ path: artifact("studio-desktop-1440x900.png"), fullPage: true });
     await expectNoPageOverflow(page);
 
