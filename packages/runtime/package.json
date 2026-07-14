@@ -1,0 +1,18 @@
+{
+  "name": "@web3d/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --root ../.. --config vitest.config.ts packages/runtime/src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@web3d/document": "workspace:*",
+    "three": "0.185.1"
+  }
+}

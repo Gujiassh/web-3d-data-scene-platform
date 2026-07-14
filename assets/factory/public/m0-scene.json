@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "m0-factory-cell",
+  "name": "M0 Factory Cell",
+  "revision": 1,
+  "assets": [
+    {
+      "id": "factory-cell-asset",
+      "name": "M0 Factory Cell",
+      "uri": "/m0-factory-cell.glb",
+      "mediaType": "model/gltf-binary",
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "byteLength": 1216,
+      "stats": {
+        "nodeCount": 2,
+        "meshCount": 1,
+        "materialCount": 1,
+        "triangleCount": 12
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "factory-cell",
+      "type": "asset",
+      "parentId": null,
+      "name": "Factory Cell",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1, 1, 1]
+      },
+      "assetId": "factory-cell-asset",
+      "metadata": {
+        "area": "m0"
+      }
+    }
+  ],
+  "targets": [
+    {
+      "id": "press-01",
+      "entityId": "factory-cell",
+      "name": "Press 01",
+      "businessId": "PRESS-01",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": 0,
+      "metadata": {
+        "equipmentType": "press"
+      }
+    },
+    {
+      "id": "conveyor-01",
+      "entityId": "factory-cell",
+      "name": "Conveyor 01",
+      "businessId": "CONVEYOR-01",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": 1,
+      "metadata": {
+        "equipmentType": "conveyor"
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "factory-telemetry",
+      "name": "Factory Telemetry",
+      "adapter": "mock",
+      "staleAfterMs": 5000,
+      "offlineAfterMs": 15000,
+      "options": {
+        "scenario": "m0-normal-with-fault",
+        "seed": 17,
+        "defaultSpeed": 1
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "id": "press-01-status-binding",
+      "targetId": "press-01",
+      "sourceId": "factory-telemetry",
+      "pointer": "/machines/PRESS-01/status",
+      "ruleSetId": "equipment-status",
+      "writes": ["color", "alarm"],
+      "enabled": true
+    },
+    {
+      "id": "conveyor-01-status-binding",
+      "targetId": "conveyor-01",
+      "sourceId": "factory-telemetry",
+      "pointer": "/machines/CONVEYOR-01/status",
+      "ruleSetId": "equipment-status",
+      "writes": ["color", "alarm"],
+      "enabled": true
+    }
+  ],
+  "ruleSets": [
+    {
+      "id": "equipment-status",
+      "name": "Equipment Status",
+      "rules": [
+        {
+          "id": "status-offline",
+          "priority": 300,
+          "when": {
+            "fact": "connection",
+            "operator": "eq",
+            "expected": "offline"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#5B6762"
+            },
+            {
+              "type": "alarm",
+              "level": "warning",
+              "message": "Telemetry offline"
+            }
+          ]
+        },
+        {
+          "id": "status-fault",
+          "priority": 200,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "fault"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#B93632"
+            },
+            {
+              "type": "alarm",
+              "level": "critical",
+              "message": "Equipment fault"
+            }
+          ]
+        },
+        {
+          "id": "status-running",
+          "priority": 100,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "running"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#2E7D4D"
+            },
+            {
+              "type": "alarm",
+              "level": "none",
+              "message": ""
+            }
+          ]
+        }
+      ],
+      "fallback": [
+        {
+          "type": "color",
+          "value": "#A96800"
+        },
+        {
+          "type": "alarm",
+          "level": "info",
+          "message": "Unknown equipment state"
+        }
+      ]
+    }
+  ],
+  "annotations": [],
+  "views": [
+    {
+      "id": "factory-overview",
+      "name": "Factory Overview",
+      "position": [7.5, 5.5, 8.5],
+      "target": [0, 0.75, 0],
+      "fov": 42
+    }
+  ],
+  "environment": {
+    "background": "#F4F6F5",
+    "grid": true,
+    "unit": "m",
+    "upAxis": "Y"
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "factory-demo",
+  "name": "Factory Demo",
+  "revision": 1,
+  "assets": [
+    {
+      "id": "asset-press",
+      "name": "Press Station",
+      "uri": "assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.glb",
+      "mediaType": "model/gltf-binary",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "byteLength": 4096,
+      "stats": {
+        "nodeCount": 8,
+        "meshCount": 5,
+        "materialCount": 4,
+        "triangleCount": 12000
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "factory-root",
+      "type": "group",
+      "parentId": null,
+      "name": "Factory",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1, 1, 1]
+      },
+      "metadata": {}
+    },
+    {
+      "id": "press-01",
+      "type": "asset",
+      "parentId": "factory-root",
+      "name": "Press 01",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [2, 0, -1],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1, 1, 1]
+      },
+      "assetId": "asset-press",
+      "metadata": {
+        "area": "forming"
+      }
+    }
+  ],
+  "targets": [
+    {
+      "id": "press-01-target",
+      "entityId": "press-01",
+      "name": "Press 01",
+      "businessId": "MACHINE-PRESS-01",
+      "assetHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "nodeIndex": null,
+      "metadata": {
+        "equipmentType": "press"
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "factory-telemetry",
+      "name": "Factory Telemetry",
+      "adapter": "mock",
+      "staleAfterMs": 5000,
+      "offlineAfterMs": 15000,
+      "options": {
+        "scenario": "normal-with-fault"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "id": "press-01-status-binding",
+      "targetId": "press-01-target",
+      "sourceId": "factory-telemetry",
+      "pointer": "/machines/PRESS-01/status",
+      "ruleSetId": "machine-status-rules",
+      "writes": ["color", "alarm"],
+      "enabled": true
+    }
+  ],
+  "ruleSets": [
+    {
+      "id": "machine-status-rules",
+      "name": "Machine Status",
+      "rules": [
+        {
+          "id": "machine-offline",
+          "priority": 300,
+          "when": {
+            "fact": "connection",
+            "operator": "eq",
+            "expected": "offline"
+          },
+          "effects": [
+            { "type": "color", "value": "#5B6762" },
+            {
+              "type": "alarm",
+              "level": "warning",
+              "message": "Telemetry offline"
+            }
+          ]
+        },
+        {
+          "id": "machine-fault",
+          "priority": 200,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "fault"
+          },
+          "effects": [
+            { "type": "color", "value": "#B93632" },
+            {
+              "type": "alarm",
+              "level": "critical",
+              "message": "Machine fault"
+            }
+          ]
+        },
+        {
+          "id": "machine-running",
+          "priority": 100,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "running"
+          },
+          "effects": [
+            { "type": "color", "value": "#2E7D4D" },
+            { "type": "alarm", "level": "none", "message": "" }
+          ]
+        }
+      ],
+      "fallback": [
+        { "type": "color", "value": "#A96800" },
+        {
+          "type": "alarm",
+          "level": "info",
+          "message": "Unknown machine state"
+        }
+      ]
+    }
+  ],
+  "annotations": [],
+  "views": [
+    {
+      "id": "factory-overview",
+      "name": "Factory Overview",
+      "position": [12, 10, 12],
+      "target": [0, 1, 0],
+      "fov": 45
+    }
+  ],
+  "environment": {
+    "background": "#F4F6F5",
+    "grid": true,
+    "unit": "m",
+    "upAxis": "Y"
+  }
+}

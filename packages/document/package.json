@@ -1,0 +1,20 @@
+{
+  "name": "@web3d/document",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate:validators": "node scripts/generate-validators.mjs",
+    "prebuild": "pnpm generate:validators",
+    "build": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm generate:validators && node scripts/smoke-standalone-validator.mjs && vitest run --root ../.. --config vitest.config.ts packages/document/src/document.test.ts",
+    "pretypecheck": "pnpm generate:validators",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  }
+}

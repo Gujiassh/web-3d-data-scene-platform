@@ -1,0 +1,19 @@
+{
+  "assetPath": "/m0-factory-cell.glb",
+  "byteLength": 1216,
+  "mediaType": "model/gltf-binary",
+  "nodeTargets": [
+    {
+      "businessId": "PRESS-01",
+      "nodeIndex": 0,
+      "targetId": "press-01"
+    },
+    {
+      "businessId": "CONVEYOR-01",
+      "nodeIndex": 1,
+      "targetId": "conveyor-01"
+    }
+  ],
+  "sceneCount": 1,
+  "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8"
+}

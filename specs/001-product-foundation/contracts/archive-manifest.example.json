@@ -1,0 +1,20 @@
+{
+  "archiveVersion": "1.0.0",
+  "createdAt": "2026-07-13T09:00:00Z",
+  "entry": "scene.json",
+  "sceneSchemaVersion": "1.0.0",
+  "files": [
+    {
+      "path": "scene.json",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "byteLength": 8192,
+      "mediaType": "application/json"
+    },
+    {
+      "path": "assets/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.glb",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "byteLength": 4096,
+      "mediaType": "model/gltf-binary"
+    }
+  ]
+}

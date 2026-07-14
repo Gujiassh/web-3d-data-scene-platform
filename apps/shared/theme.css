@@ -1,0 +1,94 @@
+:root {
+  color: #18201d;
+  background: #f4f6f5;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --canvas: #f4f6f5;
+  --surface: #ffffff;
+  --surface-muted: #e8ece9;
+  --ink: #18201d;
+  --ink-muted: #5b6762;
+  --border: #c9d1cd;
+  --border-strong: #9ba7a1;
+  --accent: #0b6e69;
+  --selection: #2d6cdf;
+  --success: #2e7d4d;
+  --warning: #a96800;
+  --danger: #b93632;
+  --shadow: 0 8px 24px rgb(24 32 29 / 10%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  background:
+    linear-gradient(rgb(24 32 29 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(24 32 29 / 3%) 1px, transparent 1px), var(--canvas);
+  background-size: 24px 24px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

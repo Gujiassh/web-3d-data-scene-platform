@@ -1,0 +1,22 @@
+{
+  "name": "@web3d/factory-demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "dev": "vite --host 0.0.0.0 --port 4174",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.2.7",
+    "@fontsource/ibm-plex-sans": "5.2.8",
+    "@web3d/demo-support": "workspace:*",
+    "@web3d/document": "workspace:*",
+    "@web3d/react": "workspace:*",
+    "@web3d/runtime": "workspace:*",
+    "lucide-react": "1.24.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  }
+}
