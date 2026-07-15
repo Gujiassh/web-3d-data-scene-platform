@@ -1,0 +1,259 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-006-layout-fixture",
+  "name": "Feature 006 Layout Fixture",
+  "revision": 1,
+  "assets": [
+    {
+      "id": "layout-m0-asset",
+      "name": "M0 Factory Cell",
+      "uri": "asset://e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "mediaType": "model/gltf-binary",
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "byteLength": 1216,
+      "stats": {
+        "nodeCount": 2,
+        "meshCount": 1,
+        "materialCount": 1,
+        "triangleCount": 12
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "layout-entity-c",
+      "type": "asset",
+      "parentId": "layout-root",
+      "name": "Conveyor East",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [3.5, 0, -0.25],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1.4, 0.75, 0.9]
+      },
+      "assetId": "layout-m0-asset",
+      "metadata": {
+        "fixtureSlot": "C"
+      }
+    },
+    {
+      "id": "layout-root",
+      "type": "group",
+      "parentId": null,
+      "name": "Layout Root",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1, 1, 1]
+      },
+      "metadata": {
+        "fixtureRole": "root"
+      }
+    },
+    {
+      "id": "layout-entity-a",
+      "type": "asset",
+      "parentId": "layout-root",
+      "name": "Mixer North",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [-4, 0, -1.5],
+        "rotation": [0, 0, 0, 1],
+        "scale": [1, 1, 1]
+      },
+      "assetId": "layout-m0-asset",
+      "metadata": {
+        "fixtureSlot": "A"
+      }
+    },
+    {
+      "id": "layout-entity-d",
+      "type": "asset",
+      "parentId": "layout-root",
+      "name": "Robot West",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [7.25, 0, 1.5],
+        "rotation": [0, 0, 0, 1],
+        "scale": [0.65, 1.5, 1.25]
+      },
+      "assetId": "layout-m0-asset",
+      "metadata": {
+        "fixtureSlot": "D"
+      }
+    },
+    {
+      "id": "layout-entity-b",
+      "type": "asset",
+      "parentId": "layout-root",
+      "name": "Press South",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "position": [-0.75, 0, 2.25],
+        "rotation": [0, 0, 0, 1],
+        "scale": [0.8, 1.2, 1.1]
+      },
+      "assetId": "layout-m0-asset",
+      "metadata": {
+        "fixtureSlot": "B"
+      }
+    }
+  ],
+  "targets": [
+    {
+      "id": "layout-target-d",
+      "entityId": "layout-entity-d",
+      "name": "Robot West Root",
+      "businessId": "LAYOUT-D",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": null,
+      "metadata": {
+        "fixtureSlot": "D"
+      }
+    },
+    {
+      "id": "layout-target-b",
+      "entityId": "layout-entity-b",
+      "name": "Press South Root",
+      "businessId": "LAYOUT-B",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": null,
+      "metadata": {
+        "fixtureSlot": "B"
+      }
+    },
+    {
+      "id": "layout-target-a",
+      "entityId": "layout-entity-a",
+      "name": "Mixer North Root",
+      "businessId": "LAYOUT-A",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": null,
+      "metadata": {
+        "fixtureSlot": "A"
+      }
+    },
+    {
+      "id": "layout-target-c",
+      "entityId": "layout-entity-c",
+      "name": "Conveyor East Root",
+      "businessId": "LAYOUT-C",
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "nodeIndex": null,
+      "metadata": {
+        "fixtureSlot": "C"
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "layout-status-source",
+      "name": "Layout status cycle",
+      "adapter": "mock",
+      "staleAfterMs": 1000,
+      "offlineAfterMs": 1500,
+      "options": {
+        "scenario": "status-cycle",
+        "seed": 6,
+        "defaultSpeed": 1
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "id": "layout-a-status-binding",
+      "targetId": "layout-target-a",
+      "sourceId": "layout-status-source",
+      "pointer": "/telemetry/status",
+      "ruleSetId": "layout-status-rules",
+      "writes": ["color", "alarm"],
+      "enabled": true
+    }
+  ],
+  "ruleSets": [
+    {
+      "id": "layout-status-rules",
+      "name": "Layout status rules",
+      "rules": [
+        {
+          "id": "layout-status-warning",
+          "priority": 200,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "warning"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#A96800"
+            }
+          ]
+        },
+        {
+          "id": "layout-status-critical",
+          "priority": 300,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "critical"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#B93632"
+            },
+            {
+              "type": "alarm",
+              "level": "critical",
+              "message": "Critical state"
+            }
+          ]
+        },
+        {
+          "id": "layout-status-ready",
+          "priority": 100,
+          "when": {
+            "fact": "value",
+            "operator": "eq",
+            "expected": "ready"
+          },
+          "effects": [
+            {
+              "type": "color",
+              "value": "#2E7D4D"
+            }
+          ]
+        }
+      ],
+      "fallback": [
+        {
+          "type": "color",
+          "value": "#5B6762"
+        }
+      ]
+    }
+  ],
+  "annotations": [],
+  "views": [
+    {
+      "id": "layout-overview",
+      "name": "Layout Overview",
+      "position": [14, 10, 16],
+      "target": [1.5, 0.75, 0.5],
+      "fov": 42
+    }
+  ],
+  "environment": {
+    "background": "#F4F6F5",
+    "grid": true,
+    "unit": "m",
+    "upAxis": "Y"
+  }
+}

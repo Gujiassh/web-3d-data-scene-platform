@@ -32,6 +32,8 @@ interface StudioToolbarProps {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly canEdit: boolean;
+  readonly canDuplicate: boolean;
+  readonly duplicateDisabledReason: string | null;
   readonly hasSelection: boolean;
   readonly onOpenProjectMenu: () => void;
   readonly onUndo: () => void;
@@ -103,7 +105,8 @@ export function StudioToolbar(props: StudioToolbarProps) {
         />
         <IconCommand label={t.toolbar.save} icon={<Save size={16} />} onClick={props.onSave} />
         <IconCommand
-          disabled={!props.canEdit || !props.hasSelection}
+          description={props.duplicateDisabledReason}
+          disabled={!props.canEdit || !props.hasSelection || !props.canDuplicate}
           label={t.toolbar.duplicate}
           icon={<Copy size={16} />}
           onClick={props.onDuplicate}
@@ -182,23 +185,25 @@ export function StudioToolbar(props: StudioToolbarProps) {
 function IconCommand({
   active = false,
   disabled = false,
+  description = null,
   icon,
   label,
   onClick,
 }: {
   readonly active?: boolean;
   readonly disabled?: boolean;
+  readonly description?: string | null;
   readonly icon: React.ReactNode;
   readonly label: string;
   readonly onClick: () => void;
 }) {
   return (
     <button
-      aria-label={label}
+      aria-label={description === null ? label : `${label}. ${description}`}
       aria-pressed={active}
       className={`icon-button ${active ? "is-active" : ""}`}
       disabled={disabled}
-      title={label}
+      title={description ?? label}
       type="button"
       onClick={onClick}
     >

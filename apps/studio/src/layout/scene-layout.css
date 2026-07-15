@@ -1,0 +1,243 @@
+.scene-layout-panel {
+  border-top: 1px solid var(--border);
+}
+
+.layout-section {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout-section h2 {
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.layout-count {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.layout-command-row,
+.layout-inline-command,
+.layout-action-grid {
+  min-width: 0;
+}
+
+.layout-inline-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.layout-inline-command > label,
+.layout-anchor-grid label,
+.layout-snap-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.layout-inline-command select,
+.layout-anchor-grid select,
+.layout-snap-fields input,
+.layout-vector-field input {
+  width: 100%;
+  min-width: 0;
+  height: 27px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font: inherit;
+}
+
+.layout-inline-command select:focus,
+.layout-anchor-grid select:focus,
+.layout-snap-fields input:focus,
+.layout-vector-field input:focus {
+  border-color: var(--accent);
+  outline: 0;
+}
+
+.layout-command {
+  min-width: 0;
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.layout-command:hover:not(:disabled),
+.layout-command:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
+  outline: 0;
+}
+
+.layout-command:disabled {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.layout-command-row > .layout-command,
+.layout-section > .layout-command {
+  width: 100%;
+}
+
+.layout-setting-row {
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.layout-segments {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.layout-segments button {
+  min-width: 0;
+  height: 25px;
+  padding: 0 4px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.layout-segments button:last-child {
+  border-right: 0;
+}
+
+.layout-segments button.is-active {
+  background: var(--selection-muted);
+  color: var(--selection);
+  font-weight: 600;
+}
+
+.layout-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.layout-vector-field {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 9px 0 6px;
+  padding: 0;
+  border: 0;
+}
+
+.layout-vector-field legend {
+  width: 100%;
+  margin-bottom: 4px;
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.layout-vector-field label {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: center;
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.layout-vector-field label > span {
+  text-align: center;
+}
+
+.layout-reason {
+  margin: 5px 0 0;
+  color: var(--ink-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.layout-reason.is-error {
+  color: var(--danger);
+}
+
+.layout-snap-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.layout-snap-fields input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.layout-anchor-grid {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0 7px;
+}
+
+.layout-anchor-grid label {
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+}
+
+.layout-feedback {
+  padding-bottom: 12px;
+}
+
+.layout-feedback-row {
+  min-height: 23px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--surface-muted);
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.layout-feedback-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 8px;
+  font-weight: 500;
+}

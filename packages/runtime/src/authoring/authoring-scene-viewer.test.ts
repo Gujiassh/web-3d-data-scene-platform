@@ -68,6 +68,18 @@ vi.mock("three/addons/controls/TransformControls.js", async () => {
     readonly listeners = new Map<string, Set<(event: Record<string, unknown>) => void>>();
     mode = "translate";
     object: Object3D | undefined;
+    translationSnap: number | null = null;
+    rotationSnap: number | null = null;
+    scaleSnap: number | null = null;
+    readonly setTranslationSnap = vi.fn((value: number | null) => {
+      this.translationSnap = value;
+    });
+    readonly setRotationSnap = vi.fn((value: number | null) => {
+      this.rotationSnap = value;
+    });
+    readonly setScaleSnap = vi.fn((value: number | null) => {
+      this.scaleSnap = value;
+    });
 
     constructor() {
       runtime.transformControls.push(this as unknown as FakeTransformControls);
@@ -478,6 +490,70 @@ describe("createAuthoringSceneViewer", () => {
     await hidden.dispose();
   });
 
+  it("reconciles validated transform settings without recreating controls or listeners", async () => {
+    const viewer = createAuthoringSceneViewer(fakeContainer());
+    const controls = requiredControls();
+    const settings = {
+      translationSnap: 0.5,
+      rotationSnapRadians: Math.PI / 12,
+      scaleSnap: 0.1,
+    };
+
+    viewer.setTransformSettings(settings);
+    expect(controls.translationSnap).toBe(0.5);
+    expect(controls.rotationSnap).toBe(Math.PI / 12);
+    expect(controls.scaleSnap).toBe(0.1);
+    expect(controls.setTranslationSnap).toHaveBeenCalledOnce();
+    expect(controls.setRotationSnap).toHaveBeenCalledOnce();
+    expect(controls.setScaleSnap).toHaveBeenCalledOnce();
+
+    viewer.setTransformSettings({ ...settings });
+    expect(controls.setTranslationSnap).toHaveBeenCalledOnce();
+    expect(() =>
+      viewer.setTransformSettings({
+        translationSnap: 0,
+        rotationSnapRadians: null,
+        scaleSnap: null,
+      }),
+    ).toThrow("finite numbers greater than zero");
+    expect(controls.translationSnap).toBe(0.5);
+    expect(controls.rotationSnap).toBe(Math.PI / 12);
+    expect(controls.scaleSnap).toBe(0.1);
+    expect(runtime.transformControls).toHaveLength(1);
+    expect([...controls.listeners.values()].every((listeners) => listeners.size === 1)).toBe(true);
+    await viewer.dispose();
+  });
+
+  it("silently reverts invalid interactive scale without preview or commit", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(scene);
+    const diagnosticsBefore = viewer.getDiagnostics();
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("scale");
+    const controls = requiredControls();
+    controls.emit("mouseDown", { mode: "scale" });
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+
+    controls.object.scale.x = 0;
+    controls.emit("objectChange");
+    expect(controls.object.scale.toArray()).toEqual([1, 1, 1]);
+    controls.object.scale.y = -1;
+    controls.emit("objectChange");
+    controls.emit("mouseUp", { mode: "scale" });
+
+    expect(controls.object.scale.toArray()).toEqual([1, 1, 1]);
+    expect(events.filter((event) => event.type === "transform-preview")).toHaveLength(0);
+    expect(events.filter((event) => event.type === "transform-commit")).toHaveLength(0);
+    expect(events.filter((event) => event.type === "diagnostic")).toHaveLength(0);
+    expect(viewer.getDiagnostics()).toEqual(diagnosticsBefore);
+    await viewer.dispose();
+  });
+
   it("reverts an in-progress preview when the transform tool changes", async () => {
     const { asset, scene } = await fixture();
     const events: AuthoringViewerEvent[] = [];
@@ -553,6 +629,64 @@ describe("createAuthoringSceneViewer", () => {
     expect(requiredControls().object).toBeDefined();
     expect(requiredControls().object).not.toBe(previousObject);
     expect(selectionEvents(events)).toHaveLength(selectionEventCount);
+    await viewer.dispose();
+  });
+
+  it("normalizes multi-selection, preserves survivors, and attaches controls only to primary", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const withSecondEntity = withEntity(scene, "secondary-entity");
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withSecondEntity);
+    viewer.setTool("translate");
+
+    viewer.selectEntities(
+      ["secondary-entity", "factory-cell", "secondary-entity"],
+      "secondary-entity",
+    );
+    expect(viewer.getSnapshot()).toMatchObject({
+      selectedEntityId: "secondary-entity",
+      selectedEntityIds: ["factory-cell", "secondary-entity"],
+      primaryEntityId: "secondary-entity",
+    });
+    expect(requiredControls().object?.name).toBe("secondary-entity");
+
+    const beforeInvalid = viewer.getSnapshot();
+    expect(() => viewer.selectEntities(["factory-cell"], "secondary-entity")).toThrow(
+      "must belong to the selection",
+    );
+    expect(() =>
+      viewer.selectEntities(["factory-cell", "missing-entity"], "factory-cell"),
+    ).toThrow();
+    expect(viewer.getSnapshot()).toEqual(beforeInvalid);
+
+    const selectionEventCount = selectionEvents(events).length;
+    await viewer.load({ ...withSecondEntity, revision: withSecondEntity.revision + 1 });
+    expect(viewer.getSnapshot().selectedEntityIds).toEqual(["factory-cell", "secondary-entity"]);
+    expect(requiredControls().object?.name).toBe("secondary-entity");
+    expect(selectionEvents(events)).toHaveLength(selectionEventCount);
+
+    await viewer.load(
+      withoutEntity(
+        { ...withSecondEntity, revision: withSecondEntity.revision + 2 },
+        "secondary-entity",
+      ),
+    );
+    expect(viewer.getSnapshot()).toMatchObject({
+      selectedEntityId: "factory-cell",
+      selectedEntityIds: ["factory-cell"],
+      primaryEntityId: "factory-cell",
+    });
+    expect(requiredControls().object?.name).toBe("factory-cell");
+    expect(selectionEvents(events).at(-1)).toEqual({
+      type: "entity-selection-change",
+      entityId: "factory-cell",
+      origin: "api",
+    });
+    expect(runtime.transformControls).toHaveLength(1);
     await viewer.dispose();
   });
 
@@ -658,6 +792,77 @@ describe("createAuthoringSceneViewer", () => {
     await viewer.dispose();
     expect(controls.helper.parent).toBeNull();
   });
+
+  it("exposes atomic revision-bound spatial snapshots only for a live loaded generation", async () => {
+    const { asset, scene } = await fixture();
+    const source = withGroup(scene, "empty-group", [3, 0, 0]);
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+
+    expect(() => viewer.getEntitySpatialSnapshots(["factory-cell"])).toThrow("loaded");
+    await viewer.load(source);
+    const snapshots = viewer.getEntitySpatialSnapshots([
+      "factory-cell",
+      "empty-group",
+      "factory-cell",
+    ]);
+    expect(snapshots.map((snapshot) => snapshot.entityId)).toEqual(["empty-group", "factory-cell"]);
+    expect(snapshots[0]).toMatchObject({
+      documentId: source.id,
+      documentRevision: source.revision,
+      worldPivot: [3, 0, 0],
+      worldBounds: null,
+    });
+    expect(snapshots[1]?.worldBounds).not.toBeNull();
+    expect(Object.isFrozen(snapshots[1]?.localTransform.scale)).toBe(true);
+
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const runtimeObject = requiredControls().object;
+    const sourceEntity = source.entities.find((entity) => entity.id === "factory-cell");
+    if (runtimeObject === undefined || sourceEntity === undefined) {
+      throw new Error("Spatial fixture entity is missing.");
+    }
+    runtimeObject.position.y = 5e-10;
+    runtimeObject.updateMatrixWorld(true);
+    const canonical = viewer.getEntitySpatialSnapshots(["factory-cell"])[0];
+    expect(canonical?.localTransform).toEqual(sourceEntity.transform);
+    expect(canonical?.localTransform).not.toBe(sourceEntity.transform);
+    expect(canonical?.worldPivot[1]).toBe(5e-10);
+    expect(() => viewer.getEntitySpatialSnapshots(["factory-cell", "missing-entity"])).toThrow(
+      "missing-entity",
+    );
+
+    await viewer.dispose();
+    expect(() => viewer.getEntitySpatialSnapshots(["factory-cell"])).toThrow("disposed");
+  });
+
+  it("rejects spatial snapshots while a transform preview is not committed to the document", async () => {
+    const { asset, scene } = await fixture();
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.emit("mouseDown", { mode: "translate" });
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    controls.object.position.x = 1;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+
+    expect(() => viewer.getEntitySpatialSnapshots(["factory-cell"])).toThrowError(
+      expect.objectContaining({ name: "StaleSpatialMeasurementError" }),
+    );
+
+    viewer.setTool("rotate");
+    expect(viewer.getEntitySpatialSnapshots(["factory-cell"])[0]?.localTransform.position).toEqual([
+      0, 0, 0,
+    ]);
+    await viewer.dispose();
+  });
 });
 
 async function fixture(): Promise<{ asset: Uint8Array<ArrayBuffer>; scene: SceneDocument }> {
@@ -698,6 +903,14 @@ function withoutEntities(scene: SceneDocument): SceneDocument {
   };
 }
 
+function withoutEntity(scene: SceneDocument, entityId: string): SceneDocument {
+  return {
+    ...scene,
+    entities: scene.entities.filter((entity) => entity.id !== entityId),
+    targets: scene.targets.filter((target) => target.entityId !== entityId),
+  };
+}
+
 function withEntity(scene: SceneDocument, entityId: string): SceneDocument {
   const template = scene.entities[0];
   if (template === undefined) throw new Error("Fixture entity is missing.");
@@ -715,6 +928,30 @@ function withEntity(scene: SceneDocument, entityId: string): SceneDocument {
           rotation: [0, 0, 0, 1],
           scale: [1, 1, 1],
         },
+      },
+    ],
+  };
+}
+
+function withGroup(
+  scene: SceneDocument,
+  entityId: string,
+  position: readonly [number, number, number],
+): SceneDocument {
+  return {
+    ...scene,
+    revision: scene.revision + 1,
+    entities: [
+      ...scene.entities,
+      {
+        id: entityId,
+        type: "group",
+        parentId: null,
+        name: "Empty group",
+        visible: true,
+        locked: false,
+        transform: { position, rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+        metadata: {},
       },
     ],
   };
@@ -884,5 +1121,12 @@ function fakeContainer(): HTMLElement {
 type FakeTransformControls = {
   object: Object3D | undefined;
   helper: Object3D;
+  listeners: Map<string, Set<(event: Record<string, unknown>) => void>>;
+  translationSnap: number | null;
+  rotationSnap: number | null;
+  scaleSnap: number | null;
+  setTranslationSnap: ReturnType<typeof vi.fn>;
+  setRotationSnap: ReturnType<typeof vi.fn>;
+  setScaleSnap: ReturnType<typeof vi.fn>;
   emit: (type: string, event?: Record<string, unknown>) => void;
 };

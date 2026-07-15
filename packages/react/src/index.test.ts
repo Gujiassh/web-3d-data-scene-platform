@@ -1,8 +1,13 @@
 import { StrictMode, createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { AuthoringScene, SceneViewer } from "./index";
+import {
+  AuthoringScene,
+  SceneViewer,
+  type AuthoringSceneHandle,
+  type AuthoringSceneProps,
+} from "./index";
 
 const source = {
   schemaVersion: "1.0.0",
@@ -42,6 +47,13 @@ describe("react runtime wrappers", () => {
           className: "authoring",
           dataRuntimeEnabled: true,
           initialTool: "rotate",
+          selectedEntityIds: ["asset-b", "asset-a"],
+          primaryEntityId: "asset-b",
+          transformSettings: {
+            translationSnap: 0.5,
+            rotationSnapRadians: Math.PI / 12,
+            scaleSnap: null,
+          },
           onBindingStateChange: () => undefined,
         }),
       ),
@@ -51,5 +63,15 @@ describe("react runtime wrappers", () => {
     expect(html).toContain('data-web3d-react-authoring="true"');
     expect(html).toContain('class="viewer"');
     expect(html).toContain('class="authoring"');
+    expectTypeOf<AuthoringSceneHandle["selectEntities"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setTransformSettings"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["getEntitySpatialSnapshots"]>().toBeFunction();
+    expectTypeOf<
+      ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]
+    >().toHaveProperty("documentRevision");
+    expectTypeOf<
+      ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]
+    >().not.toHaveProperty("revision");
+    expectTypeOf<AuthoringSceneProps>().not.toHaveProperty("onSelectionSetChange");
   });
 });

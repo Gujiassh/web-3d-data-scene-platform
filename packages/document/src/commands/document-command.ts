@@ -10,6 +10,7 @@ import type {
 } from "../types.js";
 import type { DocumentCommand, ImportAssetInstanceCommand } from "./types.js";
 import { applyDataBindingDocumentCommand } from "./data-binding-command.js";
+import { applyLayoutDocumentCommand } from "./layout-command.js";
 
 export function executeDocumentCommand(
   document: SceneDocument,
@@ -50,8 +51,12 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
       });
     case "transform-entity":
       return applyTransformCommand(document, command.entityId, command.before, command.after);
+    case "create-group":
+    case "reparent-entities":
+    case "transform-entities":
     case "duplicate-subtree":
-      return duplicateSubtree(document, command);
+    case "duplicate-subtrees":
+      return applyLayoutDocumentCommand(document, command);
     case "delete-subtree":
       return deleteSubtree(document, command.rootEntityId);
     case "import-asset-instance":
@@ -84,57 +89,6 @@ function applyTransformCommand(
         transform: cloneTransform(after),
       };
     }),
-  });
-}
-
-function duplicateSubtree(
-  document: SceneDocument,
-  command: Extract<DocumentCommand, { type: "duplicate-subtree" }>,
-): SceneDocument {
-  const subtreeIds = collectSubtreeEntityIds(document.entities, command.rootEntityId);
-  const subtreeIdSet = new Set(subtreeIds);
-  const documentEntityIds = new Set(document.entities.map((entity) => entity.id));
-  const documentTargetIds = new Set(document.targets.map((target) => target.id));
-  const usedNewEntityIds = new Set<string>();
-  const usedNewTargetIds = new Set<string>();
-  const entitiesById = new Map(document.entities.map((entity) => [entity.id, entity]));
-
-  const duplicatedEntities = subtreeIds.map((sourceId) => {
-    const source = entitiesById.get(sourceId);
-    const nextId = command.entityIdMap[sourceId];
-    if (source === undefined) throw new Error(`Entity '${sourceId}' does not exist.`);
-    if (nextId === undefined) throw new Error(`Missing duplicate entity ID for '${sourceId}'.`);
-    if (documentEntityIds.has(nextId) || usedNewEntityIds.has(nextId)) {
-      throw new Error(`Duplicate entity ID '${nextId}' is already in use.`);
-    }
-    usedNewEntityIds.add(nextId);
-
-    const nextParentId =
-      source.parentId !== null && subtreeIdSet.has(source.parentId)
-        ? requireMappedId(command.entityIdMap, source.parentId, "entity")
-        : source.parentId;
-    return cloneEntityForDuplicate(source, nextId, nextParentId);
-  });
-
-  const duplicatedTargets = document.targets
-    .filter((target) => subtreeIdSet.has(target.entityId))
-    .map((target) => {
-      const nextId = command.targetIdMap[target.id];
-      if (nextId === undefined) throw new Error(`Missing duplicate target ID for '${target.id}'.`);
-      if (documentTargetIds.has(nextId) || usedNewTargetIds.has(nextId)) {
-        throw new Error(`Duplicate target ID '${nextId}' is already in use.`);
-      }
-      usedNewTargetIds.add(nextId);
-      return cloneTargetForDuplicate(
-        target,
-        nextId,
-        requireMappedId(command.entityIdMap, target.entityId, "entity"),
-      );
-    });
-
-  return reviseDocument(document, {
-    entities: [...document.entities, ...duplicatedEntities],
-    targets: [...document.targets, ...duplicatedTargets],
   });
 }
 
@@ -251,18 +205,7 @@ function collectSubtreeEntityIds(entities: readonly SceneEntity[], rootEntityId:
       if (childId !== undefined) stack.push(childId);
     }
   }
-
   return ordered;
-}
-
-function requireMappedId(
-  map: Readonly<Record<string, string>>,
-  sourceId: string,
-  label: string,
-): string {
-  const nextId = map[sourceId];
-  if (nextId === undefined) throw new Error(`Missing duplicate ${label} ID for '${sourceId}'.`);
-  return nextId;
 }
 
 function assertUnusedId(document: SceneDocument, id: string, label: string): void {
@@ -300,16 +243,6 @@ function cloneEntity(entity: SceneEntity): SceneEntity {
   return entity.type === "asset" ? cloneAssetEntity(entity) : cloneGroupEntity(entity);
 }
 
-function cloneEntityForDuplicate(
-  entity: SceneEntity,
-  nextId: string,
-  nextParentId: string | null,
-): SceneEntity {
-  return entity.type === "asset"
-    ? cloneAssetEntity(entity, { id: nextId, parentId: nextParentId })
-    : cloneGroupEntity(entity, { id: nextId, parentId: nextParentId });
-}
-
 function cloneGroupEntity(entity: GroupEntity, overrides: Partial<GroupEntity> = {}): GroupEntity {
   return {
     ...entity,
@@ -333,17 +266,6 @@ function cloneTarget(target: SceneTarget, overrides: Partial<SceneTarget> = {}):
     ...target,
     metadata: { ...target.metadata },
     ...overrides,
-  };
-}
-
-function cloneTargetForDuplicate(target: SceneTarget, id: string, entityId: string): SceneTarget {
-  return {
-    id,
-    entityId,
-    name: target.name,
-    assetHash: target.assetHash,
-    nodeIndex: target.nodeIndex,
-    metadata: { ...target.metadata },
   };
 }
 

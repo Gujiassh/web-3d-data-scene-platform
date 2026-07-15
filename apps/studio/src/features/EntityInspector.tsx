@@ -82,6 +82,7 @@ function EntityInspectorForm(
         </h2>
         <VectorInput
           disabled={!props.editable || props.entity.locked}
+          invalid={(value) => !Number.isFinite(value)}
           label={t.inspector.position}
           value={transform.position}
           onBlur={commitTransform}
@@ -89,6 +90,7 @@ function EntityInspectorForm(
         />
         <VectorInput
           disabled={!props.editable || props.entity.locked}
+          invalid={(value) => !Number.isFinite(value) || value <= 0}
           label={t.inspector.scale}
           value={transform.scale}
           onBlur={commitTransform}
@@ -111,12 +113,14 @@ function EntityInspectorForm(
 
 function VectorInput({
   disabled,
+  invalid,
   label,
   value,
   onBlur,
   onChange,
 }: {
   readonly disabled: boolean;
+  readonly invalid?: (value: number, axisIndex: number) => boolean;
   readonly label: string;
   readonly value: Vec3;
   readonly onBlur: () => void;
@@ -130,10 +134,12 @@ function VectorInput({
       <legend>{label}</legend>
       {value.map((number, index) => {
         const axis = axisLabels[index] ?? t.inspector.axis.x;
+        const isInvalid = invalid?.(number, index) ?? false;
         return (
           <label key={index}>
             <span>{axis}</span>
             <input
+              aria-invalid={isInvalid}
               aria-label={t.inspector.vectorAxis(label, axis)}
               inputMode="decimal"
               step="0.1"

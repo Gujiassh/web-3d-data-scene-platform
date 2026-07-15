@@ -1,0 +1,338 @@
+{
+  "oracleVersion": 1,
+  "fixtureDocumentId": "feature-006-layout-fixture",
+  "initialRevision": 1,
+  "matrixConvention": "Three.js column-major Matrix4.toArray order",
+  "coordinateSystem": {
+    "upAxis": "Y",
+    "unit": "m"
+  },
+  "epsilon": 1e-9,
+  "sourceAsset": {
+    "uri": "asset://e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+    "byteLength": 1216,
+    "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+    "localBounds": {
+      "min": [-2.225, 0, -0.575],
+      "max": [2.65, 1.5, 0.575]
+    }
+  },
+  "initial": {
+    "rootEntityId": "layout-root",
+    "entities": [
+      {
+        "entityId": "layout-root",
+        "parentId": null,
+        "localTransform": {
+          "position": [0, 0, 0],
+          "rotation": [0, 0, 0, 1],
+          "scale": [1, 1, 1]
+        },
+        "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        "worldBounds": {
+          "min": [-6.225, 0, -2.075],
+          "max": [8.9725, 2.25, 2.8825]
+        }
+      },
+      {
+        "entityId": "layout-entity-a",
+        "parentId": "layout-root",
+        "localTransform": {
+          "position": [-4, 0, -1.5],
+          "rotation": [0, 0, 0, 1],
+          "scale": [1, 1, 1]
+        },
+        "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -4, 0, -1.5, 1],
+        "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -4, 0, -1.5, 1],
+        "worldBounds": {
+          "min": [-6.225, 0, -2.075],
+          "max": [-1.35, 1.5, -0.925]
+        }
+      },
+      {
+        "entityId": "layout-entity-b",
+        "parentId": "layout-root",
+        "localTransform": {
+          "position": [-0.75, 0, 2.25],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.8, 1.2, 1.1]
+        },
+        "localMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, -0.75, 0, 2.25, 1],
+        "worldMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, -0.75, 0, 2.25, 1],
+        "worldBounds": {
+          "min": [-2.53, 0, 1.6175],
+          "max": [1.37, 1.8, 2.8825]
+        }
+      },
+      {
+        "entityId": "layout-entity-c",
+        "parentId": "layout-root",
+        "localTransform": {
+          "position": [3.5, 0, -0.25],
+          "rotation": [0, 0, 0, 1],
+          "scale": [1.4, 0.75, 0.9]
+        },
+        "localMatrix": [1.4, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.9, 0, 3.5, 0, -0.25, 1],
+        "worldMatrix": [1.4, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.9, 0, 3.5, 0, -0.25, 1],
+        "worldBounds": {
+          "min": [0.385, 0, -0.7675],
+          "max": [7.21, 1.125, 0.2675]
+        }
+      },
+      {
+        "entityId": "layout-entity-d",
+        "parentId": "layout-root",
+        "localTransform": {
+          "position": [7.25, 0, 1.5],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.65, 1.5, 1.25]
+        },
+        "localMatrix": [0.65, 0, 0, 0, 0, 1.5, 0, 0, 0, 0, 1.25, 0, 7.25, 0, 1.5, 1],
+        "worldMatrix": [0.65, 0, 0, 0, 0, 1.5, 0, 0, 0, 0, 1.25, 0, 7.25, 0, 1.5, 1],
+        "worldBounds": {
+          "min": [5.80375, 0, 0.78125],
+          "max": [8.9725, 2.25, 2.21875]
+        }
+      }
+    ]
+  },
+  "actions": {
+    "createGroupAB": {
+      "basis": "initial",
+      "selectedRootIds": ["layout-entity-b", "layout-entity-a"],
+      "beforeParentId": "layout-root",
+      "destinationGroupId": "layout-group-ab",
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedDocumentRevision": 2,
+      "expectedGroup": {
+        "parentId": "layout-root",
+        "locked": false,
+        "localTransform": {
+          "position": [-2.4275, 0.9, 0.40375],
+          "rotation": [0, 0, 0, 1],
+          "scale": [1, 1, 1]
+        },
+        "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -2.4275, 0.9, 0.40375, 1],
+        "worldBounds": {
+          "min": [-6.225, 0, -2.075],
+          "max": [1.37, 1.8, 2.8825]
+        }
+      },
+      "expectedMembers": [
+        {
+          "entityId": "layout-entity-a",
+          "parentId": "layout-group-ab",
+          "localTransform": {
+            "position": [-1.5725, -0.9, -1.90375],
+            "rotation": [0, 0, 0, 1],
+            "scale": [1, 1, 1]
+          },
+          "localMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1.5725, -0.9, -1.90375, 1],
+          "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -4, 0, -1.5, 1]
+        },
+        {
+          "entityId": "layout-entity-b",
+          "parentId": "layout-group-ab",
+          "localTransform": {
+            "position": [1.6775, -0.9, 1.84625],
+            "rotation": [0, 0, 0, 1],
+            "scale": [0.8, 1.2, 1.1]
+          },
+          "localMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, 1.6775, -0.9, 1.84625, 1],
+          "worldMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, -0.75, 0, 2.25, 1]
+        }
+      ]
+    },
+    "reparentCIntoGroupAB": {
+      "basis": "createGroupAB",
+      "selectedRootIds": ["layout-entity-c"],
+      "beforeParentId": "layout-root",
+      "destinationParentId": "layout-group-ab",
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedDocumentRevision": 3,
+      "expectedEntity": {
+        "entityId": "layout-entity-c",
+        "parentId": "layout-group-ab",
+        "localTransform": {
+          "position": [5.9275, -0.9, -0.65375],
+          "rotation": [0, 0, 0, 1],
+          "scale": [1.4, 0.75, 0.9]
+        },
+        "localMatrix": [1.4, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.9, 0, 5.9275, -0.9, -0.65375, 1],
+        "worldMatrix": [1.4, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.9, 0, 3.5, 0, -0.25, 1]
+      },
+      "expectedDestinationBounds": {
+        "min": [-6.225, 0, -2.075],
+        "max": [7.21, 1.8, 2.8825]
+      }
+    },
+    "alignMinZToB": {
+      "basis": "initial",
+      "selectedRootIds": ["layout-entity-c", "layout-entity-b", "layout-entity-a"],
+      "primaryId": "layout-entity-b",
+      "axis": "z",
+      "anchor": "min",
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedDocumentRevision": 2,
+      "expected": [
+        {
+          "entityId": "layout-entity-a",
+          "position": [-4, 0, 2.1925],
+          "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -4, 0, 2.1925, 1],
+          "worldBounds": {
+            "min": [-6.225, 0, 1.6175],
+            "max": [-1.35, 1.5, 2.7675]
+          }
+        },
+        {
+          "entityId": "layout-entity-b",
+          "position": [-0.75, 0, 2.25],
+          "worldMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, -0.75, 0, 2.25, 1],
+          "worldBounds": {
+            "min": [-2.53, 0, 1.6175],
+            "max": [1.37, 1.8, 2.8825]
+          }
+        },
+        {
+          "entityId": "layout-entity-c",
+          "position": [3.5, 0, 2.135],
+          "worldMatrix": [1.4, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.9, 0, 3.5, 0, 2.135, 1],
+          "worldBounds": {
+            "min": [0.385, 0, 1.6175],
+            "max": [7.21, 1.125, 2.6525]
+          }
+        }
+      ]
+    },
+    "distributeEqualGapX": {
+      "basis": "initial",
+      "selectedRootIds": ["layout-entity-d", "layout-entity-b", "layout-entity-a"],
+      "axis": "x",
+      "stableOrder": ["layout-entity-a", "layout-entity-b", "layout-entity-d"],
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedDocumentRevision": 2,
+      "expectedEqualGap": 1.626875,
+      "expectedMovedEntity": {
+        "entityId": "layout-entity-b",
+        "position": [2.056875, 0, 2.25],
+        "worldMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, 2.056875, 0, 2.25, 1],
+        "worldBounds": {
+          "min": [0.276875, 0, 1.6175],
+          "max": [4.176875, 1.8, 2.8825]
+        }
+      },
+      "fixedOuterEntityIds": ["layout-entity-a", "layout-entity-d"]
+    },
+    "duplicateOffsetAD": {
+      "basis": "initial",
+      "selectedRootIds": ["layout-entity-d", "layout-entity-a"],
+      "offset": [0, 0, 4],
+      "entityIdMap": {
+        "layout-entity-a": "layout-copy-a",
+        "layout-entity-d": "layout-copy-d"
+      },
+      "targetIdMap": {
+        "layout-target-a": "layout-copy-target-a",
+        "layout-target-d": "layout-copy-target-d"
+      },
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedDocumentRevision": 2,
+      "expectedCopies": [
+        {
+          "entityId": "layout-copy-a",
+          "parentId": "layout-root",
+          "locked": false,
+          "position": [-4, 0, 2.5],
+          "worldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -4, 0, 2.5, 1],
+          "worldBounds": {
+            "min": [-6.225, 0, 1.925],
+            "max": [-1.35, 1.5, 3.075]
+          },
+          "targetId": "layout-copy-target-a",
+          "businessIdPresent": false
+        },
+        {
+          "entityId": "layout-copy-d",
+          "parentId": "layout-root",
+          "locked": false,
+          "position": [7.25, 0, 5.5],
+          "worldMatrix": [0.65, 0, 0, 0, 0, 1.5, 0, 0, 0, 0, 1.25, 0, 7.25, 0, 5.5, 1],
+          "worldBounds": {
+            "min": [5.80375, 0, 4.78125],
+            "max": [8.9725, 2.25, 6.21875]
+          },
+          "targetId": "layout-copy-target-d",
+          "businessIdPresent": false
+        }
+      ],
+      "unchangedCollections": ["dataSources", "bindings", "ruleSets", "annotations"]
+    },
+    "translationGridSnapB": {
+      "basis": "initial",
+      "entityId": "layout-entity-b",
+      "translationSnap": 0.5,
+      "proposedPosition": [1.24, 0, 3.76],
+      "expectedPosition": [1, 0, 4],
+      "previewRevisionDelta": 0,
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedWorldMatrix": [0.8, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 1.1, 0, 1, 0, 4, 1]
+    },
+    "rotationAngleSnapC": {
+      "basis": "initial",
+      "entityId": "layout-entity-c",
+      "axis": "y",
+      "rotationSnapDegrees": 15,
+      "proposedDegrees": 22,
+      "expectedDegrees": 15,
+      "expectedQuaternion": [0, 0.13052619222, 0, 0.991444861374],
+      "previewRevisionDelta": 0,
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedWorldMatrix": [
+        1.352296156805, 0, -0.362346663144, 0, 0, 0.75, 0, 0, 0.232937140592, 0, 0.86933324366, 0,
+        3.5, 0, -0.25, 1
+      ]
+    },
+    "scaleSnapB": {
+      "basis": "initial",
+      "entityId": "layout-entity-b",
+      "scaleSnap": 0.25,
+      "proposedScale": [1.24, 0.76, 1.49],
+      "expectedScale": [1.25, 0.75, 1.5],
+      "previewRevisionDelta": 0,
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedWorldMatrix": [1.25, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 1.5, 0, -0.75, 0, 2.25, 1]
+    },
+    "boundsAnchorAtoB": {
+      "basis": "initial",
+      "sourceEntityId": "layout-entity-a",
+      "sourceAnchorKind": "maxX",
+      "sourceAnchorWorld": [-1.35, 0.75, -1.5],
+      "targetEntityId": "layout-entity-b",
+      "targetAnchorKind": "minX",
+      "targetAnchorWorld": [-2.53, 0.9, 2.25],
+      "expectedDelta": [-1.18, 0.15, 3.75],
+      "expectedPosition": [-5.18, 0.15, 2.25],
+      "previewRevisionDelta": 0,
+      "revisionDelta": 1,
+      "historyEntriesDelta": 1,
+      "expectedWorldMatrix": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -5.18, 0.15, 2.25, 1],
+      "expectedWorldBounds": {
+        "min": [-7.405, 0.15, 1.675],
+        "max": [-2.53, 1.65, 2.825]
+      }
+    }
+  },
+  "rejectedActionDeltas": {
+    "revisionDelta": 0,
+    "historyEntriesDelta": 0
+  }
+}

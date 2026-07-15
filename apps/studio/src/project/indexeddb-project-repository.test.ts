@@ -97,6 +97,7 @@ describe("createIndexedDbProjectRepository", () => {
 
     const initial = await createFixtureProject({ clock, revision: 1 });
     await repository.save(initial);
+    expect(serializeProjectDocument(initial.document)).not.toContain("selectionRecency");
 
     clock.set("2026-07-14T08:10:00.000Z");
     const invalid = await createFixtureProject({
@@ -344,9 +345,11 @@ function loadFixtureDocument(
   }
   const withForbidden = patched as SceneDocument & {
     selectedEntityIds?: readonly string[];
+    selectionRecency?: readonly string[];
     entities: Array<SceneDocument["entities"][number] & { runtimeSelection?: boolean }>;
   };
   withForbidden.selectedEntityIds = [patched.entities[0]!.id];
+  withForbidden.selectionRecency = [patched.entities[0]!.id];
   withForbidden.entities = patched.entities.map((entity, index) =>
     index === 0 ? { ...entity, runtimeSelection: true } : entity,
   );

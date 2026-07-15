@@ -298,6 +298,11 @@
   padding: 7px;
 }
 
+.tree-children {
+  margin: 0;
+  padding: 0;
+}
+
 .tree-root,
 .tree-row {
   min-height: 30px;
@@ -338,6 +343,15 @@
   border-color: var(--selection-border);
   background: var(--selection-muted);
   color: var(--selection);
+}
+
+[role="treeitem"]:focus-visible {
+  outline: 0;
+}
+
+[role="treeitem"]:focus-visible > .tree-row {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .tree-line {

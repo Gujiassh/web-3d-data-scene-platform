@@ -154,8 +154,9 @@ test.describe("M2 Studio data binding", () => {
     expect((await mockTimerState(page)).scheduled).toBe(scheduledBeforePreferences);
     await expectRevision(page, 4);
 
-    await expect(page.getByText("Offline", { exact: true })).toBeVisible({ timeout: 6_000 });
-    await expect(page.getByText("Online", { exact: true })).toBeVisible({ timeout: 4_000 });
+    await expect
+      .poll(() => mockTimerState(page).then(hasOfflineRecovery), { timeout: 10_000 })
+      .toBe(true);
     await expect(page.locator(".runtime-value")).toHaveText("ready");
     expect((await mockTimerState(page)).scheduled).toBe(5);
     expect((await mockTimerState(page)).active).toBe(0);
@@ -573,6 +574,7 @@ interface MockRuntimeState {
   readonly maxActive: number;
   readonly scheduled: number;
   readonly criticalLatency: number | null;
+  readonly connectionTransitions: readonly string[];
 }
 
 async function instrumentMockRuntime(page: Page): Promise<void> {
@@ -583,6 +585,7 @@ async function instrumentMockRuntime(page: Page): Promise<void> {
     let maxActive = 0;
     let lastScenarioFireAt: number | null = null;
     let criticalLatency: number | null = null;
+    const connectionTransitions: string[] = [];
     const originalSetTimeout = window.setTimeout.bind(window);
     const originalClearTimeout = window.clearTimeout.bind(window);
     window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
@@ -605,7 +608,15 @@ async function instrumentMockRuntime(page: Page): Promise<void> {
       originalClearTimeout(timer);
     }) as typeof window.clearTimeout;
 
+    const recordConnectionTransition = () => {
+      const status = [...(document.querySelector(".runtime-status")?.classList ?? [])]
+        .find((className) => className.startsWith("status-"))
+        ?.slice("status-".length);
+      if (status === undefined || connectionTransitions.at(-1) === status) return;
+      connectionTransitions.push(status);
+    };
     const observer = new MutationObserver(() => {
+      recordConnectionTransition();
       if (criticalLatency !== null || lastScenarioFireAt === null) return;
       const hasCritical = [...document.querySelectorAll(".runtime-value")].some(
         (element) => element.textContent?.trim() === "critical",
@@ -615,12 +626,20 @@ async function instrumentMockRuntime(page: Page): Promise<void> {
         if (lastScenarioFireAt !== null) criticalLatency = performance.now() - lastScenarioFireAt;
       });
     });
-    observer.observe(document.body, { childList: true, characterData: true, subtree: true });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    recordConnectionTransition();
     (window as typeof window & { __m2MockState?: () => MockRuntimeState }).__m2MockState = () => ({
       active: active.size,
       maxActive,
       scheduled,
       criticalLatency,
+      connectionTransitions: [...connectionTransitions],
     });
   });
 }
@@ -633,6 +652,13 @@ async function mockTimerState(page: Page): Promise<MockRuntimeState> {
 
 async function criticalLatency(page: Page): Promise<number | null> {
   return (await mockTimerState(page)).criticalLatency;
+}
+
+function hasOfflineRecovery(state: MockRuntimeState): boolean {
+  const offlineIndex = state.connectionTransitions.indexOf("offline");
+  return (
+    offlineIndex >= 0 && state.connectionTransitions.slice(offlineIndex + 1).includes("online")
+  );
 }
 
 async function restoreWebGlContext(canvas: Locator): Promise<string> {

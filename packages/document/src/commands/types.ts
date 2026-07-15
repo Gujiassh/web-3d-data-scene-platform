@@ -1,5 +1,6 @@
 import type {
   Binding,
+  GroupEntity,
   MockDataSource,
   RuleSet,
   SceneAsset,
@@ -39,11 +40,61 @@ export interface TransformEntityCommand {
   readonly after: Transform;
 }
 
+export interface EntityPlacement {
+  readonly parentId: string | null;
+  readonly transform: Transform;
+}
+
+export interface EntityPlacementChange {
+  readonly entityId: string;
+  readonly before: EntityPlacement;
+  readonly after: EntityPlacement;
+}
+
+export interface CreateGroupCommand {
+  readonly type: "create-group";
+  readonly group: GroupEntity;
+  readonly members: readonly EntityPlacementChange[];
+}
+
+export interface ReparentEntitiesCommand {
+  readonly type: "reparent-entities";
+  readonly changes: readonly EntityPlacementChange[];
+}
+
+export interface TransformEntitiesCommand {
+  readonly type: "transform-entities";
+  readonly changes: readonly {
+    readonly entityId: string;
+    readonly before: Transform;
+    readonly after: Transform;
+  }[];
+}
+
 export interface DuplicateSubtreeCommand {
   readonly type: "duplicate-subtree";
   readonly rootEntityId: string;
   readonly entityIdMap: Readonly<Record<string, string>>;
   readonly targetIdMap: Readonly<Record<string, string>>;
+  readonly rootPlacement?: {
+    readonly before: EntityPlacement;
+    readonly after: EntityPlacement;
+  };
+}
+
+export interface DuplicateSubtreeItem {
+  readonly rootEntityId: string;
+  readonly entityIdMap: Readonly<Record<string, string>>;
+  readonly targetIdMap: Readonly<Record<string, string>>;
+  readonly rootPlacement: {
+    readonly before: EntityPlacement;
+    readonly after: EntityPlacement;
+  };
+}
+
+export interface DuplicateSubtreesCommand {
+  readonly type: "duplicate-subtrees";
+  readonly items: readonly DuplicateSubtreeItem[];
 }
 
 export interface DeleteSubtreeCommand {
@@ -92,15 +143,22 @@ export type DataBindingDocumentCommand =
   | RemoveBindingCommand
   | RemoveMockDataSourceCommand;
 
+export type LayoutDocumentCommand =
+  | CreateGroupCommand
+  | ReparentEntitiesCommand
+  | TransformEntitiesCommand
+  | DuplicateSubtreeCommand
+  | DuplicateSubtreesCommand;
+
 export type DocumentCommand =
   | RenameDocumentCommand
   | RenameEntityCommand
   | SetEntityVisibilityCommand
   | SetEntityLockCommand
   | TransformEntityCommand
-  | DuplicateSubtreeCommand
   | DeleteSubtreeCommand
   | ImportAssetInstanceCommand
+  | LayoutDocumentCommand
   | DataBindingDocumentCommand;
 
 export interface DocumentHistoryEntry {

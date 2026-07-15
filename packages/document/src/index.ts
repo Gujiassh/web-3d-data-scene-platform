@@ -12,13 +12,20 @@ export {
 export type {
   DeleteSubtreeCommand,
   ConfigureBindingRuleSetCommand,
+  CreateGroupCommand,
   DataBindingDocumentCommand,
   DocumentCommand,
   DocumentHistoryEntry,
   DocumentHistoryState,
   DuplicateSubtreeCommand,
+  DuplicateSubtreeItem,
+  DuplicateSubtreesCommand,
+  EntityPlacement,
+  EntityPlacementChange,
   ExecuteDocumentCommandOptions,
   ImportAssetInstanceCommand,
+  LayoutDocumentCommand,
+  ReparentEntitiesCommand,
   RemoveBindingCommand,
   RemoveMockDataSourceCommand,
   RenameDocumentCommand,
@@ -27,6 +34,7 @@ export type {
   SetEntityVisibilityCommand,
   SetTargetBusinessIdCommand,
   TransformEntityCommand,
+  TransformEntitiesCommand,
   UpsertMockDataSourceCommand,
 } from "./commands/types.js";
 export { exportSceneArchive, importSceneArchive } from "./archive/codec.js";

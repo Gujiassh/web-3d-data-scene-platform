@@ -18,32 +18,36 @@ import type {
   TransformAuthoringController,
   TransformAuthoringControllerFactory,
 } from "../authoring/transform-authoring-controller";
+import {
+  EMPTY_ENTITY_SELECTION,
+  normalizeEntitySelection,
+  retainEntitySelection,
+  sameEntitySelection,
+  type EntitySelection,
+} from "../authoring/entity-selection";
+import { createEntitySpatialSnapshots } from "../authoring/spatial-snapshot";
 import { defaultAssetResolver } from "../assets/asset-loader";
-import { cloneJson } from "../data/json-pointer";
-import { RuntimeValueStore } from "../data/value-store";
 import { diagnostic, diagnosticError, RuntimeDiagnosticError } from "../diagnostics";
 import { AnimationFrameSlot } from "../lifecycle/idempotent-disposer";
-import { RuntimeAlarmStore } from "../rules/alarm-store";
-import { evaluateRuleSet } from "../rules/rule-engine";
 import type {
   AuthoringSceneViewer,
   AuthoringTool,
+  AuthoringTransformSettings,
   AuthoringViewerEvent,
   AuthoringViewerSnapshot,
   CreateAuthoringViewerOptions,
   CreateViewerOptions,
   DataAdapter,
-  DataEnvelope,
   Diagnostic,
+  EntitySpatialSnapshot,
   FocusOptions,
-  RuntimeBindingState,
   SceneViewer,
   ViewerEvent,
   ViewerLifecycle,
   ViewerSnapshot,
 } from "../types";
-import { applyRuleEffects, resetRuleEffects } from "./effect-projector";
 import { ViewerAdapterRuntime } from "./adapter-runtime";
+import { ViewerDataRuntimeController } from "./data-runtime-controller";
 import { ObjectPicker } from "./object-picker";
 import {
   buildRuntimeGeneration,
@@ -69,7 +73,7 @@ interface ReadonlyViewportOptions {
 }
 
 interface PendingEntitySelection {
-  readonly entityId: string;
+  readonly selection: EntitySelection;
   readonly origin: "viewport" | "api";
   readonly controller: AbortController;
 }
@@ -92,6 +96,7 @@ class ThreeSceneViewport {
   readonly #selectionOverlay: SelectionOverlay;
   readonly #assetResolver;
   readonly #adapterRuntime: ViewerAdapterRuntime;
+  readonly #dataRuntime: ViewerDataRuntimeController;
   readonly #resizeObserver: ResizeObserver;
   readonly #healthTimer: ReturnType<typeof setInterval>;
   readonly #onViewerEvent: ((event: ViewerEvent) => void) | undefined;
@@ -100,13 +105,10 @@ class ThreeSceneViewport {
 
   #generation: RuntimeGeneration | null = null;
   #document: SceneDocument | null = null;
-  #valueStore = new RuntimeValueStore();
-  #alarmStore = new RuntimeAlarmStore();
-  readonly #bindingStates = new Map<string, RuntimeBindingState>();
   #dataRuntimeEnabled: boolean;
   #lifecycle: ViewerLifecycle = "created";
   #selectedTargetId: string | null = null;
-  #selectedEntityId: string | null = null;
+  #entitySelection: EntitySelection = EMPTY_ENTITY_SELECTION;
   #grid: GridHelper | null = null;
   #loadBarrier: Promise<void> = Promise.resolve();
   #loadController: AbortController | null = null;
@@ -169,9 +171,17 @@ class ThreeSceneViewport {
         })
       : null;
 
+    this.#dataRuntime = new ViewerDataRuntimeController({
+      emitAuthoring: (event) => this.#emitAuthoring(event),
+      emitViewer: (event) => this.#emitViewer(event),
+      now: () => performance.now(),
+      recordDiagnostic: (value) => this.#recordDiagnostic(value),
+      requestRender: this.#requestRender,
+    });
+
     this.#adapterRuntime = new ViewerAdapterRuntime({
       ...(options.adapters === undefined ? {} : { adapters: options.adapters }),
-      acceptEnvelope: (envelope) => this.#acceptEnvelope(envelope),
+      acceptEnvelope: (envelope) => this.#dataRuntime.acceptEnvelope(envelope),
       hasSource: (sourceId) =>
         this.#document?.dataSources.some((source) => source.id === sourceId) === true,
       isDisposed: () => this.#disposing,
@@ -186,7 +196,9 @@ class ThreeSceneViewport {
     this.#renderer.domElement.addEventListener("webglcontextrestored", this.#handleContextRestored);
     this.#resizeObserver = new ResizeObserver(() => this.resize());
     this.#resizeObserver.observe(this.#container);
-    this.#healthTimer = setInterval(() => this.#updateHealth(), 500);
+    this.#healthTimer = setInterval(() => {
+      if (this.#lifecycle === "ready") this.#dataRuntime.updateHealth();
+    }, 500);
     this.resize();
 
     if (options.source !== undefined) {
@@ -294,23 +306,20 @@ class ThreeSceneViewport {
     if (this.#disposing) throw abortError();
 
     const previousDocumentId = this.#document?.id ?? null;
-    const previousSelectedEntityId = this.#selectedEntityId;
+    const previousSelection = this.#entitySelection;
     const pendingSelection =
       this.#pendingEntitySelection?.controller === controller ? this.#pendingEntitySelection : null;
-    const nextSelectedEntityId =
+    const nextSelection =
       pendingSelection !== null
-        ? next.entities.has(pendingSelection.entityId)
-          ? pendingSelection.entityId
-          : null
-        : this.#authoring.enabled &&
-            previousDocumentId === source.id &&
-            previousSelectedEntityId !== null &&
-            next.entities.has(previousSelectedEntityId)
-          ? previousSelectedEntityId
-          : null;
+        ? retainEntitySelection(pendingSelection.selection, (entityId) =>
+            next.entities.has(entityId),
+          )
+        : this.#authoring.enabled && previousDocumentId === source.id
+          ? retainEntitySelection(previousSelection, (entityId) => next.entities.has(entityId))
+          : EMPTY_ENTITY_SELECTION;
     const previous = this.#generation;
-    this.#clearDataRuntimeState();
-    this.#transformAuthoring?.sync(null, previousSelectedEntityId);
+    this.#dataRuntime.detach();
+    this.#transformAuthoring?.sync(null, [], previousSelection.primaryEntityId);
     this.#selectionOverlay.clear();
     if (previous !== null) this.#scene.remove(previous.root);
     this.#generation = next;
@@ -323,30 +332,19 @@ class ThreeSceneViewport {
     }
     previous?.dispose();
 
-    this.#valueStore = new RuntimeValueStore();
-    this.#alarmStore = new RuntimeAlarmStore();
-    this.#bindingStates.clear();
+    this.#dataRuntime.attach(source, next);
     this.#selectedTargetId = null;
-    this.#selectedEntityId = nextSelectedEntityId;
-    if (this.#dataRuntimeEnabled) {
-      for (const sourceDefinition of source.dataSources) {
-        this.#valueStore.registerSource(sourceDefinition.id, sourceDefinition);
-      }
-    }
+    this.#entitySelection = nextSelection;
     this.#applyEnvironment(source);
     const initialView = source.views[0];
     if (initialView !== undefined) this.#applyView(initialView.id);
-    if (this.#dataRuntimeEnabled) {
-      for (const sourceDefinition of source.dataSources) {
-        this.#applyBindings(sourceDefinition.id);
-      }
-    }
+    if (this.#dataRuntimeEnabled) this.#dataRuntime.enable();
     this.#syncSelectionOverlay();
-    this.#transformAuthoring?.sync(next, nextSelectedEntityId);
-    if (previousSelectedEntityId !== nextSelectedEntityId) {
+    this.#transformAuthoring?.sync(next, nextSelection.entityIds, nextSelection.primaryEntityId);
+    if (previousSelection.primaryEntityId !== nextSelection.primaryEntityId) {
       this.#emitAuthoring({
         type: "entity-selection-change",
-        entityId: nextSelectedEntityId,
+        entityId: nextSelection.primaryEntityId,
         origin: pendingSelection?.origin ?? "api",
       });
     }
@@ -363,13 +361,12 @@ class ThreeSceneViewport {
     this.#dataRuntimeEnabled = enabled;
     if (!enabled) {
       const stopping = this.#adapterRuntime.reconcileDocumentAdapters(false);
-      this.#clearDataRuntimeState();
+      this.#dataRuntime.disable();
       await stopping;
       return;
     }
 
-    this.#resetValueStore(true);
-    for (const sourceId of this.#valueStore.sourceIds()) this.#applyBindings(sourceId);
+    this.#dataRuntime.enable();
     await this.#adapterRuntime.reconcileDocumentAdapters(true);
   }
 
@@ -402,8 +399,12 @@ class ThreeSceneViewport {
   }
 
   selectEntity(entityId: string | null): void {
+    this.selectEntities(entityId === null ? [] : [entityId], entityId);
+  }
+
+  selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void {
     this.#ensureActive();
-    this.#selectEntity(entityId, "api");
+    this.#selectEntities(entityIds, primaryEntityId, "api");
   }
 
   async focusEntity(entityId: string, options: FocusOptions = {}): Promise<void> {
@@ -420,7 +421,7 @@ class ThreeSceneViewport {
       this.#recordDiagnostic(value);
       throw diagnosticError(value);
     }
-    if (options.select === true) this.#selectEntity(entityId, "api");
+    if (options.select === true) this.#selectEntities([entityId], entityId, "api");
     await this.#focusObject(entity.object, options);
   }
 
@@ -436,27 +437,45 @@ class ThreeSceneViewport {
     return this.#transformAuthoring?.getTool() ?? "select";
   }
 
+  setTransformSettings(settings: AuthoringTransformSettings): void {
+    this.#ensureActive();
+    if (this.#transformAuthoring === null) return;
+    this.#transformAuthoring.setTransformSettings(settings);
+    this.#requestRender();
+  }
+
+  getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[] {
+    this.#ensureActive();
+    if (!this.#authoring.enabled || this.#document === null || this.#generation === null) {
+      throw new Error("Entity spatial snapshots require a loaded authoring scene.");
+    }
+    return createEntitySpatialSnapshots(this.#document, this.#generation, entityIds);
+  }
+
   async setView(viewId: string): Promise<void> {
     this.#ensureActive();
     this.#applyView(viewId);
   }
 
   getSnapshot(): ViewerSnapshot | AuthoringViewerSnapshot {
+    const dataRuntime = this.#dataRuntime.getSnapshot();
     const snapshot: ViewerSnapshot = {
       lifecycle: this.#lifecycle,
       documentId: this.#document?.id ?? null,
       revision: this.#document?.revision ?? null,
       selectedTargetId: this.#selectedTargetId,
-      connections: this.#valueStore.getConnections(),
-      alarms: this.#alarmStore.snapshot(),
+      connections: dataRuntime.connections,
+      alarms: dataRuntime.alarms,
     };
     if (this.#transformAuthoring === null) return snapshot;
     return {
       ...snapshot,
-      selectedEntityId: this.#selectedEntityId,
+      selectedEntityId: this.#entitySelection.primaryEntityId,
+      selectedEntityIds: [...this.#entitySelection.entityIds],
+      primaryEntityId: this.#entitySelection.primaryEntityId,
       activeTool: this.#transformAuthoring.getTool(),
       dataRuntimeEnabled: this.#dataRuntimeEnabled,
-      bindingStates: this.#bindingStateSnapshot(),
+      bindingStates: dataRuntime.bindingStates,
     };
   }
 
@@ -533,131 +552,6 @@ class ThreeSceneViewport {
     });
   }
 
-  #acceptEnvelope(envelope: DataEnvelope): void {
-    if (!this.#dataRuntimeEnabled) return;
-    const before = this.#valueStore.getSource(envelope.sourceId)?.connection;
-    const update = this.#valueStore.accept(envelope, performance.now());
-    for (const value of update.diagnostics) this.#recordDiagnostic(value);
-    const after = this.#valueStore.getSource(envelope.sourceId)?.connection;
-    if (before !== after && after !== undefined) {
-      this.#emitViewer({ type: "connection-change", sourceId: envelope.sourceId, status: after });
-    }
-    if (update.accepted || update.connectionChanged) this.#applyBindings(envelope.sourceId);
-  }
-
-  #updateHealth(): void {
-    if (this.#lifecycle !== "ready" || !this.#dataRuntimeEnabled) return;
-    for (const sourceId of this.#valueStore.sourceIds()) {
-      const afterBefore = this.#valueStore.getSource(sourceId)?.connection;
-      const update = this.#valueStore.updateHealth(sourceId, performance.now());
-      const after = this.#valueStore.getSource(sourceId)?.connection;
-      if (update.connectionChanged && after !== undefined) {
-        this.#emitViewer({ type: "connection-change", sourceId, status: after });
-        this.#applyBindings(sourceId);
-      }
-      if (afterBefore === after) continue;
-    }
-  }
-
-  #applyBindings(sourceId: string): void {
-    const document = this.#document;
-    const generation = this.#generation;
-    const source = this.#valueStore.getSource(sourceId);
-    if (document === null || generation === null || source === undefined) return;
-
-    for (const binding of document.bindings) {
-      if (!binding.enabled || binding.sourceId !== sourceId) continue;
-      const target = generation.targets.get(binding.targetId);
-      const ruleSet = document.ruleSets.find((candidate) => candidate.id === binding.ruleSetId);
-      if (target === undefined || ruleSet === undefined) continue;
-      try {
-        const value = this.#valueStore.getValue(sourceId, binding.pointer);
-        const result = evaluateRuleSet(ruleSet, {
-          value,
-          quality: source.quality,
-          connection: source.connection,
-        });
-        resetRuleEffects(target, binding.writes);
-        applyRuleEffects(target, result.effects);
-        this.#updateBindingState({
-          bindingId: binding.id,
-          targetId: binding.targetId,
-          sourceId,
-          pointer: binding.pointer,
-          value,
-          quality: source.quality,
-          connection: source.connection,
-          ruleId: result.ruleId,
-          ...(source.sourceTime === undefined ? {} : { sourceTime: source.sourceTime }),
-        });
-        for (const transition of this.#alarmStore.reconcile({
-          targetId: binding.targetId,
-          bindingId: binding.id,
-          ruleId: result.ruleId,
-          sourceId,
-          effects: result.effects,
-          ...(source.sourceTime === undefined ? {} : { sourceTime: source.sourceTime }),
-        })) {
-          this.#emitViewer({ type: "alarm", ...transition });
-        }
-      } catch {
-        this.#recordDiagnostic(
-          diagnostic(
-            "RULE_EVALUATION_FAILED",
-            "rule",
-            "error",
-            `Rule evaluation failed for binding ${binding.id}.`,
-            { sourceId, bindingId: binding.id, targetId: binding.targetId },
-          ),
-        );
-      }
-    }
-    this.#requestRender();
-  }
-
-  #clearDataRuntimeState(): void {
-    this.#generation?.targets.forEach((target) => resetRuleEffects(target));
-    for (const transition of this.#alarmStore.clearAll()) {
-      this.#emitViewer({ type: "alarm", ...transition });
-    }
-    for (const bindingId of [...this.#bindingStates.keys()].sort(compare)) {
-      this.#emitAuthoring({
-        type: "binding-state-change",
-        transition: "cleared",
-        bindingId,
-      });
-    }
-    this.#bindingStates.clear();
-    this.#resetValueStore(false);
-    this.#requestRender();
-  }
-
-  #resetValueStore(registerSources: boolean): void {
-    this.#valueStore = new RuntimeValueStore();
-    if (!registerSources) return;
-    for (const source of this.#document?.dataSources ?? []) {
-      this.#valueStore.registerSource(source.id, source);
-    }
-  }
-
-  #updateBindingState(state: RuntimeBindingState): void {
-    const snapshot = cloneBindingState(state);
-    const current = this.#bindingStates.get(snapshot.bindingId);
-    if (bindingStatesEqual(current, snapshot)) return;
-    this.#bindingStates.set(snapshot.bindingId, snapshot);
-    this.#emitAuthoring({
-      type: "binding-state-change",
-      transition: "updated",
-      state: cloneBindingState(snapshot),
-    });
-  }
-
-  #bindingStateSnapshot(): readonly RuntimeBindingState[] {
-    return [...this.#bindingStates.values()]
-      .sort((left, right) => compare(left.bindingId, right.bindingId))
-      .map(cloneBindingState);
-  }
-
   #target(targetId: string): RuntimeTarget {
     const target = this.#generation?.targets.get(targetId);
     if (target !== undefined) return target;
@@ -695,35 +589,57 @@ class ThreeSceneViewport {
     this.#requestRender();
   }
 
-  #selectEntity(entityId: string | null, origin: "viewport" | "api"): void {
+  #selectEntities(
+    entityIds: readonly string[],
+    primaryEntityId: string | null,
+    origin: "viewport" | "api",
+  ): void {
     if (!this.#authoring.enabled) return;
-    if (entityId !== null && this.#generation?.entities.has(entityId) !== true) {
+    const selection = normalizeEntitySelection(entityIds, primaryEntityId);
+    const missingEntityId = selection.entityIds.find(
+      (entityId) => this.#generation?.entities.has(entityId) !== true,
+    );
+    if (missingEntityId !== undefined) {
       if (this.#loadController !== null) {
         this.#pendingEntitySelection = {
-          entityId,
+          selection,
           origin,
           controller: this.#loadController,
         };
         return;
       }
-      this.#entity(entityId);
+      this.#entity(missingEntityId);
     }
     this.#pendingEntitySelection = null;
-    if (this.#selectedEntityId === entityId) return;
-    this.#selectedEntityId = entityId;
+    if (sameEntitySelection(this.#entitySelection, selection)) return;
+    const previousPrimaryEntityId = this.#entitySelection.primaryEntityId;
+    this.#entitySelection = selection;
     this.#syncSelectionOverlay();
-    this.#transformAuthoring?.sync(this.#generation, entityId);
-    this.#emitAuthoring({ type: "entity-selection-change", entityId, origin });
+    if (previousPrimaryEntityId !== selection.primaryEntityId) {
+      this.#transformAuthoring?.sync(
+        this.#generation,
+        selection.entityIds,
+        selection.primaryEntityId,
+      );
+      this.#emitAuthoring({
+        type: "entity-selection-change",
+        entityId: selection.primaryEntityId,
+        origin,
+      });
+    }
     this.#requestRender();
   }
 
   #syncSelectionOverlay(): void {
     if (this.#authoring.enabled) {
-      const object =
-        this.#selectedEntityId === null
-          ? null
-          : (this.#generation?.entities.get(this.#selectedEntityId)?.object ?? null);
-      this.#selectionOverlay.set(object);
+      this.#selectionOverlay.setMany(
+        this.#entitySelection.entityIds.flatMap((entityId) => {
+          const object = this.#generation?.entities.get(entityId)?.object;
+          return object === undefined
+            ? []
+            : [{ object, primary: entityId === this.#entitySelection.primaryEntityId }];
+        }),
+      );
       return;
     }
     const object =
@@ -851,7 +767,7 @@ class ThreeSceneViewport {
         surface: this.#renderer.domElement,
         resolveId: (object) => generation.entityForObject(object),
       });
-      this.#selectEntity(entityId, "viewport");
+      this.#selectEntities(entityId === null ? [] : [entityId], entityId, "viewport");
       return;
     }
     const targetId = this.#picker.pick({
@@ -922,57 +838,6 @@ function isAbortError(error: unknown): boolean {
 
 function abortError(): DOMException {
   return new DOMException("The operation was aborted.", "AbortError");
-}
-
-function bindingStatesEqual(
-  left: RuntimeBindingState | undefined,
-  right: RuntimeBindingState,
-): boolean {
-  return (
-    left !== undefined &&
-    left.targetId === right.targetId &&
-    left.sourceId === right.sourceId &&
-    left.pointer === right.pointer &&
-    left.quality === right.quality &&
-    left.connection === right.connection &&
-    left.ruleId === right.ruleId &&
-    left.sourceTime === right.sourceTime &&
-    jsonValuesEqual(left.value, right.value)
-  );
-}
-
-function cloneBindingState(state: RuntimeBindingState): RuntimeBindingState {
-  return {
-    ...state,
-    value: state.value === undefined ? undefined : cloneJson(state.value),
-  };
-}
-
-function jsonValuesEqual(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true;
-  if (Array.isArray(left) && Array.isArray(right)) {
-    return (
-      left.length === right.length &&
-      left.every((value, index) => jsonValuesEqual(value, right[index]))
-    );
-  }
-  if (!isRecord(left) || !isRecord(right)) return false;
-  const leftKeys = Object.keys(left).sort(compare);
-  const rightKeys = Object.keys(right).sort(compare);
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every(
-      (key, index) => key === rightKeys[index] && jsonValuesEqual(left[key], right[key]),
-    )
-  );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function compare(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function reportErrorAsync(error: unknown): void {

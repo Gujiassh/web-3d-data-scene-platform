@@ -158,6 +158,8 @@ describe("SceneViewer lifecycle", () => {
 
     const snapshot = viewer.getSnapshot();
     expect(snapshot).not.toHaveProperty("selectedEntityId");
+    expect(snapshot).not.toHaveProperty("selectedEntityIds");
+    expect(snapshot).not.toHaveProperty("primaryEntityId");
     expect(snapshot).not.toHaveProperty("activeTool");
     expect(snapshot).not.toHaveProperty("dataRuntimeEnabled");
     expect(snapshot).not.toHaveProperty("bindingStates");

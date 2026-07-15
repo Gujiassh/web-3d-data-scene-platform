@@ -1,4 +1,4 @@
-import type { Transform } from "@web3d/document";
+import type { Transform, Vec3 } from "@web3d/document";
 
 import type { SceneAsset, SceneDocument } from "./document-contract";
 
@@ -143,6 +143,49 @@ export type ViewerEvent =
 
 export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
 
+export interface AuthoringTransformSettings {
+  readonly translationSnap: number | null;
+  readonly rotationSnapRadians: number | null;
+  readonly scaleSnap: number | null;
+}
+
+export type WorldMatrix = readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+
+export interface EntityWorldBounds {
+  readonly min: Vec3;
+  readonly max: Vec3;
+}
+
+export interface EntitySpatialSnapshot {
+  readonly documentId: string;
+  readonly documentRevision: number;
+  readonly entityId: string;
+  readonly parentId: string | null;
+  readonly localTransform: Transform;
+  readonly worldMatrix: WorldMatrix;
+  readonly worldBounds: EntityWorldBounds | null;
+  readonly worldPivot: Vec3;
+  readonly visible: boolean;
+  readonly locked: boolean;
+}
+
 export type AuthoringViewerEvent =
   | ViewerEvent
   | BindingStateChangeEvent
@@ -170,6 +213,8 @@ export interface ViewerSnapshot {
 
 export interface AuthoringViewerSnapshot extends ViewerSnapshot {
   selectedEntityId: string | null;
+  selectedEntityIds: readonly string[];
+  primaryEntityId: string | null;
   activeTool: AuthoringTool;
   dataRuntimeEnabled: boolean;
   bindingStates: readonly RuntimeBindingState[];
@@ -210,9 +255,12 @@ export interface AuthoringSceneViewer {
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
+  selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;
   focusEntity(entityId: string, options?: FocusOptions): Promise<void>;
   setTool(tool: AuthoringTool): void;
   getTool(): AuthoringTool;
+  setTransformSettings(settings: AuthoringTransformSettings): void;
+  getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
   getDiagnostics(): readonly Diagnostic[];

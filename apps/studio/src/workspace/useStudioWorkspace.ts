@@ -13,7 +13,6 @@ import {
   type DocumentHistoryState,
   type SceneAsset,
   type SceneDocument,
-  type Transform,
 } from "@web3d/document";
 import { inspectGltf, type AssetResolver, type GltfInspectionSummary } from "@web3d/runtime";
 
@@ -34,11 +33,7 @@ import {
   withProjectDocument,
   withSavedProjectRecord,
 } from "../project/project-name";
-import {
-  buildDuplicateSubtreeCommand,
-  buildImportAssetCommand,
-  createBrowserIdFactory,
-} from "../session/command-builders";
+import { buildImportAssetCommand, createBrowserIdFactory } from "../session/command-builders";
 import { createNewStudioProject } from "../session/new-project";
 import {
   assertCanEdit,
@@ -47,6 +42,7 @@ import {
   isExportOutdated,
   reduceStudioSession,
   type AuthoringTool,
+  type SelectionOperation,
   type StudioMode,
   type StudioSessionState,
 } from "../session/session-state";
@@ -87,9 +83,8 @@ export interface StudioWorkspace {
   readonly save: () => Promise<void>;
   readonly setMode: (mode: StudioMode) => void;
   readonly setTool: (tool: AuthoringTool) => void;
-  readonly selectEntity: (entityId: string | null, extend?: boolean) => void;
-  readonly transformEntity: (entityId: string, before: Transform, after: Transform) => void;
-  readonly duplicateEntity: (entityId: string) => void;
+  readonly selectEntity: (entityId: string | null, operation?: SelectionOperation) => void;
+  readonly selectEntities: (entityIds: readonly string[], primaryEntityId: string | null) => void;
   readonly deleteEntity: (entityId: string) => void;
   readonly inspectModel: (file: File) => Promise<void>;
   readonly confirmImport: () => Promise<void>;
@@ -271,12 +266,7 @@ export function useStudioWorkspace(): StudioWorkspace {
         setRecent((current) =>
           synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
         );
-        setSession(
-          reduceStudioSession(session, {
-            type: "document-changed",
-            revision: nextHistory.document.revision,
-          }),
-        );
+        setSession(reduceSessionForDocumentChange(session, nextHistory.document));
         return { status: "changed", revision: nextHistory.document.revision };
       } catch (error) {
         const message = presentError(error);
@@ -300,12 +290,7 @@ export function useStudioWorkspace(): StudioWorkspace {
       setRecent((current) =>
         synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
       );
-      setSession(
-        reduceStudioSession(session, {
-          type: "document-changed",
-          revision: next.document.revision,
-        }),
-      );
+      setSession(reduceSessionForDocumentChange(session, next.document));
     } catch (error) {
       addDiagnostic(presentError(error));
     }
@@ -324,12 +309,7 @@ export function useStudioWorkspace(): StudioWorkspace {
       setRecent((current) =>
         synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
       );
-      setSession(
-        reduceStudioSession(session, {
-          type: "document-changed",
-          revision: next.document.revision,
-        }),
-      );
+      setSession(reduceSessionForDocumentChange(session, next.document));
     } catch (error) {
       addDiagnostic(presentError(error));
     }
@@ -364,38 +344,34 @@ export function useStudioWorkspace(): StudioWorkspace {
   );
 
   const selectEntity = useCallback(
-    (entityId: string | null, extend = false) => {
-      if (session === null) return;
-      setSession(
-        entityId === null
-          ? reduceStudioSession(session, { type: "selection-cleared" })
-          : reduceStudioSession(session, {
+    (entityId: string | null, operation: SelectionOperation = "replace") => {
+      setSession((current) => {
+        if (current === null) return current;
+        return entityId === null
+          ? reduceStudioSession(current, { type: "selection-cleared" })
+          : reduceStudioSession(current, {
               type: "entity-selected",
               entityId,
-              extend,
+              operation,
+            });
+      });
+    },
+    [],
+  );
+
+  const selectEntities = useCallback(
+    (entityIds: readonly string[], primaryEntityId: string | null) => {
+      setSession((current) =>
+        current === null
+          ? current
+          : reduceStudioSession(current, {
+              type: "selection-replaced",
+              entityIds,
+              primaryEntityId,
             }),
       );
     },
-    [session],
-  );
-
-  const transformEntity = useCallback(
-    (entityId: string, before: Transform, after: Transform) => {
-      execute({ type: "transform-entity", entityId, before, after });
-    },
-    [execute],
-  );
-
-  const duplicateEntity = useCallback(
-    (entityId: string) => {
-      if (project === null) return;
-      try {
-        execute(buildDuplicateSubtreeCommand(project.document, entityId, createBrowserIdFactory()));
-      } catch (error) {
-        addDiagnostic(presentError(error));
-      }
-    },
-    [addDiagnostic, execute, presentError, project],
+    [],
   );
 
   const deleteEntity = useCallback(
@@ -474,13 +450,17 @@ export function useStudioWorkspace(): StudioWorkspace {
         revision: saved.document.revision,
       });
       nextSession = reduceStudioSession(nextSession, {
+        type: "selection-reconciled",
+        availableEntityIds: saved.document.entities.map((entity) => entity.id),
+      });
+      nextSession = reduceStudioSession(nextSession, {
         type: "save-succeeded",
         revision: saved.document.revision,
       });
       nextSession = reduceStudioSession(nextSession, {
         type: "entity-selected",
         entityId: command.entity.id,
-        extend: false,
+        operation: "replace",
       });
       setSession(nextSession);
       setRecent(await repository.listRecent());
@@ -690,8 +670,7 @@ export function useStudioWorkspace(): StudioWorkspace {
     setMode,
     setTool,
     selectEntity,
-    transformEntity,
-    duplicateEntity,
+    selectEntities,
     deleteEntity,
     inspectModel,
     confirmImport,
@@ -735,6 +714,20 @@ function activateProject(
   setProject(project);
   setHistory(createDocumentHistory(project.document));
   setSession(createStudioSession(project.document.revision, project.record.lastExportedRevision));
+}
+
+function reduceSessionForDocumentChange(
+  session: StudioSessionState,
+  document: SceneDocument,
+): StudioSessionState {
+  const changed = reduceStudioSession(session, {
+    type: "document-changed",
+    revision: document.revision,
+  });
+  return reduceStudioSession(changed, {
+    type: "selection-reconciled",
+    availableEntityIds: document.entities.map((entity) => entity.id),
+  });
 }
 
 async function flushBeforeSwitch(

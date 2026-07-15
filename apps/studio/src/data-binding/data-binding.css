@@ -5,7 +5,7 @@
 }
 
 .studio-inspector > [role="tabpanel"],
-.run-preview-panel {
+.run-inspector-content {
   min-height: 0;
   overflow: auto;
 }
@@ -46,6 +46,7 @@
 
 .data-binding-panel,
 .entity-inspector-content,
+.run-inspector-content,
 .run-preview-panel {
   min-width: 0;
 }

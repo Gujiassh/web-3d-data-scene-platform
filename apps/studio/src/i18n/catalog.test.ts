@@ -24,4 +24,19 @@ describe("Studio catalog", () => {
       "规则值不得超过 160 个字符。",
     );
   });
+
+  it("localizes the primary Scene tree accessible name", () => {
+    expect(english.sceneTree.itemLabel("Press", true)).toBe("Press, primary selection");
+    expect(chinese.sceneTree.itemLabel("冲压机", true)).toBe("冲压机，主选对象");
+    expect(english.sceneTree.itemLabel("Press", false)).toBe("Press");
+  });
+
+  it("localizes layout commands and stable disabled reasons", () => {
+    expect(english.layout.groupSelection).toBe("Group selection");
+    expect(chinese.layout.groupSelection).toBe("编组所选对象");
+    expect(english.layout.reasons["non-representable-transform"]).toContain("shear");
+    expect(chinese.layout.reasons["non-representable-transform"]).toContain("剪切");
+    expect(english.layout.localScaleDelta).toBe("Local scale delta");
+    expect(chinese.layout.localScaleDelta).toBe("局部缩放变化");
+  });
 });

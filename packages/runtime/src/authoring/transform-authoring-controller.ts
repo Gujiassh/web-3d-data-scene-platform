@@ -2,7 +2,7 @@ import type { Transform } from "@web3d/document";
 import type { Camera, Object3D, Scene } from "three";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-import type { AuthoringTool, AuthoringViewerEvent } from "../types";
+import type { AuthoringTool, AuthoringTransformSettings, AuthoringViewerEvent } from "../types";
 import type { RuntimeEntity, RuntimeGeneration } from "../viewer/runtime-generation";
 
 type TransformEvent = Extract<
@@ -36,8 +36,10 @@ export class TransformAuthoringController {
   #entities: ReadonlyMap<string, RuntimeEntity> = EMPTY_ENTITIES;
   #selectedEntityId: string | null = null;
   #activeTool: AuthoringTool;
+  #transformSettings: AuthoringTransformSettings = DEFAULT_TRANSFORM_SETTINGS;
   #dragBefore: Transform | null = null;
   #draggingEntityId: string | null = null;
+  #dragInvalid = false;
 
   constructor(options: TransformAuthoringControllerOptions) {
     this.#orbitControls = options.orbitControls;
@@ -54,12 +56,25 @@ export class TransformAuthoringController {
     options.scene.add(this.#helper);
   }
 
-  sync(generation: RuntimeGeneration | null, selectedEntityId: string | null): void {
+  sync(
+    generation: RuntimeGeneration | null,
+    _selectedEntityIds: readonly string[],
+    primaryEntityId: string | null,
+  ): void {
     this.#cancelDrag(true);
     this.#controls.detach();
     this.#entities = generation?.entities ?? EMPTY_ENTITIES;
-    this.#selectedEntityId = selectedEntityId;
+    this.#selectedEntityId = primaryEntityId;
     this.#attachSelectedEntity();
+  }
+
+  setTransformSettings(settings: AuthoringTransformSettings): void {
+    const next = validateTransformSettings(settings);
+    if (sameTransformSettings(this.#transformSettings, next)) return;
+    this.#transformSettings = next;
+    this.#controls.setTranslationSnap(next.translationSnap);
+    this.#controls.setRotationSnap(next.rotationSnapRadians);
+    this.#controls.setScaleSnap(next.scaleSnap);
   }
 
   setTool(tool: AuthoringTool): void {
@@ -104,6 +119,7 @@ export class TransformAuthoringController {
     }
     this.#dragBefore = null;
     this.#draggingEntityId = null;
+    this.#dragInvalid = false;
     this.#orbitControls.enabled = true;
   }
 
@@ -118,6 +134,7 @@ export class TransformAuthoringController {
     if (runtimeEntity === undefined || !isTransformable(runtimeEntity)) return;
     this.#draggingEntityId = entityId;
     this.#dragBefore = readTransform(runtimeEntity.object);
+    this.#dragInvalid = false;
   };
 
   readonly #handleObjectChange = (): void => {
@@ -125,16 +142,28 @@ export class TransformAuthoringController {
     if (entityId === null) return;
     const runtimeEntity = this.#entities.get(entityId);
     if (runtimeEntity === undefined || this.#controls.object !== runtimeEntity.object) return;
+    const transform = readTransform(runtimeEntity.object);
+    if (this.#activeTool === "scale" && (this.#dragInvalid || !hasValidScale(transform))) {
+      this.#dragInvalid = true;
+      if (this.#dragBefore !== null) applyTransform(runtimeEntity.object, this.#dragBefore);
+      this.#requestRender();
+      return;
+    }
     this.#emit({
       type: "transform-preview",
       entityId,
-      transform: readTransform(runtimeEntity.object),
+      transform,
     });
   };
 
   readonly #handleMouseUp = (): void => {
     const entityId = this.#draggingEntityId;
     const before = this.#dragBefore;
+    const invalid = this.#dragInvalid;
+    if (invalid) {
+      this.#cancelDrag(true);
+      return;
+    }
     this.#cancelDrag(false);
     if (entityId === null || before === null) return;
     const runtimeEntity = this.#entities.get(entityId);
@@ -144,6 +173,46 @@ export class TransformAuthoringController {
       this.#emit({ type: "transform-commit", entityId, before, after });
     }
   };
+}
+
+const DEFAULT_TRANSFORM_SETTINGS: AuthoringTransformSettings = Object.freeze({
+  translationSnap: null,
+  rotationSnapRadians: null,
+  scaleSnap: null,
+});
+
+function validateTransformSettings(
+  settings: AuthoringTransformSettings,
+): AuthoringTransformSettings {
+  if (
+    settings === null ||
+    typeof settings !== "object" ||
+    !validSnap(settings.translationSnap) ||
+    !validSnap(settings.rotationSnapRadians) ||
+    !validSnap(settings.scaleSnap)
+  ) {
+    throw new TypeError("Transform snap values must be null or finite numbers greater than zero.");
+  }
+  return Object.freeze({
+    translationSnap: settings.translationSnap,
+    rotationSnapRadians: settings.rotationSnapRadians,
+    scaleSnap: settings.scaleSnap,
+  });
+}
+
+function validSnap(value: number | null): boolean {
+  return value === null || (Number.isFinite(value) && value > 0);
+}
+
+function sameTransformSettings(
+  left: AuthoringTransformSettings,
+  right: AuthoringTransformSettings,
+): boolean {
+  return (
+    left.translationSnap === right.translationSnap &&
+    left.rotationSnapRadians === right.rotationSnapRadians &&
+    left.scaleSnap === right.scaleSnap
+  );
 }
 
 function isTransformable(entity: RuntimeEntity): boolean {
@@ -164,6 +233,10 @@ function applyTransform(object: Object3D, transform: Transform): void {
   object.scale.fromArray(transform.scale);
   object.updateMatrix();
   object.updateMatrixWorld(true);
+}
+
+function hasValidScale(transform: Transform): boolean {
+  return transform.scale.every((value) => Number.isFinite(value) && value > 0);
 }
 
 function sameTransform(left: Transform, right: Transform): boolean {

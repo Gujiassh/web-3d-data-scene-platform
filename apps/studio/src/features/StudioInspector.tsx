@@ -7,6 +7,8 @@ import { DataBindingPanel } from "../data-binding/DataBindingPanel";
 import { RunPreviewPanel } from "../data-binding/RunPreviewPanel";
 import type { StudioPreviewState, TargetResolution } from "../data-binding/types";
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { SceneLayoutPanel } from "../layout/SceneLayoutPanel";
+import type { StudioSceneLayout } from "../layout/useStudioSceneLayout";
 import type { StudioCommandOutcome } from "../workspace/command-outcome";
 import { EntityInspector } from "./EntityInspector";
 import { inspectorAuthoringStateKey } from "./inspector-authoring-state";
@@ -22,6 +24,7 @@ interface StudioInspectorProps {
   readonly selectedEntityId: string | null;
   readonly targetResolution: TargetResolution;
   readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
+  readonly layout: StudioSceneLayout;
   readonly onFocusTarget: (targetId: string) => void;
   readonly onRename: (entityId: string, name: string) => void;
   readonly onTransformChange: (entityId: string, transform: Transform) => void;
@@ -48,12 +51,15 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
             <Activity size={13} />
             {t.dataBinding.tabs.run}
           </div>
-          <RunPreviewPanel
-            document={props.document}
-            onFocusTarget={props.onFocusTarget}
-            preview={props.preview}
-            selectedEntityId={props.selectedEntityId}
-          />
+          <div className="run-inspector-content">
+            <RunPreviewPanel
+              document={props.document}
+              onFocusTarget={props.onFocusTarget}
+              preview={props.preview}
+              selectedEntityId={props.selectedEntityId}
+            />
+            <SceneLayoutPanel layout={props.layout} />
+          </div>
         </>
       ) : (
         <>
@@ -87,6 +93,7 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
               onRename={props.onRename}
               onTransformChange={props.onTransformChange}
             />
+            <SceneLayoutPanel layout={props.layout} />
           </div>
           <div
             aria-labelledby="data-inspector-tab"

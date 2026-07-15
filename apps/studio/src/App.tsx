@@ -12,6 +12,7 @@ import { StudioToolbar } from "./features/StudioToolbar";
 import { StudioInspector } from "./features/StudioInspector";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
+import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
 import { resolveExecutableStudioShortcut } from "./session/shortcuts";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
@@ -30,7 +31,7 @@ export function App() {
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
 
-  const selectedEntityId = workspace.session?.selectedEntityIds.at(-1) ?? null;
+  const selectedEntityId = workspace.session?.primaryEntityId ?? null;
   const activeTool = workspace.session?.tool ?? "select";
   const selectedEntity =
     workspace.project?.document.entities.find((entity) => entity.id === selectedEntityId) ?? null;
@@ -48,6 +49,20 @@ export function App() {
     selectedEntityId,
     execute: workspace.execute,
   });
+  const sceneLayout = useStudioSceneLayout({
+    projectId: project?.record.id ?? null,
+    document: project?.document ?? null,
+    mode: session?.mode ?? "edit",
+    canEdit: workspace.canEdit,
+    activeTool,
+    selectedEntityIds: session?.selectedEntityIds ?? [],
+    primaryEntityId: selectedEntityId,
+    viewerRef,
+    execute: workspace.execute,
+    selectEntity: workspace.selectEntity,
+    selectEntities: workspace.selectEntities,
+    addDiagnostic: workspace.addDiagnostic,
+  });
   const openModelPicker = (): void => modelInputRef.current?.click();
   const closeSceneNameDialog = (): void => {
     setSceneNameDialogMode(null);
@@ -60,8 +75,7 @@ export function App() {
     const viewer = viewerRef.current;
     if (viewer === null) return;
     viewer.setTool(activeTool);
-    viewer.selectEntity(selectedEntityId);
-  }, [activeTool, selectedEntityId]);
+  }, [activeTool]);
 
   useLayoutEffect(() => {
     const title =
@@ -90,7 +104,7 @@ export function App() {
       if (shortcut.type === "redo") workspace.redo();
       if (shortcut.type === "save") void workspace.save().catch(() => undefined);
       if (shortcut.type === "duplicate" && selectedEntityId !== null) {
-        workspace.duplicateEntity(selectedEntityId);
+        sceneLayout.duplicateSelection();
       }
       if (shortcut.type === "delete" && selectedEntityId !== null) {
         workspace.deleteEntity(selectedEntityId);
@@ -106,7 +120,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedEntityId, workspace]);
+  }, [sceneLayout, selectedEntityId, workspace]);
 
   if (!desktopViewport) {
     return (
@@ -123,8 +137,14 @@ export function App() {
     <div className="studio-app">
       <StudioToolbar
         canEdit={workspace.canEdit}
+        canDuplicate={sceneLayout.capabilities.duplicate.enabled}
         canRedo={historyCapabilities.canRedo}
         canUndo={historyCapabilities.canUndo}
+        duplicateDisabledReason={
+          sceneLayout.capabilities.duplicate.reason === null
+            ? null
+            : t.layout.reasons[sceneLayout.capabilities.duplicate.reason]
+        }
         exportOutdated={workspace.exportOutdated}
         hasSelection={selectedEntityId !== null}
         mode={session?.mode ?? "edit"}
@@ -138,7 +158,7 @@ export function App() {
           }
         }}
         onDuplicate={() => {
-          if (selectedEntityId !== null) workspace.duplicateEntity(selectedEntityId);
+          if (selectedEntityId !== null) sceneLayout.duplicateSelection();
         }}
         onExport={() => void workspace.exportArchive()}
         onImport={openModelPicker}
@@ -211,11 +231,12 @@ export function App() {
             <SceneTree
               editable={workspace.canEdit}
               entities={project?.document.entities ?? []}
+              primaryEntityId={session?.primaryEntityId ?? null}
               selectedEntityIds={session?.selectedEntityIds ?? []}
               onLockChange={(entityId, locked) =>
                 workspace.execute({ type: "set-entity-lock", entityId, locked })
               }
-              onSelect={(entityId, extend) => workspace.selectEntity(entityId, extend)}
+              onSelect={sceneLayout.selectFromTree}
               onVisibilityChange={(entityId, visible) =>
                 workspace.execute({ type: "set-entity-visibility", entityId, visible })
               }
@@ -258,7 +279,10 @@ export function App() {
               className="studio-viewer"
               initialTool={activeTool}
               key={project.record.id}
+              primaryEntityId={session?.primaryEntityId ?? null}
+              selectedEntityIds={session?.selectedEntityIds ?? []}
               source={project.document}
+              transformSettings={sceneLayout.transformSettings}
               onDiagnostic={(diagnostic) =>
                 workspace.addDiagnostic(`${diagnostic.code} ${diagnostic.message}`)
               }
@@ -267,13 +291,11 @@ export function App() {
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
                 viewer.setTool(activeTool);
-                viewer.selectEntity(selectedEntityId);
+                sceneLayout.handleReady();
               }}
-              onSelectionChange={(event) => workspace.selectEntity(event.entityId)}
-              onTransformCommit={(event) => {
-                if (!workspace.canEdit) return;
-                workspace.transformEntity(event.entityId, event.before, event.after);
-              }}
+              onSelectionChange={sceneLayout.handleSelectionChange}
+              onTransformPreview={sceneLayout.handleTransformPreview}
+              onTransformCommit={sceneLayout.handleTransformCommit}
             />
           )}
           <div className="viewport-mode mono" data-testid="viewport-mode">
@@ -290,6 +312,7 @@ export function App() {
             editable={workspace.canEdit}
             entity={selectedEntity}
             execute={workspace.execute}
+            layout={sceneLayout}
             mode={session?.mode ?? "edit"}
             preview={dataBinding.preview}
             selectedEntityId={selectedEntityId}
@@ -309,8 +332,14 @@ export function App() {
             }
             onTransformChange={(entityId, transform) => {
               const entity = project?.document.entities.find((item) => item.id === entityId);
-              if (entity !== undefined)
-                workspace.transformEntity(entityId, entity.transform, transform);
+              if (entity !== undefined) {
+                sceneLayout.handleTransformCommit({
+                  type: "transform-commit",
+                  entityId,
+                  before: entity.transform,
+                  after: transform,
+                });
+              }
             }}
           />
         )}

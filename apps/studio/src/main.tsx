@@ -12,6 +12,7 @@ import { App } from "./App";
 import { StudioI18nProvider } from "./i18n/I18nProvider";
 import "./styles.css";
 import "./data-binding/data-binding.css";
+import "./layout/scene-layout.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");
 

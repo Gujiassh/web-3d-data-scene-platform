@@ -12,14 +12,21 @@ import {
   type AssetResolver,
   type AuthoringSceneViewer as RuntimeAuthoringViewer,
   type AuthoringTool,
+  type AuthoringTransformSettings,
   type AuthoringViewerEvent,
   type AuthoringViewerSnapshot,
   type DataAdapter,
   type Diagnostic,
+  type EntitySpatialSnapshot,
   type SceneSource,
 } from "@web3d/runtime";
 
 import { reconcileAuthoringSceneRuntime } from "./authoring-runtime-reconciliation";
+import {
+  reconcileAuthoringSceneSelection,
+  reconcileAuthoringSceneSelectionAfterLoad,
+  reconcileAuthoringTransformSettings,
+} from "./authoring-controlled-state";
 
 type ReadyEvent = Extract<AuthoringViewerEvent, { type: "ready" }>;
 type SelectionEvent = Extract<AuthoringViewerEvent, { type: "entity-selection-change" }>;
@@ -29,9 +36,12 @@ type CommitEvent = Extract<AuthoringViewerEvent, { type: "transform-commit" }>;
 
 export interface AuthoringSceneHandle {
   selectEntity(entityId: string | null): void;
+  selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;
   focusEntity(entityId: string): Promise<void>;
   setTool(tool: AuthoringTool): void;
   getTool(): AuthoringTool;
+  setTransformSettings(settings: AuthoringTransformSettings): void;
+  getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
@@ -48,6 +58,9 @@ export interface AuthoringSceneProps {
   readonly reducedMotion?: boolean;
   readonly initialTool?: AuthoringTool;
   readonly dataRuntimeEnabled?: boolean;
+  readonly selectedEntityIds?: readonly string[];
+  readonly primaryEntityId?: string | null;
+  readonly transformSettings?: AuthoringTransformSettings;
   readonly onReady?: (event: ReadyEvent) => void;
   readonly onSelectionChange?: (event: SelectionEvent) => void;
   readonly onBindingStateChange?: (event: BindingStateEvent) => void;
@@ -62,6 +75,7 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<RuntimeAuthoringViewer | null>(null);
     const callbacksRef = useRef(callbacks(props));
+    const sourceLoadRef = useRef<Promise<void> | null>(null);
     const adaptersRef = useRef<Readonly<Record<string, DataAdapter>>>({});
     const runtimeReconciliationRef = useRef(0);
     const initialOptionsRef = useRef({
@@ -101,12 +115,51 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     useEffect(() => {
       const viewer = viewerRef.current;
       if (viewer === null) return;
-      void viewer.load(props.source).catch(() => undefined);
+      const loading = viewer.load(props.source);
+      sourceLoadRef.current = loading;
+      void loading.then(
+        () => {
+          if (sourceLoadRef.current === loading) sourceLoadRef.current = null;
+        },
+        () => {
+          if (sourceLoadRef.current === loading) sourceLoadRef.current = null;
+        },
+      );
     }, [props.source]);
 
     useEffect(() => {
       viewerRef.current?.setCanvasLabel(props.canvasLabel ?? "Interactive 3D scene");
     }, [props.canvasLabel]);
+
+    useEffect(() => {
+      const viewer = viewerRef.current;
+      if (viewer === null) return;
+      let current = true;
+      const reconcile = (): void => {
+        if (!current || viewerRef.current !== viewer) return;
+        reconcileAuthoringSceneSelection(viewer, props.selectedEntityIds, props.primaryEntityId);
+      };
+      const loading = sourceLoadRef.current;
+      if (loading === null) reconcile();
+      else {
+        void reconcileAuthoringSceneSelectionAfterLoad(
+          viewer,
+          loading,
+          props.selectedEntityIds,
+          props.primaryEntityId,
+          () => current && viewerRef.current === viewer,
+        ).catch(() => undefined);
+      }
+      return () => {
+        current = false;
+      };
+    }, [props.primaryEntityId, props.selectedEntityIds, props.source]);
+
+    useEffect(() => {
+      const viewer = viewerRef.current;
+      if (viewer === null) return;
+      reconcileAuthoringTransformSettings(viewer, props.transformSettings);
+    }, [props.transformSettings]);
 
     useEffect(() => {
       const viewer = viewerRef.current;
@@ -135,6 +188,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         selectEntity(entityId) {
           requiredViewer(viewerRef).selectEntity(entityId);
         },
+        selectEntities(entityIds, primaryEntityId) {
+          requiredViewer(viewerRef).selectEntities(entityIds, primaryEntityId);
+        },
         focusEntity(entityId) {
           return requiredViewer(viewerRef).focusEntity(entityId, { select: true });
         },
@@ -143,6 +199,12 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         getTool() {
           return requiredViewer(viewerRef).getTool();
+        },
+        setTransformSettings(settings) {
+          requiredViewer(viewerRef).setTransformSettings(settings);
+        },
+        getEntitySpatialSnapshots(entityIds) {
+          return requiredViewer(viewerRef).getEntitySpatialSnapshots(entityIds);
         },
         setDataRuntimeEnabled(enabled) {
           return requiredViewer(viewerRef).setDataRuntimeEnabled(enabled);
