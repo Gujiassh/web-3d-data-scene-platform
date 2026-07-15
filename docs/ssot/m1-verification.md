@@ -2,6 +2,8 @@
 
 > 状态：Accepted for M1
 > 验证日期：2026-07-14
+> Supersession：本记录保留当时 Factory regression gate 和双 build 基线。feature 005 的同等
+> Studio Run 证据于 2026-07-15 通过并退役 Factory；M1 编辑、保存和 archive 验收结论不变。
 > 范围：本地工程与 Chromium 浏览器闭环，不代表 MVP production release
 
 ## 1. 验证对象
@@ -92,7 +94,7 @@ spec-kit acceptance 脚本只识别 `FR/NFR/SC` 定义。本 M1 规格使用 `M1
 - 已进入 `Save failed` 的同一快照不会在退出时自动盲重试；旧 record 保持有效，用户必须在
   恢复容量后显式 retry。
 - `three-scene-viewport.ts` 当前 856 行，虽然 adapter、generation、selection overlay 和
-  TransformControls 已拆出，M2 增加行为前仍应继续控制其职责和回归面。
+  TransformControls 已拆出，feature 005 增加 Run 行为时仍应继续控制其职责和回归面。
 - 没有 Firefox/Safari、固定硬件性能基准、外部开发者任务测试或正式 npm/release packaging。
 
 因此 M1 结论是“Studio 本地编辑闭环实现并在 Chromium 验收通过”，不是“产品已可生产发布”。

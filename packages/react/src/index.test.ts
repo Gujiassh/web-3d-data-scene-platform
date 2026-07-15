@@ -40,7 +40,9 @@ describe("react runtime wrappers", () => {
           source,
           canvasLabel: "Authoring 3D scene",
           className: "authoring",
+          dataRuntimeEnabled: true,
           initialTool: "rotate",
+          onBindingStateChange: () => undefined,
         }),
       ),
     );

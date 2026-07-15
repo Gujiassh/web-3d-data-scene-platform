@@ -11,17 +11,23 @@ export {
 } from "./commands/history.js";
 export type {
   DeleteSubtreeCommand,
+  ConfigureBindingRuleSetCommand,
+  DataBindingDocumentCommand,
   DocumentCommand,
   DocumentHistoryEntry,
   DocumentHistoryState,
   DuplicateSubtreeCommand,
   ExecuteDocumentCommandOptions,
   ImportAssetInstanceCommand,
+  RemoveBindingCommand,
+  RemoveMockDataSourceCommand,
   RenameDocumentCommand,
   RenameEntityCommand,
   SetEntityLockCommand,
   SetEntityVisibilityCommand,
+  SetTargetBusinessIdCommand,
   TransformEntityCommand,
+  UpsertMockDataSourceCommand,
 } from "./commands/types.js";
 export { exportSceneArchive, importSceneArchive } from "./archive/codec.js";
 export { exportCanonicalSceneJson, importCanonicalSceneJson } from "./archive/json.js";

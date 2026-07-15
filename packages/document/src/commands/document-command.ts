@@ -9,6 +9,7 @@ import type {
   Transform,
 } from "../types.js";
 import type { DocumentCommand, ImportAssetInstanceCommand } from "./types.js";
+import { applyDataBindingDocumentCommand } from "./data-binding-command.js";
 
 export function executeDocumentCommand(
   document: SceneDocument,
@@ -55,6 +56,12 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
       return deleteSubtree(document, command.rootEntityId);
     case "import-asset-instance":
       return importAssetInstance(document, command);
+    case "set-target-business-id":
+    case "upsert-mock-data-source":
+    case "configure-binding-rule-set":
+    case "remove-binding":
+    case "remove-mock-data-source":
+      return applyDataBindingDocumentCommand(document, command);
   }
 }
 

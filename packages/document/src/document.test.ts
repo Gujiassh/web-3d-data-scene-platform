@@ -13,7 +13,10 @@ const fixtureUrl = new URL(
   "../../../specs/001-product-foundation/contracts/scene.example.json",
   import.meta.url,
 );
-const m0FixtureUrl = new URL("../../../assets/factory/public/m0-scene.json", import.meta.url);
+const m0FixtureUrl = new URL(
+  "../../../tests/fixtures/m0-factory/public/m0-scene.json",
+  import.meta.url,
+);
 
 describe("SceneDocument", () => {
   it("parses and validates the contract fixture", () => {
@@ -73,6 +76,13 @@ describe("SceneDocument", () => {
     });
 
     expect(codes(validateSceneDocument(input))).toContain("BINDING_WRITE_CONFLICT");
+  });
+
+  it("keeps legacy non-canonical binding pointers globally valid", () => {
+    const input = loadFixture();
+    records(input["bindings"])[0]!["pointer"] = "/machines/legacy~2status";
+
+    expect(validateSceneDocument(input).ok).toBe(true);
   });
 
   it("detects duplicate IDs and asset, target, and threshold inconsistencies", () => {

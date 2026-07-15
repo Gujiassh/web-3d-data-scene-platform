@@ -25,6 +25,20 @@ describe("RuntimeAlarmStore", () => {
       "opened",
     ]);
   });
+
+  it("returns stable cleared transitions when all transient alarms are drained", () => {
+    const store = new RuntimeAlarmStore();
+    const critical: RuleEffect[] = [{ type: "alarm", level: "critical", message: "Machine fault" }];
+    store.reconcile(input("fault-b", critical));
+    store.reconcile({ ...input("fault-a", critical), bindingId: "another-binding" });
+
+    expect(store.clearAll().map((item) => [item.transition, item.alarm.key])).toEqual([
+      ["cleared", "press-01\u0000another-binding\u0000fault-a"],
+      ["cleared", "press-01\u0000press-status\u0000fault-b"],
+    ]);
+    expect(store.snapshot()).toEqual([]);
+    expect(store.clearAll()).toEqual([]);
+  });
 });
 
 function input(ruleId: string, effects: readonly RuleEffect[], sourceTime?: string) {

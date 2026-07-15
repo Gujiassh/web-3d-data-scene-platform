@@ -7,7 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAX_GLTF_INSPECTION_BYTES, inspectGltf } from "./inspect-gltf";
 import { sha256Hex } from "./asset-loader";
 
-const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb", import.meta.url);
+const assetUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+  import.meta.url,
+);
 
 if (typeof globalThis.ProgressEvent === "undefined") {
   class TestProgressEvent extends Event {

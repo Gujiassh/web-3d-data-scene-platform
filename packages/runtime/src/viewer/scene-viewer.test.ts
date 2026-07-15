@@ -69,8 +69,14 @@ vi.mock("./runtime-generation", async (importOriginal) => {
 
 import { createSceneViewer } from "./scene-viewer";
 
-const sceneUrl = new URL("../../../../assets/factory/public/m0-scene.json", import.meta.url);
-const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb", import.meta.url);
+const sceneUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-scene.json",
+  import.meta.url,
+);
+const assetUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+  import.meta.url,
+);
 
 describe("SceneViewer lifecycle", () => {
   beforeEach(() => {
@@ -153,6 +159,22 @@ describe("SceneViewer lifecycle", () => {
     const snapshot = viewer.getSnapshot();
     expect(snapshot).not.toHaveProperty("selectedEntityId");
     expect(snapshot).not.toHaveProperty("activeTool");
+    expect(snapshot).not.toHaveProperty("dataRuntimeEnabled");
+    expect(snapshot).not.toHaveProperty("bindingStates");
+    await viewer.dispose();
+  });
+
+  it("keeps readonly data adapters enabled by default", async () => {
+    const { asset, scene } = await fixture();
+    const active = adapter("readonly-default");
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+
+    await viewer.load(scene);
+    expect(active.start).toHaveBeenCalledOnce();
+    expect(viewer.getSnapshot().connections).toEqual({ "factory-telemetry": "connecting" });
     await viewer.dispose();
   });
 

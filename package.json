@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
-    "dev": "pnpm --parallel --filter @web3d/studio --filter @web3d/factory-demo dev",
+    "dev": "pnpm --filter @web3d/studio dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "generate:contracts": "node packages/document/scripts/generate-validators.mjs",
@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/e2e/tsconfig.json && pnpm -r --if-present typecheck",
     "verify:design": "./scripts/verify-product-design.sh",
-    "verify:i18n": "node scripts/verify-i18n-copy.mjs"
+    "verify:i18n": "node scripts/verify-i18n-copy.mjs",
+    "verify:topology": "node scripts/verify-topology.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

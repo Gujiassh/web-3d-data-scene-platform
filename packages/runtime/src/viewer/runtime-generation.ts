@@ -1,5 +1,5 @@
 import type { SceneDocument, SceneEntity } from "@web3d/document";
-import { Group, Mesh, type Material, type Object3D } from "three";
+import { Color, Group, Mesh, type Material, type Object3D } from "three";
 
 import { loadGltfAsset } from "../assets/asset-loader";
 import { disposeObject3D, isolateTargetMaterials } from "../assets/dispose-object";
@@ -9,6 +9,12 @@ import type { AssetResolver } from "../types";
 export interface RuntimeTarget {
   readonly object: Object3D;
   readonly materials: readonly Material[];
+  readonly baseline: RuntimeTargetBaseline;
+}
+
+export interface RuntimeTargetBaseline {
+  readonly visible: boolean;
+  readonly colors: readonly (Color | null)[];
 }
 
 export interface RuntimeEntity {
@@ -112,9 +118,14 @@ export async function buildRuntimeGeneration(
         meshOwners.set(object, target.id);
       });
 
+      const materials = isolateTargetMaterials(targetObject);
       const runtimeTarget = {
         object: targetObject,
-        materials: isolateTargetMaterials(targetObject),
+        materials,
+        baseline: {
+          visible: targetObject.visible,
+          colors: materials.map((material) => (hasColor(material) ? material.color.clone() : null)),
+        },
       };
       targetObjects.set(target.id, runtimeTarget);
       targetObject.traverse((object) => objectTargets.set(object, target.id));
@@ -168,6 +179,10 @@ export async function buildRuntimeGeneration(
     });
     throw error;
   }
+}
+
+function hasColor(material: Material): material is Material & { color: Color } {
+  return "color" in material && material.color instanceof Color;
 }
 
 async function createAssetEntity(

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveStudioShortcut, type ShortcutInput } from "./shortcuts";
+import {
+  canExecuteStudioShortcut,
+  resolveExecutableStudioShortcut,
+  resolveStudioShortcut,
+  type ShortcutInput,
+  type StudioShortcut,
+} from "./shortcuts";
 
 const base: ShortcutInput = {
   key: "",
@@ -39,5 +45,43 @@ describe("resolveStudioShortcut", () => {
     expect(resolveStudioShortcut({ ...base, key: "w", targetTagName: "input" })).toBeNull();
     expect(resolveStudioShortcut({ ...base, key: "Delete", targetEditable: true })).toBeNull();
     expect(resolveStudioShortcut({ ...base, key: "w", altKey: true })).toBeNull();
+  });
+});
+
+describe("canExecuteStudioShortcut", () => {
+  it.each([
+    { type: "undo" },
+    { type: "redo" },
+    { type: "tool", tool: "translate" },
+    { type: "duplicate" },
+    { type: "delete" },
+  ] satisfies readonly StudioShortcut[])(
+    "blocks $type while authoring is unavailable",
+    (shortcut) => {
+      expect(canExecuteStudioShortcut(shortcut, false)).toBe(false);
+      expect(canExecuteStudioShortcut(shortcut, true)).toBe(true);
+    },
+  );
+
+  it.each([
+    { type: "save" },
+    { type: "focus" },
+    { type: "clear" },
+  ] satisfies readonly StudioShortcut[])("keeps $type available in Run", (shortcut) => {
+    expect(canExecuteStudioShortcut(shortcut, false)).toBe(true);
+  });
+});
+
+describe("resolveExecutableStudioShortcut", () => {
+  it("returns no authoring mutation in Run but preserves non-mutating shortcuts", () => {
+    expect(resolveExecutableStudioShortcut({ ...base, key: "z", ctrlKey: true }, false)).toBeNull();
+    expect(resolveExecutableStudioShortcut({ ...base, key: "w" }, false)).toBeNull();
+    expect(resolveExecutableStudioShortcut({ ...base, key: "Delete" }, false)).toBeNull();
+    expect(resolveExecutableStudioShortcut({ ...base, key: "s", ctrlKey: true }, false)).toEqual({
+      type: "save",
+    });
+    expect(resolveExecutableStudioShortcut({ ...base, key: "f" }, false)).toEqual({
+      type: "focus",
+    });
   });
 });

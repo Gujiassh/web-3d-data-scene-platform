@@ -17,10 +17,9 @@ export function EntityInspector(props: EntityInspectorProps) {
 
   if (props.entity === null) {
     return (
-      <aside aria-label={t.inspector.ariaLabel} className="studio-inspector inspector-empty">
-        <div className="inspector-header">{t.inspector.title}</div>
+      <div className="inspector-empty">
         <span>{t.inspector.empty}</span>
-      </aside>
+      </div>
     );
   }
 
@@ -48,11 +47,7 @@ function EntityInspectorForm(
   };
 
   return (
-    <aside aria-label={t.inspector.ariaLabel} className="studio-inspector">
-      <div className="inspector-header">
-        <span>{t.inspector.title}</span>
-        <span className="mono">{props.entity.id}</span>
-      </div>
+    <div className="entity-inspector-content">
       <section className="inspector-section">
         <h2>
           <Box size={13} /> {t.inspector.entity}
@@ -74,6 +69,7 @@ function EntityInspectorForm(
           />
         </label>
         <InspectorValue label={t.inspector.type} value={props.entity.type} />
+        <InspectorValue label={t.inspector.id} value={props.entity.id} mono />
         <InspectorValue
           label={t.inspector.parent}
           value={props.entity.parentId ?? t.inspector.sceneRoot}
@@ -109,7 +105,7 @@ function EntityInspectorForm(
           <Lock size={13} /> {t.inspector.locked}
         </div>
       )}
-    </aside>
+    </div>
   );
 }
 

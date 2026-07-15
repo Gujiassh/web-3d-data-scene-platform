@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { importSceneArchive, type SceneDocument } from "../../packages/document/src/index.js";
 
-const studioUrl = "http://127.0.0.1:4173";
-const factoryModelPath = path.resolve("assets/factory/public/m0-factory-cell.glb");
+const studioUrl = "/";
+const factoryModelPath = path.resolve("tests/fixtures/m0-factory/public/m0-factory-cell.glb");
 const factoryModelSha256 = "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8";
 const artifact = (name: string) => `artifacts/e2e/${name}`;
 

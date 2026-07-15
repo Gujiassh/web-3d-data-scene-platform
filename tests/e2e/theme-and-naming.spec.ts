@@ -2,12 +2,9 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const studioUrl = "http://127.0.0.1:4173";
-const factoryUrl = "http://127.0.0.1:4174";
+const studioUrl = "/";
 const studioLocaleKey = "web3d.studio.locale";
 const studioThemeKey = "web3d.studio.theme";
-const factoryLocaleKey = "web3d.factory-demo.locale";
-const factoryThemeKey = "web3d.factory-demo.theme";
 const artifact = (name: string) => `artifacts/e2e/${name}`;
 
 test.describe("Theme and scene naming", () => {
@@ -205,49 +202,6 @@ test.describe("Theme and scene naming", () => {
     await page.reload();
     await readyCanvas(page);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    expect(runtimeErrors).toEqual([]);
-  });
-
-  test("Factory detects and persists theme without resetting selection or telemetry", async ({
-    page,
-  }) => {
-    const runtimeErrors = observeRuntimeErrors(page);
-    await useEnglish(page, factoryLocaleKey);
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(factoryUrl);
-    const canvas = await readyCanvas(page);
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(page.getByTestId("connection-state")).toHaveClass(/connection-online/, {
-      timeout: 5_000,
-    });
-    expect(await canvasHasContent(page, canvas)).toBe(true);
-    await page.getByTestId("equipment-conveyor-01").click();
-    await expect(page.getByTestId("equipment-conveyor-01")).toHaveClass(/is-selected/);
-    await rememberCanvas(page, canvas);
-    const connectionClass = await page.getByTestId("connection-state").getAttribute("class");
-    await expectNoPageOverflow(page);
-    await page.screenshot({ path: artifact("factory-dark-1440x900.png"), fullPage: true });
-
-    await page.getByRole("button", { name: "Switch to light theme" }).click();
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    expect(await isRememberedCanvas(page, canvas)).toBe(true);
-    await expect(page.getByTestId("equipment-conveyor-01")).toHaveClass(/is-selected/);
-    await expect(page.getByTestId("connection-state")).toHaveAttribute(
-      "class",
-      connectionClass ?? "",
-    );
-    expect(await page.evaluate((key) => localStorage.getItem(key), factoryThemeKey)).toBe("light");
-
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await expectNoPageOverflow(page);
-    await page.screenshot({ path: artifact("factory-light-768x1024.png"), fullPage: true });
-    await page.reload();
-    await readyCanvas(page);
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.getByTestId("connection-state")).toHaveClass(/connection-online/, {
-      timeout: 5_000,
-    });
     expect(runtimeErrors).toEqual([]);
   });
 });

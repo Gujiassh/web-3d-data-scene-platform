@@ -1,4 +1,13 @@
-import type { SceneAsset, SceneDocument, SceneEntity, SceneTarget, Transform } from "../types.js";
+import type {
+  Binding,
+  MockDataSource,
+  RuleSet,
+  SceneAsset,
+  SceneDocument,
+  SceneEntity,
+  SceneTarget,
+  Transform,
+} from "../types.js";
 
 export interface RenameDocumentCommand {
   readonly type: "rename-document";
@@ -49,6 +58,40 @@ export interface ImportAssetInstanceCommand {
   readonly target: SceneTarget;
 }
 
+export interface SetTargetBusinessIdCommand {
+  readonly type: "set-target-business-id";
+  readonly targetId: string;
+  readonly businessId: string | null;
+}
+
+export interface UpsertMockDataSourceCommand {
+  readonly type: "upsert-mock-data-source";
+  readonly source: MockDataSource;
+}
+
+export interface ConfigureBindingRuleSetCommand {
+  readonly type: "configure-binding-rule-set";
+  readonly binding: Binding;
+  readonly ruleSet: RuleSet;
+}
+
+export interface RemoveBindingCommand {
+  readonly type: "remove-binding";
+  readonly bindingId: string;
+}
+
+export interface RemoveMockDataSourceCommand {
+  readonly type: "remove-mock-data-source";
+  readonly sourceId: string;
+}
+
+export type DataBindingDocumentCommand =
+  | SetTargetBusinessIdCommand
+  | UpsertMockDataSourceCommand
+  | ConfigureBindingRuleSetCommand
+  | RemoveBindingCommand
+  | RemoveMockDataSourceCommand;
+
 export type DocumentCommand =
   | RenameDocumentCommand
   | RenameEntityCommand
@@ -57,7 +100,8 @@ export type DocumentCommand =
   | TransformEntityCommand
   | DuplicateSubtreeCommand
   | DeleteSubtreeCommand
-  | ImportAssetInstanceCommand;
+  | ImportAssetInstanceCommand
+  | DataBindingDocumentCommand;
 
 export interface DocumentHistoryEntry {
   readonly before: SceneDocument;

@@ -2,6 +2,8 @@
 
 > 状态：Accepted for M0
 > 核验日期：2026-07-14
+> 当前拓扑：M0 的双 app 和构建数字是历史基线；feature 005 改为单 Studio 产品前端，后续
+> 006-009 路线见 `specs/001-product-foundation/delivery-plan.md`。
 
 ## 版本基线
 
@@ -103,7 +105,7 @@ React StrictMode 开发环境会重复执行 setup/cleanup。Viewer 创建、异
 - Vitest/node：Schema、语义验证、规则、数据顺序和生命周期纯逻辑。
 - Vitest/jsdom：React wrapper 挂载、属性变更和卸载。
 - Playwright/Chromium：真实 WebGL、Canvas 像素、选择、聚焦和截图。
-- Firefox/Safari 等跨浏览器验证在 M3/M4 执行，M0 先证明 Chromium 闭环。
+- Firefox/Safari 等跨浏览器验证在 feature 009 执行，M0 先证明 Chromium 闭环。
 
 2026-07-14 的 M0 门禁结果为 36 个 Vitest tests 和 4 个 Playwright Chromium tests 全部通过。
 浏览器测试还覆盖状态色像素、桌面/平板 framing、StrictMode 计时器、窄屏 unmount 和 WebGL
@@ -121,7 +123,14 @@ M0 没有物理需求。Studio 仅为合同控制台，局部 React state 足够
 `chunkSizeWarningLimit` 隐藏基线。
 
 Three.js、OrbitControls 和 GLTFLoader 是首屏 Viewer 闭环的实际依赖。是否动态拆分必须在
-M1/M4 用真实缓存、首屏和交互测量决定；当前不为消除告警引入没有运行时证据的加载复杂度。
+feature 009 用真实缓存、首屏和交互测量决定；当前不为消除告警引入没有运行时证据的加载复杂度。
+
+## TD-011：开发与浏览器测试使用单 Studio server
+
+feature 005 完成后，根 `pnpm dev` 只启动 Studio。Studio 固定使用 strict port 4173；端口被占用时
+命令失败，不静默漂移。Playwright 使用同一 baseURL 和一个隔离的 Studio webServer，
+`reuseExistingServer=false`。`pnpm verify:topology` 拒绝第二 app/server、已删除的 package、旧端口
+和旧产品偏好 key；003-005 的显式历史规格通过窄 allowlist 保留，不作为当前拓扑输入。
 
 ## 核验来源
 

@@ -1,100 +1,68 @@
-# Factory Demo 资产策略
+# M0 Reference Fixture Strategy
 
-> 状态：Accepted for MVP
-> 日期：2026-07-13
+> 状态：Accepted test evidence
+> 初始日期：2026-07-13
+> 迁移日期：2026-07-15
 
-## 目标
+## 当前角色
 
-用一套风格统一、许可清晰、可重复生成的低模工厂资产证明平台能力。资产服务于状态
-识别、选择、告警和物料流转，不追求 CAD 精度或照片级写实。
+`tests/fixtures/m0-factory/` 保存 M0 的确定性 GLB、SceneDocument、node manifest、生成器和
+CC0 许可证。它用于验证真实 GLB inspection、资产哈希、glTF node index、archive 往返、规则
+投影和浏览器运行时，不是 Studio 生产资产，也不代表独立 Factory 产品表面。
+
+feature 005 迁移目录时保持 GLB、manifest、SceneDocument、生成器和许可证内容不变。已接受
+的 GLB oracle 是：
+
+```text
+bytes=1216
+sha256=e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8
+```
+
+fixture 内部保留历史工厂 ID、设备数据路径和规则，因为这些值本身是合法的领域中立合同
+样例。不得为了产品改名而产生无业务价值的 hash、node mapping 或 archive churn。
 
 ## 许可
 
-- Blender Python 生成脚本随平台代码使用 MIT。
-- 脚本导出的 Factory Demo GLB 使用 CC0-1.0。
-- 每次发布记录 Blender 版本、脚本提交、导出参数和资产 SHA-256。
-- 不提交来源不明、仅允许个人使用或禁止再分发的模型和纹理。
-- AI 只能生成脚本、参数和设计草案；最终几何必须由仓库中的可复现流程产出。
+- 生成器随平台代码使用 MIT。
+- 生成的 GLB 使用 CC0-1.0。
+- fixture 必须保留许可证、生成来源、字节数和 SHA-256。
+- 不引入来源不明、禁止再分发或只有个人使用权的模型和纹理。
 
-## 视觉方向
+## 生成
 
-- 模块化低模工业设计，形体清楚，边缘有小倒角，不模仿具体厂商品牌。
-- 主体使用浅灰金属和白色烤漆，运动结构使用深石墨色。
-- 安全区域使用黄黑警示，但只用于真实功能位置。
-- 状态颜色由 Viewer 叠加，不烘焙到设备基础材质中。
-- 设备铭牌使用简单几何和材质，不依赖不可读的小尺寸贴图。
-- 不使用脏污、锈蚀和大量装饰管线制造“复杂感”。
+当前 M0 fixture 由 Node.js 脚本确定性生成：
 
-## 坐标与单位
-
-- glTF 右手坐标系，Y-up，单位为米。
-- 流水线默认沿 +X 方向流动。
-- 设备正面朝 +Z，默认检查相机位于 +Z 看向 -Z。
-- 设备根节点 pivot 位于落地包围盒中心。
-- 可动部件 pivot 位于真实转轴或滑轨起点。
-- 所有对象在导出前应用缩放；根节点 scale 为 `[1, 1, 1]`。
-
-## MVP 模块
-
-| 模块              | 用途                   | 动画/状态                    |
-| ----------------- | ---------------------- | ---------------------------- |
-| Floor Bay         | 统一空间尺度和区域边界 | 无                           |
-| Safety Fence      | 形成工作单元和安全入口 | 门开关可选                   |
-| Straight Conveyor | 主物料路径             | belt-cycle                   |
-| Transfer Conveyor | 支线转运               | belt-cycle                   |
-| Press Station     | 加工设备和主要告警对象 | idle、cycle、fault-stop      |
-| Robot Cell        | 视觉重点和动画绑定     | idle、pick-place、fault-stop |
-| Sensor Gate       | 检测与状态切换         | scan                         |
-| Crate / Pallet    | 流动物料和重复实例     | 路径动画由运行时负责         |
-| Stack Light       | 显式设备状态           | 颜色由绑定规则负责           |
-
-动画 clip 名称使用小写 kebab-case。动画只表达设备显示状态，不承担业务数据迁移或物理
-碰撞语义。
-
-## 节点命名
-
-```text
-module-press-root
-├── body
-├── door
-├── actuator
-├── worktable
-└── stack-light
+```bash
+node tests/fixtures/m0-factory/scripts/generate-m0-asset.mjs
 ```
 
-- 节点名称用于调试和 Studio 展示，不作为稳定业务 ID。
-- 运行时引用使用资产 SHA-256 和 glTF node index。
-- 可绑定部件在生成脚本中显式注册，并输出 node manifest。
-- 禁止依赖“第一个 Mesh”、名称模糊匹配或子节点顺序推断业务意义。
+重生成属于显式 fixture 更新，必须同时验证所有文件 diff、GLB hash、manifest、SceneDocument
+资产引用、runtime node mapping 和 archive round-trip。普通路径迁移不得顺带重生成。
 
-## 资产预算
+## 坐标与节点合同
 
-| 指标              | Factory Demo 总预算 | 单模块建议                             |
-| ----------------- | ------------------- | -------------------------------------- |
-| GLB 压缩后大小    | <= 15 MB            | 常规模块 <= 1 MB                       |
-| 唯一三角面        | <= 200,000          | 视觉重点 <= 50,000；常规模块 <= 12,000 |
-| 材质数量          | <= 32               | 常规模块 <= 4                          |
-| 纹理分辨率        | <= 2048             | 常规贴图 <= 1024                       |
-| 运行时 draw calls | <= 120              | 重复部件必须实例化                     |
-| 动画 clip         | <= 12               | 每模块 <= 3                            |
+- glTF 使用右手坐标系、Y-up 和米制单位。
+- 业务 Target 由资产 SHA-256 与 glTF node index 识别。
+- 节点名称只用于调试，不作为稳定业务 ID。
+- 禁止依赖第一个 Mesh、名称模糊匹配或遍历顺序推断业务含义。
+- node manifest 必须与 GLB 实际 node index 一致。
 
-预算是导入警告和基准场景的共同依据。为了达到数字而合并语义不同的对象是不允许的。
+## 测试所有权
 
-## 生成和导出流程
+- `packages/document`：SceneDocument 结构、语义和确定性序列化。
+- `packages/runtime`：GLB inspection、hash、node mapping、规则投影和 Viewer lifecycle。
+- `apps/studio` tests：IndexedDB、导入、JSON/ZIP 和 Run 行为。
+- Playwright：真实 WebGL、Canvas 像素、状态色、选择、告警和 context restoration。
 
-1. Blender Python 根据参数创建几何、材质、节点和动画。
-2. 脚本生成 node manifest 和资产元数据。
-3. 固定相机渲染正面、45 度和俯视预览图。
-4. 导出 GLB，并使用 Khronos glTF Validator 检查格式。
-5. 使用 glTF Transform 检查三角面、材质、纹理和 draw call 相关指标。
-6. 计算 SHA-256，将预览、manifest、验证结果和许可证写入资产目录。
-7. Playwright 在 Viewer 中加载资产并做 Canvas 非空、 framing 和像素检查。
+Studio production build 不复制该目录。旧 Factory harness 的 Vite 映射已在 Studio Run 替代
+证据通过后与应用一起删除；fixture 只由自动化测试从仓库路径读取。
 
-## 资产验收
+## 验收
 
-- 模块比例一致，传送带连接高度和连接面完全对齐。
-- 可动部件 pivot 正确，动画无穿模和跳帧。
-- node manifest 与 GLB 实际 node index 一致。
-- 状态色叠加后仍可辨认基础结构和选择轮廓。
-- 重复实例在拾取时能反查到正确 Target ID。
-- 所有资产都有生成来源、哈希、预算结果和许可证。
+- fixture 文件可从仓库固定路径直接读取。
+- GLB 字节数和 SHA-256 与 accepted oracle 一致。
+- manifest 记录相同 hash、byte length 和两个 node target。
+- SceneDocument 通过当前 Schema 与语义校验。
+- 测试不通过名称、顺序或 first-available 推断 Target。
+- 目录不进入 Studio production build。
+- 许可证与生成器随 fixture 一同存在。

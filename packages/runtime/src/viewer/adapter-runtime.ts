@@ -12,6 +12,7 @@ interface AdapterRuntimeOptions {
   readonly acceptEnvelope: (envelope: DataEnvelope) => void;
   readonly hasSource: (sourceId: string) => boolean;
   readonly isDisposed: () => boolean;
+  readonly isEnabled: () => boolean;
   readonly now: () => number;
   readonly recordDiagnostic: (diagnostic: Diagnostic) => void;
 }
@@ -23,6 +24,7 @@ export class ViewerAdapterRuntime {
   readonly #acceptEnvelope;
   readonly #hasSource;
   readonly #isDisposed;
+  readonly #isEnabled;
   readonly #now;
   readonly #recordDiagnostic;
 
@@ -32,6 +34,7 @@ export class ViewerAdapterRuntime {
     this.#acceptEnvelope = options.acceptEnvelope;
     this.#hasSource = options.hasSource;
     this.#isDisposed = options.isDisposed;
+    this.#isEnabled = options.isEnabled;
     this.#now = options.now;
     this.#recordDiagnostic = options.recordDiagnostic;
     for (const [sourceId, adapter] of Object.entries(options.adapters ?? {})) {
@@ -40,9 +43,15 @@ export class ViewerAdapterRuntime {
   }
 
   async applyDocumentAdapters(): Promise<void> {
+    await this.reconcileDocumentAdapters(this.#isEnabled());
+  }
+
+  async reconcileDocumentAdapters(enabled: boolean): Promise<void> {
+    const interrupted = enabled ? Promise.resolve() : this.#stopAllActive();
     await this.#queue(async () => {
+      await interrupted;
       await this.#stopAllActive();
-      if (this.#isDisposed()) return;
+      if (this.#isDisposed() || !enabled || !this.#isEnabled()) return;
       for (const [sourceId, adapter] of this.#configured) {
         const revision = this.#revisions.get(sourceId) ?? 0;
         await this.#startAdapter(
@@ -50,6 +59,7 @@ export class ViewerAdapterRuntime {
           adapter,
           () =>
             !this.#isDisposed() &&
+            this.#isEnabled() &&
             this.#hasSource(sourceId) &&
             (this.#revisions.get(sourceId) ?? 0) === revision &&
             this.#configured.get(sourceId) === adapter,
@@ -83,12 +93,13 @@ export class ViewerAdapterRuntime {
         return;
       }
       this.#configured.set(sourceId, adapter);
-      if (this.#hasSource(sourceId)) {
+      if (this.#isEnabled() && this.#hasSource(sourceId)) {
         await this.#startAdapter(
           sourceId,
           adapter,
           () =>
             !this.#isDisposed() &&
+            this.#isEnabled() &&
             this.#hasSource(sourceId) &&
             this.#revisions.get(sourceId) === revision &&
             this.#configured.get(sourceId) === adapter,

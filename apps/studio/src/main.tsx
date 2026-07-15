@@ -11,6 +11,7 @@ import { ThemeProvider } from "@web3d/demo-support/theme-provider";
 import { App } from "./App";
 import { StudioI18nProvider } from "./i18n/I18nProvider";
 import "./styles.css";
+import "./data-binding/data-binding.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");
 

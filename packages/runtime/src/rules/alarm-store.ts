@@ -84,6 +84,15 @@ export class RuntimeAlarmStore {
   clear(): void {
     this.#alarms.clear();
   }
+
+  clearAll(): readonly AlarmTransition[] {
+    const transitions = this.snapshot().map((alarm) => ({
+      transition: "cleared" as const,
+      alarm,
+    }));
+    this.#alarms.clear();
+    return transitions;
+  }
 }
 
 export function alarmKey(targetId: string, bindingId: string, ruleId: string): string {

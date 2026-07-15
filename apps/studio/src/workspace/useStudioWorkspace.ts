@@ -50,6 +50,7 @@ import {
   type StudioMode,
   type StudioSessionState,
 } from "../session/session-state";
+import type { StudioCommandOutcome } from "./command-outcome";
 
 export type ModelImportState =
   | { readonly status: "inspecting"; readonly fileName: string }
@@ -80,7 +81,7 @@ export interface StudioWorkspace {
   readonly dirty: boolean;
   readonly exportOutdated: boolean;
   readonly canEdit: boolean;
-  readonly execute: (command: DocumentCommand) => void;
+  readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
   readonly undo: () => void;
   readonly redo: () => void;
   readonly save: () => Promise<void>;
@@ -250,15 +251,19 @@ export function useStudioWorkspace(): StudioWorkspace {
   }, [project, session]);
 
   const execute = useCallback(
-    (command: DocumentCommand) => {
-      if (project === null || history === null || session === null) return;
+    (command: DocumentCommand): StudioCommandOutcome => {
+      if (project === null || history === null || session === null) {
+        return { status: "unavailable" };
+      }
       try {
         assertCanEdit(session);
         if (importState?.status === "committing") {
           throw studioAppErrors.importCommitting();
         }
         const nextHistory = executeHistoryCommand(history, command, { mode: session.mode });
-        if (nextHistory === history) return;
+        if (nextHistory === history) {
+          return { status: "unchanged", revision: history.document.revision };
+        }
         const nextProject = withProjectDocument(project, nextHistory.document);
         setHistory(nextHistory);
         projectRef.current = nextProject;
@@ -272,8 +277,11 @@ export function useStudioWorkspace(): StudioWorkspace {
             revision: nextHistory.document.revision,
           }),
         );
+        return { status: "changed", revision: nextHistory.document.revision };
       } catch (error) {
-        addDiagnostic(presentError(error));
+        const message = presentError(error);
+        addDiagnostic(message);
+        return { status: "rejected", message };
       }
     },
     [addDiagnostic, history, importState?.status, presentError, project, session],

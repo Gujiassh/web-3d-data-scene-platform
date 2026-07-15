@@ -4,14 +4,16 @@ import { Box, FolderTree, TriangleAlert } from "lucide-react";
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
 
 import { AssetList } from "./features/AssetList";
-import { EntityInspector } from "./features/EntityInspector";
 import { ImportDialog } from "./features/ImportDialog";
 import { ProjectMenu } from "./features/ProjectMenu";
 import { SceneNameDialog, type SceneNameDialogMode } from "./features/SceneNameDialog";
 import { SceneTree } from "./features/SceneTree";
 import { StudioToolbar } from "./features/StudioToolbar";
+import { StudioInspector } from "./features/StudioInspector";
+import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
-import { resolveStudioShortcut } from "./session/shortcuts";
+import { studioHistoryCapabilities } from "./session/authoring-capabilities";
+import { resolveExecutableStudioShortcut } from "./session/shortcuts";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
 type LeftPanel = "scene" | "assets";
@@ -35,6 +37,17 @@ export function App() {
   const project = workspace.project;
   const session = workspace.session;
   const history = workspace.history;
+  const historyCapabilities = studioHistoryCapabilities(
+    workspace.canEdit,
+    history?.undoStack.length ?? 0,
+    history?.redoStack.length ?? 0,
+  );
+  const dataBinding = useStudioDataBinding({
+    document: project?.document ?? null,
+    mode: session?.mode ?? "edit",
+    selectedEntityId,
+    execute: workspace.execute,
+  });
   const openModelPicker = (): void => modelInputRef.current?.click();
   const closeSceneNameDialog = (): void => {
     setSceneNameDialogMode(null);
@@ -59,24 +72,27 @@ export function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target instanceof HTMLElement ? event.target : null;
-      const shortcut = resolveStudioShortcut({
-        key: event.key,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        shiftKey: event.shiftKey,
-        altKey: event.altKey,
-        ...(target === null ? {} : { targetTagName: target.tagName }),
-        ...(target === null ? {} : { targetEditable: target.isContentEditable }),
-      });
+      const shortcut = resolveExecutableStudioShortcut(
+        {
+          key: event.key,
+          metaKey: event.metaKey,
+          ctrlKey: event.ctrlKey,
+          shiftKey: event.shiftKey,
+          altKey: event.altKey,
+          ...(target === null ? {} : { targetTagName: target.tagName }),
+          ...(target === null ? {} : { targetEditable: target.isContentEditable }),
+        },
+        workspace.canEdit,
+      );
       if (shortcut === null) return;
       event.preventDefault();
       if (shortcut.type === "undo") workspace.undo();
       if (shortcut.type === "redo") workspace.redo();
       if (shortcut.type === "save") void workspace.save().catch(() => undefined);
-      if (shortcut.type === "duplicate" && workspace.canEdit && selectedEntityId !== null) {
+      if (shortcut.type === "duplicate" && selectedEntityId !== null) {
         workspace.duplicateEntity(selectedEntityId);
       }
-      if (shortcut.type === "delete" && workspace.canEdit && selectedEntityId !== null) {
+      if (shortcut.type === "delete" && selectedEntityId !== null) {
         workspace.deleteEntity(selectedEntityId);
         workspace.selectEntity(null);
       }
@@ -107,8 +123,8 @@ export function App() {
     <div className="studio-app">
       <StudioToolbar
         canEdit={workspace.canEdit}
-        canRedo={(history?.redoStack.length ?? 0) > 0}
-        canUndo={(history?.undoStack.length ?? 0) > 0}
+        canRedo={historyCapabilities.canRedo}
+        canUndo={historyCapabilities.canUndo}
         exportOutdated={workspace.exportOutdated}
         hasSelection={selectedEntityId !== null}
         mode={session?.mode ?? "edit"}
@@ -235,6 +251,8 @@ export function App() {
           ) : (
             <AuthoringScene
               ref={viewerRef}
+              adapters={dataBinding.adapters}
+              dataRuntimeEnabled={session?.mode === "run"}
               canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
               className="studio-viewer"
@@ -244,6 +262,7 @@ export function App() {
               onDiagnostic={(diagnostic) =>
                 workspace.addDiagnostic(`${diagnostic.code} ${diagnostic.message}`)
               }
+              onEvent={dataBinding.handleViewerEvent}
               onReady={() => {
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
@@ -251,9 +270,10 @@ export function App() {
                 viewer.selectEntity(selectedEntityId);
               }}
               onSelectionChange={(event) => workspace.selectEntity(event.entityId)}
-              onTransformCommit={(event) =>
-                workspace.transformEntity(event.entityId, event.before, event.after)
-              }
+              onTransformCommit={(event) => {
+                if (!workspace.canEdit) return;
+                workspace.transformEntity(event.entityId, event.before, event.after);
+              }}
             />
           )}
           <div className="viewport-mode mono" data-testid="viewport-mode">
@@ -263,18 +283,37 @@ export function App() {
           </div>
         </section>
 
-        <EntityInspector
-          editable={workspace.canEdit}
-          entity={selectedEntity}
-          onRename={(entityId, name) =>
-            workspace.execute({ type: "rename-entity", entityId, name })
-          }
-          onTransformChange={(entityId, transform) => {
-            const entity = project?.document.entities.find((item) => item.id === entityId);
-            if (entity !== undefined)
-              workspace.transformEntity(entityId, entity.transform, transform);
-          }}
-        />
+        {project !== null && (
+          <StudioInspector
+            document={project.document}
+            projectId={project.record.id}
+            editable={workspace.canEdit}
+            entity={selectedEntity}
+            execute={workspace.execute}
+            mode={session?.mode ?? "edit"}
+            preview={dataBinding.preview}
+            selectedEntityId={selectedEntityId}
+            targetResolution={dataBinding.targetResolution}
+            onFocusTarget={(targetId) => {
+              const entityId = project.document.targets.find(
+                (target) => target.id === targetId,
+              )?.entityId;
+              if (entityId === undefined) return;
+              workspace.selectEntity(entityId);
+              void viewerRef.current?.focusEntity(entityId).catch((error: unknown) => {
+                workspace.addDiagnostic(error instanceof Error ? error.message : String(error));
+              });
+            }}
+            onRename={(entityId, name) =>
+              workspace.execute({ type: "rename-entity", entityId, name })
+            }
+            onTransformChange={(entityId, transform) => {
+              const entity = project?.document.entities.find((item) => item.id === entityId);
+              if (entity !== undefined)
+                workspace.transformEntity(entityId, entity.transform, transform);
+            }}
+          />
+        )}
 
         <section className="studio-diagnostics" aria-label={t.app.diagnostics.label}>
           <div className="diagnostics-title">

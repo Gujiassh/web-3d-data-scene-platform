@@ -3,6 +3,10 @@
 This document records the stable ownership and persistence rules introduced by
 `specs/004-theme-project-naming`.
 
+Feature 004's Studio/Factory theme acceptance remains a historical fact. Feature 005 superseded and
+removed the Factory product surface after replacement Studio Run evidence passed. The current product
+contract and browser-local preference below are Studio-only.
+
 ## Scene Name Ownership
 
 `SceneDocument.name` is the authoritative scene name. `ProjectRecord.name` is a denormalized index
@@ -54,11 +58,10 @@ Resolution order:
 Storage keys:
 
 - Studio: `web3d.studio.theme`
-- Factory Demo: `web3d.factory-demo.theme`
 
 The shared provider exposes the active theme on `document.documentElement.dataset.theme`, synchronizes
-native `color-scheme`, and applies explicit changes without reload. Studio and Factory use the shared
-icon control with app-owned bilingual accessible labels.
+native `color-scheme`, and applies explicit changes without reload. Studio uses the icon control with
+app-owned bilingual accessible labels.
 
 Theme data must never enter:
 
@@ -77,9 +80,9 @@ Shared `theme.css` owns semantic tokens for surfaces, text, borders, accents, se
 translucent overlays, backdrops and shadows. Application styles must consume those tokens instead of
 introducing light-only color literals.
 
-Both themes must keep visible focus, readable status states and stable geometry at the existing Studio
-desktop and Factory tablet breakpoints. A theme change must preserve the current Canvas element and
-runtime state.
+Both themes must keep visible focus, readable status states and stable geometry at the Studio 1280x720
+and 1440x900 breakpoints. A theme change must preserve the current Canvas element, authored document,
+selection and active Run state.
 
 ## Verification
 
@@ -92,4 +95,4 @@ Required regression coverage:
   long-name truncation and renamed JSON/ZIP round trips.
 - Browser flow proving theme detection/persistence, same Canvas, unchanged document/selection/connection,
   nonblank Canvas pixels and no target-viewport overflow.
-- Light/dark screenshot inspection for Studio and Factory Demo.
+- Light/dark screenshot inspection for Studio Edit and Run.

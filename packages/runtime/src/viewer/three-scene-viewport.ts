@@ -19,6 +19,7 @@ import type {
   TransformAuthoringControllerFactory,
 } from "../authoring/transform-authoring-controller";
 import { defaultAssetResolver } from "../assets/asset-loader";
+import { cloneJson } from "../data/json-pointer";
 import { RuntimeValueStore } from "../data/value-store";
 import { diagnostic, diagnosticError, RuntimeDiagnosticError } from "../diagnostics";
 import { AnimationFrameSlot } from "../lifecycle/idempotent-disposer";
@@ -35,12 +36,13 @@ import type {
   DataEnvelope,
   Diagnostic,
   FocusOptions,
+  RuntimeBindingState,
   SceneViewer,
   ViewerEvent,
   ViewerLifecycle,
   ViewerSnapshot,
 } from "../types";
-import { applyRuleEffects } from "./effect-projector";
+import { applyRuleEffects, resetRuleEffects } from "./effect-projector";
 import { ViewerAdapterRuntime } from "./adapter-runtime";
 import { ObjectPicker } from "./object-picker";
 import {
@@ -53,6 +55,7 @@ import { SelectionOverlay } from "./selection-overlay";
 
 export interface AuthoringViewportOptions {
   readonly enabled: true;
+  readonly dataRuntimeEnabled: boolean;
   readonly initialTool: AuthoringTool;
   readonly onEvent: ((event: AuthoringViewerEvent) => void) | undefined;
   readonly createTransformController: TransformAuthoringControllerFactory;
@@ -60,6 +63,7 @@ export interface AuthoringViewportOptions {
 
 interface ReadonlyViewportOptions {
   readonly enabled: false;
+  readonly dataRuntimeEnabled: true;
   readonly initialTool: "select";
   readonly onEvent: undefined;
 }
@@ -98,6 +102,8 @@ class ThreeSceneViewport {
   #document: SceneDocument | null = null;
   #valueStore = new RuntimeValueStore();
   #alarmStore = new RuntimeAlarmStore();
+  readonly #bindingStates = new Map<string, RuntimeBindingState>();
+  #dataRuntimeEnabled: boolean;
   #lifecycle: ViewerLifecycle = "created";
   #selectedTargetId: string | null = null;
   #selectedEntityId: string | null = null;
@@ -118,9 +124,11 @@ class ThreeSceneViewport {
     this.#onViewerEvent = options.onEvent;
     this.#authoring = options.authoring ?? {
       enabled: false,
+      dataRuntimeEnabled: true,
       initialTool: "select",
       onEvent: undefined,
     };
+    this.#dataRuntimeEnabled = this.#authoring.dataRuntimeEnabled;
     this.#reducedMotion = options.reducedMotion ?? false;
 
     this.#renderer = new WebGLRenderer({ antialias: true });
@@ -167,6 +175,7 @@ class ThreeSceneViewport {
       hasSource: (sourceId) =>
         this.#document?.dataSources.some((source) => source.id === sourceId) === true,
       isDisposed: () => this.#disposing,
+      isEnabled: () => this.#dataRuntimeEnabled,
       now: () => performance.now(),
       recordDiagnostic: (value) => this.#recordDiagnostic(value),
     });
@@ -300,6 +309,7 @@ class ThreeSceneViewport {
           ? previousSelectedEntityId
           : null;
     const previous = this.#generation;
+    this.#clearDataRuntimeState();
     this.#transformAuthoring?.sync(null, previousSelectedEntityId);
     this.#selectionOverlay.clear();
     if (previous !== null) this.#scene.remove(previous.root);
@@ -315,16 +325,21 @@ class ThreeSceneViewport {
 
     this.#valueStore = new RuntimeValueStore();
     this.#alarmStore = new RuntimeAlarmStore();
+    this.#bindingStates.clear();
     this.#selectedTargetId = null;
     this.#selectedEntityId = nextSelectedEntityId;
-    for (const sourceDefinition of source.dataSources) {
-      this.#valueStore.registerSource(sourceDefinition.id, sourceDefinition);
+    if (this.#dataRuntimeEnabled) {
+      for (const sourceDefinition of source.dataSources) {
+        this.#valueStore.registerSource(sourceDefinition.id, sourceDefinition);
+      }
     }
     this.#applyEnvironment(source);
     const initialView = source.views[0];
     if (initialView !== undefined) this.#applyView(initialView.id);
-    for (const sourceDefinition of source.dataSources) {
-      this.#applyBindings(sourceDefinition.id);
+    if (this.#dataRuntimeEnabled) {
+      for (const sourceDefinition of source.dataSources) {
+        this.#applyBindings(sourceDefinition.id);
+      }
     }
     this.#syncSelectionOverlay();
     this.#transformAuthoring?.sync(next, nextSelectedEntityId);
@@ -340,6 +355,22 @@ class ThreeSceneViewport {
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void> {
     this.#ensureActive();
     return this.#adapterRuntime.setAdapter(sourceId, adapter);
+  }
+
+  async setDataRuntimeEnabled(enabled: boolean): Promise<void> {
+    this.#ensureActive();
+    if (!this.#authoring.enabled || this.#dataRuntimeEnabled === enabled) return;
+    this.#dataRuntimeEnabled = enabled;
+    if (!enabled) {
+      const stopping = this.#adapterRuntime.reconcileDocumentAdapters(false);
+      this.#clearDataRuntimeState();
+      await stopping;
+      return;
+    }
+
+    this.#resetValueStore(true);
+    for (const sourceId of this.#valueStore.sourceIds()) this.#applyBindings(sourceId);
+    await this.#adapterRuntime.reconcileDocumentAdapters(true);
   }
 
   setCanvasLabel(label: string): void {
@@ -424,6 +455,8 @@ class ThreeSceneViewport {
       ...snapshot,
       selectedEntityId: this.#selectedEntityId,
       activeTool: this.#transformAuthoring.getTool(),
+      dataRuntimeEnabled: this.#dataRuntimeEnabled,
+      bindingStates: this.#bindingStateSnapshot(),
     };
   }
 
@@ -501,6 +534,7 @@ class ThreeSceneViewport {
   }
 
   #acceptEnvelope(envelope: DataEnvelope): void {
+    if (!this.#dataRuntimeEnabled) return;
     const before = this.#valueStore.getSource(envelope.sourceId)?.connection;
     const update = this.#valueStore.accept(envelope, performance.now());
     for (const value of update.diagnostics) this.#recordDiagnostic(value);
@@ -512,7 +546,7 @@ class ThreeSceneViewport {
   }
 
   #updateHealth(): void {
-    if (this.#lifecycle !== "ready") return;
+    if (this.#lifecycle !== "ready" || !this.#dataRuntimeEnabled) return;
     for (const sourceId of this.#valueStore.sourceIds()) {
       const afterBefore = this.#valueStore.getSource(sourceId)?.connection;
       const update = this.#valueStore.updateHealth(sourceId, performance.now());
@@ -537,12 +571,25 @@ class ThreeSceneViewport {
       const ruleSet = document.ruleSets.find((candidate) => candidate.id === binding.ruleSetId);
       if (target === undefined || ruleSet === undefined) continue;
       try {
+        const value = this.#valueStore.getValue(sourceId, binding.pointer);
         const result = evaluateRuleSet(ruleSet, {
-          value: this.#valueStore.getValue(sourceId, binding.pointer),
+          value,
           quality: source.quality,
           connection: source.connection,
         });
+        resetRuleEffects(target, binding.writes);
         applyRuleEffects(target, result.effects);
+        this.#updateBindingState({
+          bindingId: binding.id,
+          targetId: binding.targetId,
+          sourceId,
+          pointer: binding.pointer,
+          value,
+          quality: source.quality,
+          connection: source.connection,
+          ruleId: result.ruleId,
+          ...(source.sourceTime === undefined ? {} : { sourceTime: source.sourceTime }),
+        });
         for (const transition of this.#alarmStore.reconcile({
           targetId: binding.targetId,
           bindingId: binding.id,
@@ -566,6 +613,49 @@ class ThreeSceneViewport {
       }
     }
     this.#requestRender();
+  }
+
+  #clearDataRuntimeState(): void {
+    this.#generation?.targets.forEach((target) => resetRuleEffects(target));
+    for (const transition of this.#alarmStore.clearAll()) {
+      this.#emitViewer({ type: "alarm", ...transition });
+    }
+    for (const bindingId of [...this.#bindingStates.keys()].sort(compare)) {
+      this.#emitAuthoring({
+        type: "binding-state-change",
+        transition: "cleared",
+        bindingId,
+      });
+    }
+    this.#bindingStates.clear();
+    this.#resetValueStore(false);
+    this.#requestRender();
+  }
+
+  #resetValueStore(registerSources: boolean): void {
+    this.#valueStore = new RuntimeValueStore();
+    if (!registerSources) return;
+    for (const source of this.#document?.dataSources ?? []) {
+      this.#valueStore.registerSource(source.id, source);
+    }
+  }
+
+  #updateBindingState(state: RuntimeBindingState): void {
+    const snapshot = cloneBindingState(state);
+    const current = this.#bindingStates.get(snapshot.bindingId);
+    if (bindingStatesEqual(current, snapshot)) return;
+    this.#bindingStates.set(snapshot.bindingId, snapshot);
+    this.#emitAuthoring({
+      type: "binding-state-change",
+      transition: "updated",
+      state: cloneBindingState(snapshot),
+    });
+  }
+
+  #bindingStateSnapshot(): readonly RuntimeBindingState[] {
+    return [...this.#bindingStates.values()]
+      .sort((left, right) => compare(left.bindingId, right.bindingId))
+      .map(cloneBindingState);
   }
 
   #target(targetId: string): RuntimeTarget {
@@ -832,6 +922,57 @@ function isAbortError(error: unknown): boolean {
 
 function abortError(): DOMException {
   return new DOMException("The operation was aborted.", "AbortError");
+}
+
+function bindingStatesEqual(
+  left: RuntimeBindingState | undefined,
+  right: RuntimeBindingState,
+): boolean {
+  return (
+    left !== undefined &&
+    left.targetId === right.targetId &&
+    left.sourceId === right.sourceId &&
+    left.pointer === right.pointer &&
+    left.quality === right.quality &&
+    left.connection === right.connection &&
+    left.ruleId === right.ruleId &&
+    left.sourceTime === right.sourceTime &&
+    jsonValuesEqual(left.value, right.value)
+  );
+}
+
+function cloneBindingState(state: RuntimeBindingState): RuntimeBindingState {
+  return {
+    ...state,
+    value: state.value === undefined ? undefined : cloneJson(state.value),
+  };
+}
+
+function jsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return (
+      left.length === right.length &&
+      left.every((value, index) => jsonValuesEqual(value, right[index]))
+    );
+  }
+  if (!isRecord(left) || !isRecord(right)) return false;
+  const leftKeys = Object.keys(left).sort(compare);
+  const rightKeys = Object.keys(right).sort(compare);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) => key === rightKeys[index] && jsonValuesEqual(left[key], right[key]),
+    )
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function compare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function reportErrorAsync(error: unknown): void {

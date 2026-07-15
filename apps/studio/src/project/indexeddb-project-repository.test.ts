@@ -15,7 +15,7 @@ import {
 
 import type { SceneDocument } from "@web3d/document";
 
-const FIXTURE_PATH = resolve(process.cwd(), "assets/factory/public/m0-scene.json");
+const FIXTURE_PATH = resolve(process.cwd(), "tests/fixtures/m0-factory/public/m0-scene.json");
 
 class FixedClock {
   #current: Date;

@@ -110,6 +110,22 @@ export interface RuntimeAlarm {
   sourceTime?: string;
 }
 
+export interface RuntimeBindingState {
+  bindingId: string;
+  targetId: string;
+  sourceId: string;
+  pointer: string;
+  value: JsonValue | undefined;
+  quality: DataQuality;
+  connection: ConnectionStatus;
+  ruleId: string;
+  sourceTime?: string;
+}
+
+export type BindingStateChangeEvent =
+  | { type: "binding-state-change"; transition: "updated"; state: RuntimeBindingState }
+  | { type: "binding-state-change"; transition: "cleared"; bindingId: string };
+
 export interface PerformanceSample {
   renderDurationMs: number;
   drawCalls: number;
@@ -129,6 +145,7 @@ export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
 
 export type AuthoringViewerEvent =
   | ViewerEvent
+  | BindingStateChangeEvent
   | { type: "entity-selection-change"; entityId: string | null; origin: "viewport" | "api" }
   | { type: "tool-change"; tool: AuthoringTool }
   | { type: "transform-preview"; entityId: string; transform: Transform }
@@ -154,6 +171,8 @@ export interface ViewerSnapshot {
 export interface AuthoringViewerSnapshot extends ViewerSnapshot {
   selectedEntityId: string | null;
   activeTool: AuthoringTool;
+  dataRuntimeEnabled: boolean;
+  bindingStates: readonly RuntimeBindingState[];
 }
 
 export interface CreateViewerOptions {
@@ -168,6 +187,7 @@ export interface CreateViewerOptions {
 
 export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, "onEvent"> {
   initialTool?: AuthoringTool;
+  dataRuntimeEnabled?: boolean;
   onEvent?: (event: AuthoringViewerEvent) => void;
 }
 
@@ -187,6 +207,7 @@ export interface SceneViewer {
 export interface AuthoringSceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
   focusEntity(entityId: string, options?: FocusOptions): Promise<void>;

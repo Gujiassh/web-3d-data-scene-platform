@@ -41,6 +41,19 @@ export function resolveStudioShortcut(input: ShortcutInput): StudioShortcut | nu
   return null;
 }
 
+export function canExecuteStudioShortcut(shortcut: StudioShortcut, canEdit: boolean): boolean {
+  if (canEdit) return true;
+  return shortcut.type === "save" || shortcut.type === "focus" || shortcut.type === "clear";
+}
+
+export function resolveExecutableStudioShortcut(
+  input: ShortcutInput,
+  canEdit: boolean,
+): StudioShortcut | null {
+  const shortcut = resolveStudioShortcut(input);
+  return shortcut !== null && canExecuteStudioShortcut(shortcut, canEdit) ? shortcut : null;
+}
+
 function isEditingText(input: ShortcutInput): boolean {
   if (input.targetEditable === true) return true;
   const tagName = input.targetTagName?.toLowerCase();

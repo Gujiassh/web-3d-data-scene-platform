@@ -7,9 +7,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { loadGltfAsset, sha256Hex } from "./asset-loader";
 
-const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb", import.meta.url);
+const assetUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+  import.meta.url,
+);
 const manifestUrl = new URL(
-  "../../../../assets/factory/public/m0-factory-cell.manifest.json",
+  "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.manifest.json",
   import.meta.url,
 );
 

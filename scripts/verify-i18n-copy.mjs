@@ -4,7 +4,7 @@ import process from "node:process";
 
 import ts from "typescript";
 
-const roots = ["apps/studio/src", "apps/factory-demo/src", "apps/shared"];
+const roots = ["apps/studio/src", "apps/shared"];
 const userFacingAttributes = new Set(["alt", "aria-label", "placeholder", "title"]);
 const allowedTechnicalText = new Set([
   "/machines/*/status",
@@ -20,9 +20,6 @@ const allowedTechnicalText = new Set([
   "中",
 ]);
 const allowedDeveloperErrors = new Set([
-  "Factory Demo root element was not found.",
-  "FactoryI18nProvider is missing.",
-  "Unhandled M0 scene-load reason:",
   "Studio root element was not found.",
   "StudioI18nProvider is missing.",
 ]);

@@ -3,11 +3,9 @@ import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const studioUrl = "http://127.0.0.1:4173";
-const factoryUrl = "http://127.0.0.1:4174";
+const studioUrl = "/";
 const studioLocaleKey = "web3d.studio.locale";
-const factoryLocaleKey = "web3d.factory-demo.locale";
-const factoryModelPath = path.resolve("assets/factory/public/m0-factory-cell.glb");
+const factoryModelPath = path.resolve("tests/fixtures/m0-factory/public/m0-factory-cell.glb");
 const artifact = (name: string) => `artifacts/e2e/${name}`;
 
 test.describe("Chinese and English interface", () => {
@@ -69,62 +67,13 @@ test.describe("Chinese and English interface", () => {
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("Factory switches presentation without resetting selection, connection, or Viewer", async ({
-    page,
-  }) => {
-    const runtimeErrors = observeRuntimeErrors(page);
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(factoryUrl);
-
-    const canvas = await readyCanvas(page);
-    const connection = page.getByTestId("connection-state");
-    await expect(connection).toHaveClass(/connection-online/, { timeout: 5_000 });
-    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
-    await expect(page.getByText("设备", { exact: true }).first()).toBeVisible();
-    await expect(canvas).toHaveAttribute("aria-label", /[\u3400-\u9fff]/u);
-    await expectNoPageOverflow(page);
-    await page.screenshot({ path: artifact("factory-zh-1440x900.png"), fullPage: true });
-
-    await page.getByTestId("equipment-conveyor-01").click();
-    await expect(page.getByTestId("equipment-conveyor-01")).toHaveClass(/is-selected/);
-    const alarm = page.getByTestId("alarm-list").getByRole("button");
-    await expect(alarm).toContainText("设备故障", { timeout: 5_000 });
-    await rememberCanvas(page, canvas);
-    const connectionClass = await connection.getAttribute("class");
-
-    await page.getByRole("button", { name: "切换到英文", exact: true }).click();
-    await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(connection).toHaveText("online");
-    await expect(connection).toHaveAttribute("class", connectionClass ?? "");
-    await expect(page.getByTestId("equipment-conveyor-01")).toHaveClass(/is-selected/);
-    await expect(alarm).toContainText("Equipment fault");
-    await expect(alarm).toHaveCount(1);
-    expect(await isRememberedCanvas(page, canvas)).toBe(true);
-    expect(await page.evaluate((key) => localStorage.getItem(key), factoryLocaleKey)).toBe("en");
-
-    await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(page.getByText("Equipment", { exact: true }).first()).toBeVisible();
-    expect(runtimeErrors).toEqual([]);
-  });
-
-  test("Chinese layouts fit the Studio desktop and Factory tablet viewports", async ({ page }) => {
+  test("Chinese layout fits the minimum Studio desktop viewport", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(studioUrl);
     await readyCanvas(page);
     await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
     await expectNoPageOverflow(page);
     await page.screenshot({ path: artifact("studio-zh-1280x720.png"), fullPage: true });
-
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(factoryUrl);
-    await readyCanvas(page);
-    await expect(page.getByTestId("connection-state")).toHaveClass(/connection-online/, {
-      timeout: 5_000,
-    });
-    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
-    await expectNoPageOverflow(page);
-    await page.screenshot({ path: artifact("factory-zh-768x1024.png"), fullPage: true });
   });
 });
 

@@ -57,44 +57,8 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@22.20.1)(vite@8.1.4(@types/node@22.20.1))
 
-  apps/factory-demo:
-    dependencies:
-      '@fontsource/ibm-plex-mono':
-        specifier: 5.2.7
-        version: 5.2.7
-      '@fontsource/ibm-plex-sans':
-        specifier: 5.2.8
-        version: 5.2.8
-      '@web3d/demo-support':
-        specifier: workspace:*
-        version: link:../shared
-      '@web3d/document':
-        specifier: workspace:*
-        version: link:../../packages/document
-      '@web3d/react':
-        specifier: workspace:*
-        version: link:../../packages/react
-      '@web3d/runtime':
-        specifier: workspace:*
-        version: link:../../packages/runtime
-      lucide-react:
-        specifier: 1.24.0
-        version: 1.24.0(react@19.2.7)
-      react:
-        specifier: 19.2.7
-        version: 19.2.7
-      react-dom:
-        specifier: 19.2.7
-        version: 19.2.7(react@19.2.7)
-
   apps/shared:
     dependencies:
-      '@web3d/document':
-        specifier: workspace:*
-        version: link:../../packages/document
-      '@web3d/runtime':
-        specifier: workspace:*
-        version: link:../../packages/runtime
       lucide-react:
         specifier: 1.24.0
         version: 1.24.0(react@19.2.7)

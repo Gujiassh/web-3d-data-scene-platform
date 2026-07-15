@@ -3,6 +3,8 @@
 > 状态：Accepted for M0
 > 验证日期：2026-07-14
 > 范围：本地工程与 Chromium 浏览器闭环，不代表 MVP 发布门禁全部通过
+> Supersession：本记录保留当时 Studio/Factory 双宿主的真实验收事实。feature 005 的 Studio
+> Run 替代证据于 2026-07-15 通过，随后删除 Factory；以下历史结果不追溯改写。
 
 ## 1. 验证对象
 
@@ -40,7 +42,7 @@ M0 使用同一份确定性 `SceneDocument`、GLB 和 Mock 遥测场景验证以
 | `pnpm build`                         | Pass                     |
 | `./scripts/verify-product-design.sh` | Pass                     |
 
-TypeScript、ESLint 和两个 Vite production build 共同覆盖 TS/TSX import 与未解析标识符；
+当时的 TypeScript、ESLint 和两个 Vite production build 共同覆盖 TS/TSX import 与未解析标识符；
 源文件静态扫描没有发现 `@ts-ignore`、`@ts-expect-error`、TODO/FIXME 或调试日志残留。
 
 ## 4. 浏览器证据
@@ -70,6 +72,13 @@ Playwright 使用隔离的本地 Vite server，`reuseExistingServer=false`，避
 - `studio-desktop-1440x900.png`
 - `studio-size-gate-768x1024.png`
 
+### Feature 005 替代证据
+
+`tests/e2e/m2-data-binding.spec.ts` 在 Studio 内重新证明完整 authoring、JSON/ZIP ID 与语义往返、
+单 adapter 的 5 个 scenario timers、critical color/alarm、offline/recovery、选择与同一 Canvas、
+locale/theme 连续性、WebGL context restore、1280x720/1440x900 无溢出、Edit cleanup 和第二次 Run
+lifecycle。首次替代运行结果为 1 passed / 14.6s；旧 Factory-only Playwright case 随应用删除。
+
 ## 5. 生命周期结论
 
 - React 每次实际 mount 创建一个新 Viewer；cleanup 只 dispose 自己创建的实例。
@@ -82,8 +91,8 @@ Playwright 使用隔离的本地 Vite server，`reuseExistingServer=false`，避
 
 ## 6. 构建基线
 
-两个 app 当前共享的 `three-runtime` production chunk 约为 621 kB minified、156 kB gzip。
-Vite 的 500 kB warning 保持可见，没有通过提高阈值静默隐藏。M1/M4 应结合真实加载路径和
+2026-07-14 的两个 app 曾共享约 621 kB minified、156 kB gzip 的 `three-runtime` production chunk。
+Vite 的 500 kB warning 保持可见，没有通过提高阈值静默隐藏。feature 009 应结合真实加载路径和
 缓存策略决定是否拆分 Three.js、controls 与 loader，不能只为消除 warning 做无证据拆包。
 
 ## 7. M0 限制与后续风险

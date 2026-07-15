@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 import { parseSceneDocument, type SceneDocument } from "@web3d/document";
-import type { Object3D } from "three";
-import { Raycaster } from "three";
+import type { Material, Object3D } from "three";
+import { Color, Mesh, Raycaster } from "three";
 import type * as ThreeModule from "three";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -13,7 +13,7 @@ import {
   inspectGltf,
   type GltfInspectionSummary,
 } from "../index";
-import type { AuthoringViewerEvent } from "../types";
+import type { AuthoringViewerEvent, DataAdapter, DataEnvelope } from "../types";
 
 const runtime = vi.hoisted(() => ({
   canvases: [] as ReturnType<typeof fakeCanvas>[],
@@ -213,6 +213,248 @@ describe("createAuthoringSceneViewer", () => {
     runtime.frames.shift()?.(0);
     expect(events.filter((event) => event.type === "performance")).toHaveLength(1);
     await viewer.dispose();
+  });
+
+  it("gates data runtime and completely restores authoring state when disabled", async () => {
+    const { asset, scene: fixtureScene } = await fixture();
+    const scene = withObjectVisibilityRules(fixtureScene);
+    const adapter = controlledAdapter();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": adapter.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const canvas = runtime.canvases.at(-1);
+    if (canvas === undefined) throw new Error("Canvas not created.");
+
+    await viewer.load(scene);
+    expect(adapter.start).not.toHaveBeenCalled();
+    expect(viewer.getSnapshot()).toMatchObject({
+      dataRuntimeEnabled: false,
+      connections: {},
+      alarms: [],
+      bindingStates: [],
+    });
+
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const generationObject = requiredControls().object;
+    const press = generationObject?.getObjectByName("PressStation");
+    if (generationObject === undefined || press === undefined) {
+      throw new Error("Press runtime object is missing.");
+    }
+    const baselineColor = firstMaterialColor(press);
+    const baselineVisibility = press.visible;
+
+    await viewer.setDataRuntimeEnabled(true);
+    expect(adapter.start).toHaveBeenCalledOnce();
+    expect(viewer.getSnapshot().dataRuntimeEnabled).toBe(true);
+    events.length = 0;
+    adapter.emit({
+      kind: "snapshot",
+      sourceId: "factory-telemetry",
+      streamId: "preview",
+      sequence: 1,
+      sourceTime: "2026-07-15T10:00:00.000Z",
+      quality: "good",
+      value: {
+        machines: {
+          "PRESS-01": { status: "fault" },
+          "CONVEYOR-01": { status: "running" },
+        },
+      },
+    });
+
+    const active = viewer.getSnapshot();
+    expect(active.connections).toEqual({ "factory-telemetry": "online" });
+    expect(active.bindingStates).toMatchObject([
+      {
+        bindingId: "conveyor-01-status-binding",
+        value: { status: "running" },
+        ruleId: "status-running",
+      },
+      {
+        bindingId: "press-01-status-binding",
+        value: { status: "fault" },
+        ruleId: "status-fault",
+      },
+    ]);
+    expect(active.alarms).toEqual([
+      expect.objectContaining({
+        bindingId: "press-01-status-binding",
+        level: "critical",
+        message: "Equipment fault",
+      }),
+    ]);
+    expect(press.visible).toBe(false);
+    expect(firstMaterialColor(press)).toBe("b93632");
+
+    const exposedValue = active.bindingStates.find(
+      (state) => state.bindingId === "press-01-status-binding",
+    )?.value;
+    if (exposedValue === null || typeof exposedValue !== "object" || Array.isArray(exposedValue)) {
+      throw new Error("Expected an object-valued binding state.");
+    }
+    exposedValue["status"] = "mutated";
+    expect(
+      viewer
+        .getSnapshot()
+        .bindingStates.find((state) => state.bindingId === "press-01-status-binding")?.value,
+    ).toEqual({ status: "fault" });
+
+    const bindingEventsBeforeDuplicate = bindingStateEvents(events).length;
+    const alarmEventsBeforeDuplicate = alarmEvents(events).length;
+    adapter.emit({
+      kind: "snapshot",
+      sourceId: "factory-telemetry",
+      streamId: "preview",
+      sequence: 2,
+      sourceTime: "2026-07-15T10:00:00.000Z",
+      quality: "good",
+      value: {
+        machines: {
+          "PRESS-01": { status: "fault" },
+          "CONVEYOR-01": { status: "running" },
+        },
+      },
+    });
+    expect(bindingStateEvents(events)).toHaveLength(bindingEventsBeforeDuplicate);
+    expect(alarmEvents(events)).toHaveLength(alarmEventsBeforeDuplicate);
+
+    await viewer.setDataRuntimeEnabled(false);
+    expect(adapter.stop).toHaveBeenCalledOnce();
+    expect(adapter.unsubscribe).toHaveBeenCalledOnce();
+    expect(viewer.getSnapshot()).toMatchObject({
+      dataRuntimeEnabled: false,
+      connections: {},
+      alarms: [],
+      bindingStates: [],
+      selectedEntityId: "factory-cell",
+    });
+    expect(bindingStateEvents(events).filter((event) => event.transition === "cleared")).toEqual([
+      {
+        type: "binding-state-change",
+        transition: "cleared",
+        bindingId: "conveyor-01-status-binding",
+      },
+      {
+        type: "binding-state-change",
+        transition: "cleared",
+        bindingId: "press-01-status-binding",
+      },
+    ]);
+    expect(alarmEvents(events).at(-1)).toMatchObject({
+      transition: "cleared",
+      alarm: { bindingId: "press-01-status-binding", ruleId: "status-fault" },
+    });
+    expect(firstMaterialColor(press)).toBe(baselineColor);
+    expect(press.visible).toBe(baselineVisibility);
+    expect(requiredControls().object).toBe(generationObject);
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+
+    const firstEnable = viewer.setDataRuntimeEnabled(true);
+    const interveningDisable = viewer.setDataRuntimeEnabled(false);
+    const latestEnable = viewer.setDataRuntimeEnabled(true);
+    await Promise.all([firstEnable, interveningDisable, latestEnable]);
+    expect(viewer.getSnapshot().dataRuntimeEnabled).toBe(true);
+    expect(adapter.maxActiveSubscriptions).toBe(1);
+    expect(adapter.activeSubscriptions).toBe(1);
+
+    await viewer.dispose();
+    expect(adapter.activeSubscriptions).toBe(0);
+    expect(adapter.stop).toHaveBeenCalledTimes(adapter.start.mock.calls.length);
+    expect(adapter.unsubscribe).toHaveBeenCalledTimes(adapter.start.mock.calls.length);
+  });
+
+  it("preempts a pending adapter start when data runtime is disabled", async () => {
+    const { asset, scene } = await fixture();
+    const starting = deferred<void>();
+    const adapter = controlledAdapter({ start: () => starting.promise });
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": adapter.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+
+    const enabling = viewer.setDataRuntimeEnabled(true);
+    await vi.waitFor(() => expect(adapter.start).toHaveBeenCalledOnce());
+    const disabling = viewer.setDataRuntimeEnabled(false);
+
+    await expect(disabling).resolves.toBeUndefined();
+    await expect(enabling).resolves.toBeUndefined();
+    expect(viewer.getSnapshot()).toMatchObject({
+      dataRuntimeEnabled: false,
+      connections: {},
+      alarms: [],
+      bindingStates: [],
+    });
+    expect(adapter.stop).toHaveBeenCalledOnce();
+    expect(adapter.unsubscribe).toHaveBeenCalledOnce();
+    expect(adapter.activeSubscriptions).toBe(0);
+    await viewer.dispose();
+    expect(adapter.stop).toHaveBeenCalledOnce();
+    expect(adapter.unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("clears transient effects immediately while physical adapter stop is slow", async () => {
+    const { asset, scene: fixtureScene } = await fixture();
+    const scene = withObjectVisibilityRules(fixtureScene);
+    const stopped = deferred<void>();
+    const adapter = controlledAdapter({ stop: () => stopped.promise });
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": adapter.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(scene);
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const press = requiredControls().object?.getObjectByName("PressStation");
+    if (press === undefined) throw new Error("Press runtime object is missing.");
+    const baselineColor = firstMaterialColor(press);
+    const baselineVisibility = press.visible;
+
+    await viewer.setDataRuntimeEnabled(true);
+    adapter.emit({
+      kind: "snapshot",
+      sourceId: "factory-telemetry",
+      streamId: "preview",
+      sequence: 1,
+      quality: "good",
+      value: {
+        machines: {
+          "PRESS-01": { status: "fault" },
+          "CONVEYOR-01": { status: "running" },
+        },
+      },
+    });
+    expect(press.visible).toBe(false);
+    expect(firstMaterialColor(press)).toBe("b93632");
+
+    let disableSettled = false;
+    const disabling = viewer.setDataRuntimeEnabled(false).then(() => {
+      disableSettled = true;
+    });
+
+    expect(adapter.stop).toHaveBeenCalledOnce();
+    expect(adapter.unsubscribe).toHaveBeenCalledOnce();
+    expect(adapter.activeSubscriptions).toBe(0);
+    expect(viewer.getSnapshot()).toMatchObject({
+      dataRuntimeEnabled: false,
+      connections: {},
+      alarms: [],
+      bindingStates: [],
+    });
+    expect(firstMaterialColor(press)).toBe(baselineColor);
+    expect(press.visible).toBe(baselineVisibility);
+    await Promise.resolve();
+    expect(disableSettled).toBe(false);
+
+    stopped.resolve();
+    await disabling;
+    await viewer.dispose();
+    expect(adapter.stop).toHaveBeenCalledOnce();
+    expect(adapter.unsubscribe).toHaveBeenCalledOnce();
   });
 
   it("does not attach transform controls for locked or hidden entities", async () => {
@@ -419,9 +661,12 @@ describe("createAuthoringSceneViewer", () => {
 });
 
 async function fixture(): Promise<{ asset: Uint8Array<ArrayBuffer>; scene: SceneDocument }> {
-  const sceneUrl = new URL("../../../../assets/factory/public/m0-scene.json", import.meta.url);
+  const sceneUrl = new URL(
+    "../../../../tests/fixtures/m0-factory/public/m0-scene.json",
+    import.meta.url,
+  );
   const assetUrl = new URL(
-    "../../../../assets/factory/public/m0-factory-cell.glb",
+    "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
     import.meta.url,
   );
   const [sceneJson, asset] = await Promise.all([readFile(sceneUrl, "utf8"), readFile(assetUrl)]);
@@ -475,11 +720,117 @@ function withEntity(scene: SceneDocument, entityId: string): SceneDocument {
   };
 }
 
+function withObjectVisibilityRules(scene: SceneDocument): SceneDocument {
+  return {
+    ...scene,
+    bindings: scene.bindings.map((binding) => ({
+      ...binding,
+      pointer: binding.pointer.replace(/\/status$/u, ""),
+      writes: [...binding.writes, "visibility"],
+    })),
+    ruleSets: scene.ruleSets.map((ruleSet) => ({
+      ...ruleSet,
+      rules: ruleSet.rules.map((rule) => ({
+        ...rule,
+        when:
+          rule.when.fact === "value" && typeof rule.when.expected === "string"
+            ? { ...rule.when, expected: { status: rule.when.expected } }
+            : rule.when,
+        effects: [
+          ...rule.effects,
+          { type: "visibility" as const, value: rule.id !== "status-fault" },
+        ],
+      })),
+      fallback: [...ruleSet.fallback, { type: "visibility" as const, value: true }],
+    })),
+  };
+}
+
 function selectionEvents(events: readonly AuthoringViewerEvent[]) {
   return events.filter(
     (event): event is Extract<AuthoringViewerEvent, { type: "entity-selection-change" }> =>
       event.type === "entity-selection-change",
   );
+}
+
+function bindingStateEvents(events: readonly AuthoringViewerEvent[]) {
+  return events.filter(
+    (event): event is Extract<AuthoringViewerEvent, { type: "binding-state-change" }> =>
+      event.type === "binding-state-change",
+  );
+}
+
+function alarmEvents(events: readonly AuthoringViewerEvent[]) {
+  return events.filter(
+    (event): event is Extract<AuthoringViewerEvent, { type: "alarm" }> => event.type === "alarm",
+  );
+}
+
+function controlledAdapter(
+  options: {
+    start?: () => Promise<void>;
+    stop?: () => Promise<void>;
+  } = {},
+) {
+  let listener: ((envelope: DataEnvelope) => void) | null = null;
+  let activeSubscriptions = 0;
+  let maxActiveSubscriptions = 0;
+  const start = vi.fn(options.start ?? (() => Promise.resolve()));
+  const stop = vi.fn(options.stop ?? (() => Promise.resolve()));
+  const unsubscribe = vi.fn(() => {
+    listener = null;
+    activeSubscriptions -= 1;
+  });
+  const value: DataAdapter = {
+    sourceId: "factory-telemetry",
+    start,
+    stop,
+    subscribe: vi.fn((next) => {
+      listener = next;
+      activeSubscriptions += 1;
+      maxActiveSubscriptions = Math.max(maxActiveSubscriptions, activeSubscriptions);
+      return unsubscribe;
+    }),
+  };
+  return {
+    value,
+    start,
+    stop,
+    unsubscribe,
+    emit(envelope: DataEnvelope) {
+      if (listener === null) throw new Error("Adapter is not subscribed.");
+      listener(envelope);
+    },
+    get activeSubscriptions() {
+      return activeSubscriptions;
+    },
+    get maxActiveSubscriptions() {
+      return maxActiveSubscriptions;
+    },
+  };
+}
+
+function deferred<T>() {
+  let resolve: (value: T | PromiseLike<T>) => void = () => undefined;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
+
+function firstMaterialColor(object: Object3D): string | undefined {
+  let result: string | undefined;
+  object.traverse((candidate) => {
+    if (result !== undefined || !(candidate instanceof Mesh)) return;
+    const materials = Array.isArray(candidate.material) ? candidate.material : [candidate.material];
+    const material = materials.find(hasColor);
+    result = material?.color.getHexString();
+  });
+  return result;
+}
+
+function hasColor(material: Material): material is Material & { color: Color } {
+  return "color" in material && material.color instanceof Color;
 }
 
 function requiredControls(): FakeTransformControls {

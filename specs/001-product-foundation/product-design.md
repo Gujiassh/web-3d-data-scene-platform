@@ -2,14 +2,15 @@
 
 > 状态：Accepted for MVP
 > 日期：2026-07-13
+> 单 Studio 修订：2026-07-15，由 `../005-single-studio-data-binding/spec.md` supersede 双应用结构
 > 对应需求：FR-001 至 FR-013、NFR-001、NFR-007、NFR-008
 
 ## 1. 产品结构
 
 ### Studio
 
-桌面端场景生产工具，包含项目管理、资产、场景树、3D 视口、属性、数据绑定、规则、
-诊断和运行预览。
+唯一用户可见产品前端。桌面端场景生产工具包含项目管理、资产、场景树、3D 视口、属性、
+数据绑定、规则、诊断和运行预览；Edit 与 Run 不切换项目或页面。
 
 ### Viewer Runtime
 
@@ -20,10 +21,11 @@ Viewer 只提供场景、选择、聚焦、数据和诊断接口。
 
 将 Viewer 生命周期映射为 React 组件和命令句柄，不重新定义运行时语义。
 
-### Factory Demo
+### Reference Fixtures
 
-一个独立宿主应用，组合 Viewer、设备列表、KPI、告警和模拟数据。它证明嵌入能力，
-不作为 Studio 内置页面。
+确定性 GLB、SceneDocument、manifest 和 Mock 数据只用于 contract/runtime/archive/browser 测试。
+它们不是独立产品应用，也不进入 Studio production build。发布嵌入由 feature 008 的最小宿主
+示例证明。
 
 ## 2. Studio 信息架构
 
@@ -40,7 +42,7 @@ Project
 │   ├── Data sources
 │   ├── Bindings
 │   └── Rules
-├── Preview
+├── Run
 │   ├── Runtime state
 │   └── Alarm events
 └── Diagnostics
@@ -54,7 +56,7 @@ Project
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ Project  Undo Redo  Select Move Rotate Scale  Edit|Run  Export  Preview │
+│ Project  Undo Redo  Select Move Rotate Scale  Edit|Run  Export          │
 ├──────────────┬───────────────────────────────────────┬───────────────────┤
 │ Assets       │                                       │ Properties        │
 │ Scene        │              3D Viewport              │ Data              │
@@ -102,13 +104,13 @@ Project
 - SceneDocument 只读。
 - 启动已配置的数据适配器和规则执行。
 - 显示运行时状态、告警和连接健康度。
-- 相机和当前选择属于会话状态，不进入保存文档。
-- 返回 Edit 模式时恢复编辑选择，但丢弃运行时瞬时状态。
+- Edit 与 Run 使用同一当前选择；相机和选择属于会话状态，不进入保存文档。
+- 返回 Edit 模式时停止 adapter，保留 authored mapping/rules，并丢弃连接、当前值和告警等瞬时状态。
 
-### Preview
+### Publish Preview
 
-在独立浏览器标签加载真实 Viewer 和当前导出快照，用于发现 Studio 内预览无法暴露的
-集成差异。
+当前 Studio Run 只证明同一项目内的运行语义。独立发布产物和最小宿主预览属于 feature 008，
+在该阶段前不增加第二个用户入口或把 legacy Factory harness 当成发布预览。
 
 ## 5. 核心交互
 
@@ -132,7 +134,7 @@ Project
 ### 数据绑定
 
 1. 用户选择实体并打开 Data 标签。
-2. 选择逻辑数据源 ID，再从最新快照树中选择 JSON Pointer。
+2. 选择逻辑数据源 ID，再从确定性 sample payload 字段列表选择 JSON Pointer。
 3. 系统显示当前值、质量和更新时间，但不写入文档。
 4. 用户选择目标属性并配置规则。
 5. 系统阻止同一实体目标属性出现未排序的冲突规则。
@@ -185,23 +187,11 @@ Project
 
 状态不能只依赖颜色。故障、陈旧、离线和错误必须同时使用图标、文本或图案。
 
-## 8. Factory Demo 信息架构
+## 8. Run 信息架构
 
-```text
-Factory Demo
-├── Overview KPIs
-├── Equipment list / filters
-├── 3D Viewer
-├── Selected equipment details
-├── Alarm feed
-└── Simulation controls
-```
-
-- Viewer 是主工作区，不放入装饰卡片。
-- 左侧设备列表和右侧详情是可折叠停靠面板。
-- KPI 使用紧凑数据条，不使用营销式大数字卡片墙。
-- 告警点击调用 `focusEntity`，Viewer 选择事件驱动宿主详情面板。
-- 模拟控制仅包含播放、暂停、速度和注入故障，不暴露平台内部调试开关。
+Run 复用 Studio 的项目、SceneDocument、场景选择和 Canvas；只将持久化编辑控件切换为只读，
+并展示 transient connection、current value、alarm 和 diagnostics。行业设备列表、KPI、告警确认
+和操作面板属于未来宿主业务，不进入 Studio 固定信息架构。
 
 ## 9. 视觉规范
 
@@ -248,7 +238,7 @@ Factory Demo
 ## 11. 响应式和可访问性
 
 - Studio 在低于 1280px 时显示尺寸要求，不提供压缩的完整编辑布局。
-- Viewer 在 768px 至 1279px 保持完整 Canvas，宿主面板变为抽屉。
+- 发布 Viewer 在 768px 至 1279px 的宿主布局由 feature 008 验收。
 - Viewer 的 Canvas 使用稳定 `aspect-ratio` 或填充明确容器，不由内容改变尺寸。
 - 场景树支持键盘上下移动、展开、选择、重命名和删除。
 - 控件满足 WCAG 2.2 AA 的键盘、焦点和文本对比要求。
@@ -260,6 +250,6 @@ Factory Demo
 - 三条 PRD 用户流程在上述信息架构中均有唯一、连续路径。
 - Edit 和 Run 模式对持久化状态的权限无歧义。
 - 空、加载、失败、断线、陈旧、恢复和版本错误均有明确反馈。
-- 工厂宿主 UI 不进入 Viewer Runtime 的固定接口或场景文档。
+- 行业宿主 UI 不进入 Studio、Viewer Runtime 的固定接口或 SceneDocument。
 - 所有常用命令既能通过 UI 完成，也有键盘访问路径。
 - 视觉层级不超过两层表面，不出现卡片嵌套和不必要说明模块。

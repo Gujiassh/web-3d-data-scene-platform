@@ -1,4 +1,4 @@
-import type { RuleEffect } from "@web3d/document";
+import type { EffectType, RuleEffect } from "@web3d/document";
 import { Color, type Material } from "three";
 
 import type { RuntimeTarget } from "./runtime-generation";
@@ -7,6 +7,18 @@ export function applyRuleEffects(target: RuntimeTarget, effects: readonly RuleEf
   for (const effect of effects) {
     if (effect.type === "color") applyColor(target.materials, effect.value);
     if (effect.type === "visibility") target.object.visible = effect.value;
+  }
+}
+
+export function resetRuleEffects(target: RuntimeTarget, writes?: readonly EffectType[]): void {
+  if (writes === undefined || writes.includes("color")) {
+    target.materials.forEach((material, index) => {
+      const color = target.baseline.colors[index];
+      if (color !== null && color !== undefined && hasColor(material)) material.color.copy(color);
+    });
+  }
+  if (writes === undefined || writes.includes("visibility")) {
+    target.object.visible = target.baseline.visible;
   }
 }
 

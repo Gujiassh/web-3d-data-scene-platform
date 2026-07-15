@@ -2,6 +2,7 @@
 
 > 状态：Accepted for MVP
 > 日期：2026-07-13
+> 单 Studio 修订：2026-07-15，由 `../005-single-studio-data-binding/plan.md` 接管当前拓扑
 > 依据：`spec.md`、`product-design.md`、`docs/ssot/product-decisions.md`
 
 ## 1. 架构目标
@@ -17,14 +18,14 @@
 
 ```text
 apps/
-├── studio/                React 编辑器应用
-└── factory-demo/          独立 React 宿主和参考场景
+├── studio/                唯一产品前端，包含 Edit 与 Run
+└── shared/                内部展示偏好和控件支持，不是产品入口
 packages/
 ├── document/              Schema、验证、迁移、命令和序列化
 ├── runtime/               Three.js Viewer、规则执行、拾取和诊断
 └── react/                 Viewer React wrapper
-assets/
-└── factory/               Blender 脚本、源文件、GLB 和许可证
+tests/
+└── fixtures/m0-factory/   固定 GLB、SceneDocument、manifest、生成器和许可证
 benchmarks/
 └── reference-scene/       固定模型、数据负载和测量脚本
 ```
@@ -39,16 +40,13 @@ document  <-  runtime  <-  react
     ^            ^
     │            │
     └──────── studio
-                 ^
-                 │
-             factory-demo (通过 react + runtime 公共 API)
 ```
 
 - `document` 不导入 Three.js、React、DOM 或网络 API。
 - `runtime` 可以导入 `document` 和 Three.js，不导入 Studio。
 - `react` 只管理 Viewer 生命周期和宿主事件。
 - `studio` 使用公共 document/runtime API，不访问运行时私有 Three.js 对象。
-- `factory-demo` 不导入 Studio 内部模块，用于证明真实嵌入边界。
+- feature 008 的最小宿主只通过发布的 runtime/react API 证明嵌入，不依赖 Studio 内部模块。
 
 ## 4. 状态所有权
 
@@ -283,8 +281,8 @@ viewer_error code=ASSET_NODE_MISSING entity=press-01 target=press-door node_inde
 - runtime：规则引擎、数据顺序、stale/offline、实体投影、生命周期释放。
 - react：属性更新、事件、ref 命令、卸载清理。
 - studio：关键用户流程、Undo/Redo、导入失败不破坏当前项目。
-- factory-demo：告警定位、选择联动、断线恢复。
-- contract：Editor 预览与 Viewer 对同一 fixture 的输出一致性。
+- Studio Run：adapter、规则、告警、选择联动、断线恢复和 transient state 清理。
+- contract：Studio Run 与发布 Viewer 对同一 fixture 的输出一致性。
 - visual/performance：Playwright 截图、Canvas 像素检查和固定场景基准。
 
 ## 16. 明确延后

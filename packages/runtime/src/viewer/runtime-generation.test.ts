@@ -1,14 +1,20 @@
 import { readFile } from "node:fs/promises";
 
 import { parseSceneDocument } from "@web3d/document";
-import { BufferGeometry } from "three";
+import { BufferGeometry, Color, type Material } from "three";
 import { describe, expect, it, vi } from "vitest";
 
-import { applyRuleEffects } from "./effect-projector";
+import { applyRuleEffects, resetRuleEffects } from "./effect-projector";
 import { buildRuntimeGeneration } from "./runtime-generation";
 
-const sceneUrl = new URL("../../../../assets/factory/public/m0-scene.json", import.meta.url);
-const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb", import.meta.url);
+const sceneUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-scene.json",
+  import.meta.url,
+);
+const assetUrl = new URL(
+  "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+  import.meta.url,
+);
 
 describe("buildRuntimeGeneration", () => {
   it("maps both M0 targets by node index and isolates their materials", async () => {
@@ -41,6 +47,35 @@ describe("buildRuntimeGeneration", () => {
     press?.materials[0]?.addEventListener("dispose", dispose);
     generation.dispose();
     expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("restores baseline color and visibility after projected effects", async () => {
+    const [sceneJson, asset] = await Promise.all([readFile(sceneUrl, "utf8"), readFile(assetUrl)]);
+    const parsed = parseSceneDocument(sceneJson);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const generation = await buildRuntimeGeneration(
+      parsed.value,
+      { resolve: () => Promise.resolve(new Blob([asset])) },
+      new AbortController().signal,
+    );
+    const target = generation.targets.get("press-01");
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+    const baselineColor = target.baseline.colors[0]?.getHexString();
+    const baselineVisibility = target.baseline.visible;
+
+    applyRuleEffects(target, [
+      { type: "color", value: "#B93632" },
+      { type: "visibility", value: !baselineVisibility },
+    ]);
+    expect(target.object.visible).toBe(!baselineVisibility);
+    expect(materialColorHex(target.materials[0])).not.toBe(baselineColor);
+
+    resetRuleEffects(target);
+    expect(target.object.visible).toBe(baselineVisibility);
+    expect(materialColorHex(target.materials[0])).toBe(baselineColor);
+    generation.dispose();
   });
 
   it("disposes an earlier unattached asset when a later asset fails", async () => {
@@ -110,3 +145,10 @@ describe("buildRuntimeGeneration", () => {
     ).rejects.toMatchObject({ diagnostic: { code: "DOCUMENT_REFERENCE_INVALID" } });
   });
 });
+
+function materialColorHex(material: Material | undefined): string | undefined {
+  if (material === undefined || !("color" in material) || !(material.color instanceof Color)) {
+    return undefined;
+  }
+  return material.color.getHexString();
+}
