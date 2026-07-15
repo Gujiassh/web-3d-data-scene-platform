@@ -1,5 +1,6 @@
 import { parseSceneDocument, type SceneDocument } from "@web3d/document";
 
+import { studioAppErrors } from "../errors";
 import { systemRepositoryClock } from "./clock";
 import { serializeProjectDocument, validateProjectDocument } from "./document-snapshot";
 import type {
@@ -41,7 +42,7 @@ export function createIndexedDbProjectRepository(
 ): StudioProjectRepository {
   const indexedDb = options.indexedDB ?? globalThis.indexedDB;
   if (!indexedDb) {
-    throw new Error("IndexedDB is not available in this environment.");
+    throw studioAppErrors.indexedDbUnavailable();
   }
 
   const clock = options.clock ?? systemRepositoryClock;
@@ -59,7 +60,7 @@ export function createIndexedDbProjectRepository(
       const referencedHashes = new Set(document.assets.map((asset) => asset.sha256));
       for (const asset of persistedAssets) {
         if (!referencedHashes.has(asset.sha256)) {
-          throw new Error(`Asset ${asset.sha256} is not referenced by the SceneDocument.`);
+          throw studioAppErrors.assetNotReferenced(asset.sha256);
         }
       }
 
@@ -91,7 +92,7 @@ export function createIndexedDbProjectRepository(
             assetStore.get(asset.sha256),
           );
           if (!existingAsset) {
-            throw new Error(`Asset bytes for ${asset.sha256} are missing from the repository.`);
+            throw studioAppErrors.assetBytesMissing(asset.sha256);
           }
         }
 
@@ -133,7 +134,7 @@ export function createIndexedDbProjectRepository(
         projectStore.get(projectId),
       );
       if (!existing) {
-        throw new Error(`Project ${projectId} does not exist.`);
+        throw studioAppErrors.projectNotFound(projectId);
       }
       const document = parseStoredDocument(existing.documentJson, projectId);
       const nowIso = clock.now().toISOString();
@@ -206,7 +207,7 @@ export function createIndexedDbProjectRepository(
       const asset = await request<PersistedAssetRecord | undefined>(assetStore.get(sha256));
       await done;
       if (!asset) {
-        throw new Error(`Asset ${sha256} does not exist.`);
+        throw studioAppErrors.assetNotFound(sha256);
       }
       return asset.blob;
     },
@@ -238,7 +239,7 @@ export function createIndexedDbProjectRepository(
         };
         openRequest.onsuccess = () => resolve(openRequest.result);
         openRequest.onerror = () =>
-          reject(openRequest.error ?? new Error("Failed to open IndexedDB."));
+          reject(openRequest.error ?? studioAppErrors.indexedDbOpenFailed());
       });
     }
     return databasePromise;
@@ -247,7 +248,7 @@ export function createIndexedDbProjectRepository(
 
 function assertOpen(closed: boolean): void {
   if (closed) {
-    throw new Error("Project repository is closed.");
+    throw studioAppErrors.projectRepositoryClosed();
   }
 }
 
@@ -255,7 +256,7 @@ async function toPersistedAssetRecord(asset: ProjectAssetInput): Promise<Persist
   const buffer = await asset.blob.arrayBuffer();
   const sha256 = await sha256Hex(buffer);
   if (sha256 !== asset.sha256) {
-    throw new Error(`Asset SHA-256 mismatch for ${asset.sha256}; received ${sha256}.`);
+    throw studioAppErrors.assetSha256Mismatch(asset.sha256, sha256);
   }
   return {
     sha256,
@@ -305,9 +306,7 @@ async function assertStorageCapacity(
     documentBytes + newAssets.reduce((total, asset) => total + asset.byteLength, 0);
   const remainingBytes = estimate.quota - estimate.usage;
   if (remainingBytes < requiredBytes) {
-    throw new Error(
-      `Insufficient storage capacity: ${remainingBytes} bytes remain, ${requiredBytes} bytes required.`,
-    );
+    throw studioAppErrors.insufficientStorageCapacity(remainingBytes, requiredBytes);
   }
 }
 
@@ -350,20 +349,21 @@ function toStudioProject(
 function parseStoredDocument(documentJson: string, projectId: string): SceneDocument {
   const parsed = parseSceneDocument(documentJson);
   if (!parsed.ok) {
-    throw new Error(
-      parsed.diagnostics[0]?.message ?? `Project ${projectId} contains an invalid SceneDocument.`,
-    );
+    const diagnostic = parsed.diagnostics[0];
+    throw diagnostic === undefined
+      ? studioAppErrors.storedProjectInvalid(projectId)
+      : new Error(diagnostic.message);
   }
   return validateProjectDocument(parsed.value);
 }
 
 function parseAssetUri(uri: string): string {
   if (!uri.startsWith(ASSET_URI_PREFIX)) {
-    throw new Error(`Unsupported asset URI ${uri}.`);
+    throw studioAppErrors.unsupportedAssetUri(uri);
   }
   const sha256 = uri.slice(ASSET_URI_PREFIX.length);
   if (!/^[a-f0-9]{64}$/u.test(sha256)) {
-    throw new Error(`Unsupported asset URI ${uri}.`);
+    throw studioAppErrors.unsupportedAssetUri(uri);
   }
   return sha256;
 }
@@ -395,7 +395,7 @@ async function readSetting<TValue>(
 function request<TResult>(source: IDBRequest<TResult>): Promise<TResult> {
   return new Promise((resolve, reject) => {
     source.onsuccess = () => resolve(source.result);
-    source.onerror = () => reject(source.error ?? new Error("IndexedDB request failed."));
+    source.onerror = () => reject(source.error ?? studioAppErrors.indexedDbRequestFailed());
   });
 }
 
@@ -403,9 +403,9 @@ function transactionComplete(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onabort = () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction aborted."));
+      reject(transaction.error ?? studioAppErrors.indexedDbTransactionAborted());
     transaction.onerror = () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction failed."));
+      reject(transaction.error ?? studioAppErrors.indexedDbTransactionFailed());
   });
 }
 

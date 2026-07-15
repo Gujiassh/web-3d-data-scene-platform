@@ -2,6 +2,8 @@ import { Box, FileBox, Upload } from "lucide-react";
 
 import type { SceneAsset } from "@web3d/document";
 
+import { useStudioI18n } from "../i18n/I18nProvider";
+
 interface AssetListProps {
   readonly assets: readonly SceneAsset[];
   readonly editable: boolean;
@@ -9,6 +11,8 @@ interface AssetListProps {
 }
 
 export function AssetList({ assets, editable, onImport }: AssetListProps) {
+  const { formatters, t } = useStudioI18n();
+
   return (
     <div className="asset-panel">
       <button
@@ -17,7 +21,7 @@ export function AssetList({ assets, editable, onImport }: AssetListProps) {
         type="button"
         onClick={onImport}
       >
-        <Upload size={14} /> Import model
+        <Upload size={14} /> {t.assetList.importModel}
       </button>
       <div className="asset-list">
         {assets.map((asset) => (
@@ -29,7 +33,7 @@ export function AssetList({ assets, editable, onImport }: AssetListProps) {
               <strong>{asset.name}</strong>
               <small>
                 {asset.mediaType === "model/gltf-binary" ? "GLB" : "glTF"} ·{" "}
-                {formatBytes(asset.byteLength)}
+                {formatters.formatBytes(asset.byteLength)}
               </small>
             </span>
             <span className="mono">{asset.sha256.slice(0, 8)}</span>
@@ -38,16 +42,10 @@ export function AssetList({ assets, editable, onImport }: AssetListProps) {
         {assets.length === 0 && (
           <div className="asset-empty">
             <Box size={16} />
-            <span>No assets</span>
+            <span>{t.assetList.empty}</span>
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  return bytes < 1024 * 1024
-    ? `${(bytes / 1024).toFixed(1)} KiB`
-    : `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 }

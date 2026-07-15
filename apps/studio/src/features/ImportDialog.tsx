@@ -1,5 +1,7 @@
 import { AlertTriangle, Box, FileBox, LoaderCircle, X } from "lucide-react";
 
+import { useStudioI18n } from "../i18n/I18nProvider";
+
 export interface ModelImportSummary {
   readonly fileName: string;
   readonly mediaType: "model/gltf-binary" | "model/gltf+json";
@@ -23,7 +25,9 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) {
+  const { formatters, t } = useStudioI18n();
   const summary = state.status === "ready" || state.status === "committing" ? state.summary : null;
+
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
       <section
@@ -38,11 +42,11 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
             <FileBox size={17} />
           </span>
           <div>
-            <h2 id="import-dialog-title">Import model</h2>
+            <h2 id="import-dialog-title">{t.importDialog.title}</h2>
             <span className="mono">{importFileName(state)}</span>
           </div>
           <button
-            aria-label="Close import"
+            aria-label={t.importDialog.close}
             className="icon-button"
             type="button"
             onClick={onCancel}
@@ -54,14 +58,14 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
         {state.status === "inspecting" && (
           <div className="dialog-progress">
             <LoaderCircle className="spin" size={18} />
-            <span>Inspecting model</span>
+            <span>{t.importDialog.inspecting}</span>
           </div>
         )}
 
         {state.status === "failed" && (
           <div className="import-failure" role="alert">
             <AlertTriangle size={17} />
-            <strong>Import failed</strong>
+            <strong>{t.importDialog.failed}</strong>
             <span>{state.message}</span>
           </div>
         )}
@@ -69,22 +73,28 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
         {summary !== null && (
           <>
             <div className="import-summary-grid" data-testid="import-summary">
-              <SummaryMetric label="Nodes" value={summary.nodeCount} />
-              <SummaryMetric label="Meshes" value={summary.meshCount} />
-              <SummaryMetric label="Materials" value={summary.materialCount} />
-              <SummaryMetric label="Triangles" value={summary.triangleCount} />
+              <SummaryMetric label={t.importDialog.metrics.nodes} value={summary.nodeCount} />
+              <SummaryMetric label={t.importDialog.metrics.meshes} value={summary.meshCount} />
+              <SummaryMetric
+                label={t.importDialog.metrics.materials}
+                value={summary.materialCount}
+              />
+              <SummaryMetric
+                label={t.importDialog.metrics.triangles}
+                value={summary.triangleCount}
+              />
             </div>
             <dl className="import-file-details">
               <div>
-                <dt>Format</dt>
+                <dt>{t.importDialog.details.format}</dt>
                 <dd>{summary.mediaType === "model/gltf-binary" ? "GLB" : "glTF"}</dd>
               </div>
               <div>
-                <dt>Size</dt>
-                <dd>{formatBytes(summary.byteLength)}</dd>
+                <dt>{t.importDialog.details.size}</dt>
+                <dd>{formatters.formatBytes(summary.byteLength)}</dd>
               </div>
               <div>
-                <dt>SHA-256</dt>
+                <dt>{t.importDialog.details.sha256}</dt>
                 <dd className="mono">{summary.sha256}</dd>
               </div>
             </dl>
@@ -103,7 +113,7 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
 
         <footer>
           <button className="secondary-command" type="button" onClick={onCancel}>
-            Cancel
+            {t.importDialog.cancel}
           </button>
           <button
             className="primary-command"
@@ -116,7 +126,7 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
             ) : (
               <Box size={15} />
             )}
-            Add to scene
+            {t.importDialog.confirm}
           </button>
         </footer>
       </section>
@@ -125,18 +135,14 @@ export function ImportDialog({ state, onCancel, onConfirm }: ImportDialogProps) 
 }
 
 function SummaryMetric({ label, value }: { readonly label: string; readonly value: number }) {
+  const { formatters } = useStudioI18n();
+
   return (
     <div>
       <span>{label}</span>
-      <strong>{value.toLocaleString("en-US")}</strong>
+      <strong>{formatters.formatCount(value)}</strong>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 }
 
 function importFileName(state: ImportDialogProps["state"]): string {

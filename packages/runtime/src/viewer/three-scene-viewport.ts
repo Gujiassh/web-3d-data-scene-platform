@@ -74,6 +74,8 @@ interface InternalViewportOptions extends CreateViewerOptions {
   readonly authoring?: AuthoringViewportOptions;
 }
 
+const DEFAULT_CANVAS_LABEL = "Interactive 3D scene";
+
 class ThreeSceneViewport {
   readonly #container: HTMLElement;
   readonly #scene = new Scene();
@@ -126,7 +128,7 @@ class ThreeSceneViewport {
       Math.min(options.pixelRatio ?? globalThis.devicePixelRatio ?? 1, 2),
     );
     this.#renderer.domElement.dataset["web3dViewer"] = "true";
-    this.#renderer.domElement.setAttribute("aria-label", "Interactive 3D scene");
+    this.#applyCanvasLabel(options.canvasLabel ?? DEFAULT_CANVAS_LABEL);
     this.#renderer.domElement.tabIndex = 0;
     this.#renderer.domElement.style.display = "block";
     this.#renderer.domElement.style.height = "100%";
@@ -338,6 +340,11 @@ class ThreeSceneViewport {
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void> {
     this.#ensureActive();
     return this.#adapterRuntime.setAdapter(sourceId, adapter);
+  }
+
+  setCanvasLabel(label: string): void {
+    this.#ensureActive();
+    this.#applyCanvasLabel(label);
   }
 
   selectTarget(targetId: string | null): void {
@@ -783,6 +790,10 @@ class ThreeSceneViewport {
   readonly #handleContextRestored = (): void => {
     this.#requestRender();
   };
+
+  #applyCanvasLabel(label: string): void {
+    this.#renderer.domElement.setAttribute("aria-label", label);
+  }
 
   #recordDiagnostic(value: Diagnostic): void {
     this.#diagnostics.push(value);

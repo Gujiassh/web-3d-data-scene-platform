@@ -17,6 +17,10 @@ import {
 } from "@web3d/document";
 import { inspectGltf, type AssetResolver, type GltfInspectionSummary } from "@web3d/runtime";
 
+import { isStudioAppError, studioAppErrors } from "../errors";
+import type { ModelImportSummary } from "../features/ImportDialog";
+import { formatStudioError } from "../i18n/error-presentation";
+import { useStudioI18n } from "../i18n/I18nProvider";
 import {
   createAutosaveController,
   createIndexedDbProjectRepository,
@@ -41,7 +45,6 @@ import {
   type StudioMode,
   type StudioSessionState,
 } from "../session/session-state";
-import type { ModelImportSummary } from "../features/ImportDialog";
 
 export type ModelImportState =
   | { readonly status: "inspecting"; readonly fileName: string }
@@ -96,10 +99,15 @@ export interface StudioWorkspace {
 }
 
 export function useStudioWorkspace(): StudioWorkspace {
+  const { formatters, t } = useStudioI18n();
   const repositoryRef = useRef<StudioProjectRepository | null>(null);
   const autosaveRef = useRef<AutosaveController | null>(null);
   const importCandidateRef = useRef<ImportCandidate | null>(null);
   const projectRef = useRef<StudioProjectSnapshot | null>(null);
+  const initialProjectNameRef = useRef(t.defaults.untitledScene);
+  const liveErrorCopyRef = useRef(t.errors);
+  liveErrorCopyRef.current = t.errors;
+
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<StudioProjectSnapshot | null>(null);
   const [history, setHistory] = useState<DocumentHistoryState | null>(null);
@@ -111,6 +119,10 @@ export function useStudioWorkspace(): StudioWorkspace {
   const addDiagnostic = useCallback((message: string) => {
     setDiagnostics((current) => [...current.slice(-11), message]);
   }, []);
+  const presentError = useCallback(
+    (error: unknown) => formatStudioError(error, liveErrorCopyRef.current),
+    [],
+  );
 
   useEffect(() => {
     projectRef.current = project;
@@ -118,7 +130,14 @@ export function useStudioWorkspace(): StudioWorkspace {
 
   useEffect(() => {
     let active = true;
-    const repository = createIndexedDbProjectRepository();
+    let repository: StudioProjectRepository;
+    try {
+      repository = createIndexedDbProjectRepository();
+    } catch (error) {
+      addDiagnostic(presentError(error));
+      setLoading(false);
+      return;
+    }
     repositoryRef.current = repository;
     const autosave = createAutosaveController({
       async save(snapshot) {
@@ -150,7 +169,7 @@ export function useStudioWorkspace(): StudioWorkspace {
           return reduceStudioSession(current, {
             type: "save-failed",
             revision: state.revision,
-            message: state.message ?? "Local save failed.",
+            message: state.message ?? presentError(studioAppErrors.localSaveFailed()),
           });
         });
       },
@@ -185,7 +204,7 @@ export function useStudioWorkspace(): StudioWorkspace {
     browserNavigation?.addEventListener("navigate", flushBeforeNavigation);
     window.addEventListener("pagehide", flushBeforePageExit);
 
-    void initializeRepository(repository)
+    void initializeRepository(repository, initialProjectNameRef.current)
       .then(({ current, items }) => {
         if (!active) return;
         activateProject(current, setProject, setHistory, setSession);
@@ -194,7 +213,7 @@ export function useStudioWorkspace(): StudioWorkspace {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
         setLoading(false);
       });
 
@@ -207,7 +226,7 @@ export function useStudioWorkspace(): StudioWorkspace {
       importCandidateRef.current = null;
       void autosave.close().finally(() => repository.close());
     };
-  }, [addDiagnostic]);
+  }, [addDiagnostic, presentError]);
 
   useEffect(() => {
     if (project === null || session === null) return;
@@ -220,7 +239,9 @@ export function useStudioWorkspace(): StudioWorkspace {
       if (project === null || history === null || session === null) return;
       try {
         assertCanEdit(session);
-        if (importState?.status === "committing") throw new Error("Import is being committed.");
+        if (importState?.status === "committing") {
+          throw studioAppErrors.importCommitting();
+        }
         const nextHistory = executeHistoryCommand(history, command, { mode: session.mode });
         setHistory(nextHistory);
         setProject({ ...project, document: nextHistory.document });
@@ -231,10 +252,10 @@ export function useStudioWorkspace(): StudioWorkspace {
           }),
         );
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, history, importState?.status, project, session],
+    [addDiagnostic, history, importState?.status, presentError, project, session],
   );
 
   const undo = useCallback(() => {
@@ -252,9 +273,9 @@ export function useStudioWorkspace(): StudioWorkspace {
         }),
       );
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
     }
-  }, [addDiagnostic, history, project, session]);
+  }, [addDiagnostic, history, presentError, project, session]);
 
   const redo = useCallback(() => {
     if (project === null || history === null || session === null) return;
@@ -271,32 +292,34 @@ export function useStudioWorkspace(): StudioWorkspace {
         }),
       );
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
     }
-  }, [addDiagnostic, history, project, session]);
+  }, [addDiagnostic, history, presentError, project, session]);
 
   const save = useCallback(async () => {
     if (project === null) return;
     try {
       await requireAutosave(autosaveRef.current).flush(project);
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
       throw error;
     }
-  }, [addDiagnostic, project]);
+  }, [addDiagnostic, presentError, project]);
 
   const setMode = useCallback(
     (mode: StudioMode) => {
-      if (session !== null)
+      if (session !== null) {
         setSession(reduceStudioSession(session, { type: "mode-changed", mode }));
+      }
     },
     [session],
   );
 
   const setTool = useCallback(
     (tool: AuthoringTool) => {
-      if (session !== null)
+      if (session !== null) {
         setSession(reduceStudioSession(session, { type: "tool-changed", tool }));
+      }
     },
     [session],
   );
@@ -330,10 +353,10 @@ export function useStudioWorkspace(): StudioWorkspace {
       try {
         execute(buildDuplicateSubtreeCommand(project.document, entityId, createBrowserIdFactory()));
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, execute, project],
+    [addDiagnostic, execute, presentError, project],
   );
 
   const deleteEntity = useCallback(
@@ -341,18 +364,21 @@ export function useStudioWorkspace(): StudioWorkspace {
     [execute],
   );
 
-  const inspectModel = useCallback(async (file: File) => {
-    setImportState({ status: "inspecting", fileName: file.name });
-    importCandidateRef.current = null;
-    try {
-      const bytes = await file.arrayBuffer();
-      const inspection = await inspectGltf(file.name, bytes);
-      importCandidateRef.current = { bytes, inspection };
-      setImportState({ status: "ready", summary: toImportSummary(inspection) });
-    } catch (error) {
-      setImportState({ status: "failed", fileName: file.name, message: errorMessage(error) });
-    }
-  }, []);
+  const inspectModel = useCallback(
+    async (file: File) => {
+      setImportState({ status: "inspecting", fileName: file.name });
+      importCandidateRef.current = null;
+      try {
+        const bytes = await file.arrayBuffer();
+        const inspection = await inspectGltf(file.name, bytes);
+        importCandidateRef.current = { bytes, inspection };
+        setImportState({ status: "ready", summary: toImportSummary(inspection) });
+      } catch (error) {
+        setImportState({ status: "failed", fileName: file.name, message: presentError(error) });
+      }
+    },
+    [presentError],
+  );
 
   const confirmImport = useCallback(async () => {
     const candidate = importCandidateRef.current;
@@ -381,6 +407,7 @@ export function useStudioWorkspace(): StudioWorkspace {
           parentId: null,
         },
         createBrowserIdFactory(),
+        { fallbackName: t.defaults.importedModel },
       );
       const nextHistory = executeHistoryCommand(history, command, { mode: session.mode });
       const alreadyStored = project.document.assets.some(
@@ -421,11 +448,11 @@ export function useStudioWorkspace(): StudioWorkspace {
       importCandidateRef.current = null;
       setImportState(null);
     } catch (error) {
-      const message = errorMessage(error);
+      const message = presentError(error);
       addDiagnostic(message);
       setImportState({ status: "failed", fileName: summary.fileName, message });
     }
-  }, [addDiagnostic, history, project, session]);
+  }, [addDiagnostic, history, presentError, project, session, t.defaults.importedModel]);
 
   const closeImport = useCallback(() => {
     importCandidateRef.current = null;
@@ -447,14 +474,14 @@ export function useStudioWorkspace(): StudioWorkspace {
       const now = new Date().toISOString();
       const next = createNewStudioProject({
         id: `project-${globalThis.crypto.randomUUID()}`,
-        name: "Untitled Scene",
+        name: t.defaults.untitledScene,
         createdAt: now,
       });
       await switchToProject(await repository.save(next));
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
     }
-  }, [addDiagnostic, project, switchToProject]);
+  }, [addDiagnostic, presentError, project, switchToProject, t.defaults.untitledScene]);
 
   const openProject = useCallback(
     async (projectId: string) => {
@@ -464,10 +491,10 @@ export function useStudioWorkspace(): StudioWorkspace {
         const repository = requireRepository(repositoryRef.current);
         await switchToProject(await repository.open(projectId));
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, project, switchToProject],
+    [addDiagnostic, presentError, project, switchToProject],
   );
 
   const deleteProject = useCallback(
@@ -478,10 +505,10 @@ export function useStudioWorkspace(): StudioWorkspace {
         await repository.delete(projectId);
         setRecent(await repository.listRecent());
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, project?.record.id],
+    [addDiagnostic, presentError, project?.record.id],
   );
 
   const importJson = useCallback(
@@ -493,10 +520,10 @@ export function useStudioWorkspace(): StudioWorkspace {
         const next = projectSnapshotForImportedDocument(document, []);
         await switchToProject(await repository.save(next));
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, project, switchToProject],
+    [addDiagnostic, presentError, project, switchToProject],
   );
 
   const importArchive = useCallback(
@@ -513,10 +540,10 @@ export function useStudioWorkspace(): StudioWorkspace {
         const next = projectSnapshotForImportedDocument(imported.document, assets);
         await switchToProject(await repository.save(next));
       } catch (error) {
-        addDiagnostic(errorMessage(error));
+        addDiagnostic(presentError(error));
       }
     },
-    [addDiagnostic, project, switchToProject],
+    [addDiagnostic, presentError, project, switchToProject],
   );
 
   const markExported = useCallback(async () => {
@@ -538,12 +565,16 @@ export function useStudioWorkspace(): StudioWorkspace {
     if (project === null) return;
     try {
       const bytes = exportCanonicalSceneJson(project.document);
-      downloadBytes(bytes, `${safeFileName(project.document.name)}.scene.json`, "application/json");
+      downloadBytes(
+        bytes,
+        `${formatters.safeFileStem(project.document.name, t.defaults.fileNameScene)}.scene.json`,
+        "application/json",
+      );
       await markExported();
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
     }
-  }, [addDiagnostic, markExported, project]);
+  }, [addDiagnostic, formatters, markExported, presentError, project, t.defaults.fileNameScene]);
 
   const exportArchive = useCallback(async () => {
     if (project === null) return;
@@ -557,25 +588,34 @@ export function useStudioWorkspace(): StudioWorkspace {
           return new Uint8Array(await blob.arrayBuffer());
         },
       });
-      downloadBytes(bytes, `${safeFileName(project.document.name)}.scene.zip`, "application/zip");
+      downloadBytes(
+        bytes,
+        `${formatters.safeFileStem(project.document.name, t.defaults.fileNameScene)}.scene.zip`,
+        "application/zip",
+      );
       await markExported();
     } catch (error) {
-      addDiagnostic(errorMessage(error));
+      addDiagnostic(presentError(error));
     }
-  }, [addDiagnostic, markExported, project]);
+  }, [addDiagnostic, formatters, markExported, presentError, project, t.defaults.fileNameScene]);
 
   const assetResolver = useMemo<AssetResolver>(
     () => ({
       async resolve(asset: SceneAsset, signal: AbortSignal) {
-        signal.throwIfAborted();
-        const pending = project?.assets.find((candidate) => candidate.sha256 === asset.sha256);
-        if (pending !== undefined) return pending.blob;
-        const blob = await requireRepository(repositoryRef.current).resolveAsset(asset.uri);
-        signal.throwIfAborted();
-        return blob;
+        try {
+          signal.throwIfAborted();
+          const pending = project?.assets.find((candidate) => candidate.sha256 === asset.sha256);
+          if (pending !== undefined) return pending.blob;
+          const blob = await requireRepository(repositoryRef.current).resolveAsset(asset.uri);
+          signal.throwIfAborted();
+          return blob;
+        } catch (error) {
+          if (!isStudioAppError(error)) throw error;
+          throw new Error(presentError(error), { cause: error });
+        }
       },
     }),
-    [project?.assets],
+    [presentError, project?.assets],
   );
 
   return {
@@ -614,7 +654,10 @@ export function useStudioWorkspace(): StudioWorkspace {
   };
 }
 
-async function initializeRepository(repository: StudioProjectRepository) {
+async function initializeRepository(
+  repository: StudioProjectRepository,
+  defaultProjectName: string,
+) {
   const items = await repository.listRecent();
   if (items[0] !== undefined) {
     return { current: await repository.open(items[0].id), items: await repository.listRecent() };
@@ -622,7 +665,7 @@ async function initializeRepository(repository: StudioProjectRepository) {
   const now = new Date().toISOString();
   const initial = createNewStudioProject({
     id: "untitled-project",
-    name: "Untitled Scene",
+    name: defaultProjectName,
     createdAt: now,
   });
   const current = await repository.save(initial);
@@ -683,26 +726,13 @@ function toImportSummary(summary: GltfInspectionSummary): ModelImportSummary {
 }
 
 function requireRepository(value: StudioProjectRepository | null): StudioProjectRepository {
-  if (value === null) throw new Error("Project repository is not ready.");
+  if (value === null) throw studioAppErrors.projectRepositoryNotReady();
   return value;
 }
 
 function requireAutosave(value: AutosaveController | null): AutosaveController {
-  if (value === null) throw new Error("Autosave is not ready.");
+  if (value === null) throw studioAppErrors.autosaveNotReady();
   return value;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function safeFileName(name: string): string {
-  return (
-    name
-      .trim()
-      .replace(/[^A-Za-z0-9._-]+/gu, "-")
-      .replace(/^-+|-+$/gu, "") || "scene"
-  );
 }
 
 function downloadBytes(bytes: Uint8Array, fileName: string, mediaType: string): void {

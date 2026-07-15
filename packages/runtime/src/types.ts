@@ -160,6 +160,7 @@ export interface CreateViewerOptions {
   source?: SceneSource;
   assetResolver?: AssetResolver;
   adapters?: Record<string, DataAdapter>;
+  canvasLabel?: string;
   pixelRatio?: number;
   reducedMotion?: boolean;
   onEvent?: (event: ViewerEvent) => void;
@@ -173,6 +174,7 @@ export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, 
 export interface SceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
   setView(viewId: string): Promise<void>;
@@ -185,6 +187,7 @@ export interface SceneViewer {
 export interface AuthoringSceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
   focusEntity(entityId: string, options?: FocusOptions): Promise<void>;
   setTool(tool: AuthoringTool): void;

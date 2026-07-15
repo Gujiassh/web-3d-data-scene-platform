@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { LanguageSwitch } from "@web3d/demo-support/language-switch";
 import { SceneViewer, type SceneViewerHandle } from "@web3d/react";
 import type {
   ConnectionStatus,
@@ -12,10 +13,27 @@ import { Activity, AlertTriangle, Box, Crosshair, RefreshCw, Radio } from "lucid
 
 import { createM0Adapter, equipment, loadM0Scene } from "@web3d/demo-support";
 
+import { useFactoryI18n } from "./i18n/I18nProvider";
+import {
+  alarmMessage,
+  connectionLabel,
+  equipmentArea,
+  equipmentLabel,
+  equipmentStateLabel,
+  formatCount,
+  resolveEquipmentDisplayState,
+  sceneLoadErrorMessage,
+} from "./i18n/presentation";
+
+interface SceneLoadFailure {
+  readonly error: unknown;
+}
+
 export function App() {
+  const { catalog, locale, setLocale } = useFactoryI18n();
   const viewerRef = useRef<SceneViewerHandle>(null);
   const [scene, setScene] = useState<Awaited<ReturnType<typeof loadM0Scene>> | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadFailure, setLoadFailure] = useState<SceneLoadFailure | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionStatus>("connecting");
   const [alarms, setAlarms] = useState<ReadonlyMap<string, RuntimeAlarm>>(new Map());
@@ -28,10 +46,13 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     loadM0Scene(controller.signal)
-      .then(setScene)
+      .then((value) => {
+        setScene(value);
+        setLoadFailure(null);
+      })
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
-          setLoadError(error instanceof Error ? error.message : "Scene loading failed.");
+          setLoadFailure({ error });
         }
       });
     return () => controller.abort();
@@ -71,6 +92,8 @@ export function App() {
 
   const selectedEquipment = equipment.find((item) => item.id === selectedTargetId) ?? null;
   const activeAlarms = [...alarms.values()];
+  const connectionDisplay = connectionLabel(catalog, connection);
+  const sceneConnection = snapshot?.connections["factory-telemetry"] ?? connection;
 
   return (
     <div className="factory-app">
@@ -80,39 +103,57 @@ export function App() {
             <Box size={18} strokeWidth={1.8} />
           </div>
           <div>
-            <strong>Factory Cell M0</strong>
-            <span>Runtime contract demo</span>
+            <strong>{catalog.header.name}</strong>
+            <span>{catalog.header.subtitle}</span>
           </div>
         </div>
-        <div className={`connection-state connection-${connection}`} data-testid="connection-state">
-          <span className="status-dot" />
-          {connection}
+        <div className="header-actions">
+          <LanguageSwitch
+            ariaLabel={catalog.header.languageSwitch}
+            chineseLabel={catalog.header.switchToChinese}
+            englishLabel={catalog.header.switchToEnglish}
+            locale={locale}
+            onChange={setLocale}
+          />
+          <div
+            aria-label={`${catalog.header.connection}: ${connectionDisplay}`}
+            className={`connection-state connection-${connection}`}
+            data-testid="connection-state"
+            title={connectionDisplay}
+          >
+            <span className="status-dot" />
+            {connectionDisplay}
+          </div>
+          <button
+            className="header-command"
+            title={catalog.header.restartSequenceTitle}
+            type="button"
+            onClick={() => setCycle((value) => value + 1)}
+          >
+            <RefreshCw size={15} />
+            {catalog.header.restartSequence}
+          </button>
         </div>
-        <button
-          className="header-command"
-          type="button"
-          onClick={() => setCycle((value) => value + 1)}
-        >
-          <RefreshCw size={15} />
-          Restart sequence
-        </button>
       </header>
 
       <main className="factory-workspace">
-        <aside className="equipment-rail" aria-label="Equipment">
+        <aside className="equipment-rail" aria-label={catalog.rails.equipment}>
           <div className="rail-heading">
-            <span>Equipment</span>
-            <b>{equipment.length}</b>
+            <span>{catalog.rails.equipment}</span>
+            <b>{formatCount(locale, equipment.length)}</b>
           </div>
           <div className="equipment-list">
             {equipment.map((item) => {
               const alarm = activeAlarms.find((candidate) => candidate.targetId === item.id);
-              const state = connection === "offline" ? "offline" : (alarm?.level ?? "running");
+              const state = resolveEquipmentDisplayState(connection, alarm);
+              const label = equipmentLabel(catalog, item.labelKey);
               return (
                 <button
+                  aria-label={catalog.equipment.focusTitle(label)}
                   className={`equipment-row ${selectedTargetId === item.id ? "is-selected" : ""}`}
                   data-testid={`equipment-${item.id}`}
                   key={item.id}
+                  title={catalog.equipment.focusTitle(label)}
                   type="button"
                   onClick={() => focus(item.id)}
                 >
@@ -120,29 +161,34 @@ export function App() {
                     {alarm === undefined ? <Activity size={16} /> : <AlertTriangle size={16} />}
                   </span>
                   <span>
-                    <strong>{item.label}</strong>
-                    <small>{item.area}</small>
+                    <strong>{label}</strong>
+                    <small>{equipmentArea(catalog, item.areaKey)}</small>
                   </span>
-                  <span className={`state-label state-${state}`}>{state}</span>
+                  <span className={`state-label state-${state}`}>
+                    {equipmentStateLabel(catalog, state)}
+                  </span>
                 </button>
               );
             })}
           </div>
           <div className="rail-footer mono">
             <Radio size={14} />
-            /machines/*/status
+            {catalog.telemetry.pointer}
           </div>
         </aside>
 
-        <section className="viewer-stage" aria-label="Factory 3D view">
+        <section className="viewer-stage" aria-label={catalog.rails.viewer}>
           {scene === null ? (
             <div className="stage-message" role="status">
-              {loadError ?? "Loading validated scene..."}
+              {loadFailure === null
+                ? catalog.viewer.loading
+                : catalog.viewer.loadError(sceneLoadErrorMessage(catalog, loadFailure.error))}
             </div>
           ) : (
             <SceneViewer
               ref={viewerRef}
               adapters={adapters}
+              canvasLabel={catalog.viewer.canvasLabel}
               className="factory-viewer"
               source={scene}
               onEvent={handleEvent}
@@ -150,33 +196,43 @@ export function App() {
           )}
           <div className="viewport-badge mono">
             <Crosshair size={13} />
-            {selectedEquipment?.businessId ?? "NO SELECTION"}
+            {selectedEquipment?.businessId ?? catalog.viewer.noSelection}
           </div>
           <div className="viewport-metrics">
-            <Metric label="Targets" value={String(scene?.targets.length ?? 0)} />
-            <Metric label="Bindings" value={String(scene?.bindings.length ?? 0)} />
-            <Metric label="Alarms" value={String(activeAlarms.length)} tone="danger" />
+            <Metric
+              label={catalog.metrics.targets}
+              value={formatCount(locale, scene?.targets.length ?? 0)}
+            />
+            <Metric
+              label={catalog.metrics.bindings}
+              value={formatCount(locale, scene?.bindings.length ?? 0)}
+            />
+            <Metric
+              label={catalog.metrics.alarms}
+              value={formatCount(locale, activeAlarms.length)}
+              tone="danger"
+            />
           </div>
         </section>
 
-        <aside className="operations-rail" aria-label="Runtime operations">
+        <aside className="operations-rail" aria-label={catalog.rails.operations}>
           <section className="detail-section">
-            <div className="section-heading">Selected target</div>
+            <div className="section-heading">{catalog.selected.heading}</div>
             {selectedEquipment === null ? (
-              <p className="empty-copy">Select a machine in the view or equipment list.</p>
+              <p className="empty-copy">{catalog.selected.empty}</p>
             ) : (
               <dl className="target-details">
                 <div>
-                  <dt>Target</dt>
-                  <dd>{selectedEquipment.label}</dd>
+                  <dt>{catalog.selected.target}</dt>
+                  <dd>{equipmentLabel(catalog, selectedEquipment.labelKey)}</dd>
                 </div>
                 <div>
-                  <dt>Business ID</dt>
+                  <dt>{catalog.selected.businessId}</dt>
                   <dd className="mono">{selectedEquipment.businessId}</dd>
                 </div>
                 <div>
-                  <dt>Connection</dt>
-                  <dd>{snapshot?.connections["factory-telemetry"] ?? connection}</dd>
+                  <dt>{catalog.selected.connection}</dt>
+                  <dd>{connectionLabel(catalog, sceneConnection)}</dd>
                 </div>
               </dl>
             )}
@@ -184,26 +240,28 @@ export function App() {
 
           <section className="detail-section alarm-section">
             <div className="section-heading">
-              Active alarms
-              <span>{activeAlarms.length}</span>
+              {catalog.alarms.heading}
+              <span>{formatCount(locale, activeAlarms.length)}</span>
             </div>
             {activeAlarms.length === 0 ? (
               <div className="alarm-empty">
                 <Activity size={16} />
-                No active alarms
+                {catalog.alarms.none}
               </div>
             ) : (
               <div className="alarm-list" data-testid="alarm-list">
                 {activeAlarms.map((alarm) => (
                   <button
+                    aria-label={catalog.alarms.focusTitle(alarm.targetId)}
                     className={`alarm-row alarm-${alarm.level}`}
                     key={alarm.key}
+                    title={catalog.alarms.focusTitle(alarm.targetId)}
                     type="button"
                     onClick={() => focus(alarm.targetId)}
                   >
                     <AlertTriangle size={15} />
                     <span>
-                      <strong>{alarm.message}</strong>
+                      <strong>{alarmMessage(catalog, alarm)}</strong>
                       <small className="mono">{alarm.targetId}</small>
                     </span>
                   </button>
@@ -213,8 +271,10 @@ export function App() {
           </section>
 
           <section className="detail-section diagnostics-section">
-            <div className="section-heading">Diagnostics</div>
-            <div className="diagnostic-count mono">{diagnostics.length} recent</div>
+            <div className="section-heading">{catalog.diagnostics.heading}</div>
+            <div className="diagnostic-count mono">
+              {catalog.diagnostics.recent(formatCount(locale, diagnostics.length))}
+            </div>
           </section>
         </aside>
       </main>

@@ -9,6 +9,7 @@ interface CreateViewerOptions {
   source?: SceneSource;
   assetResolver?: AssetResolver;
   adapters?: Record<string, DataAdapter>;
+  canvasLabel?: string;
   pixelRatio?: number;
   reducedMotion?: boolean;
   onEvent?: (event: ViewerEvent) => void;
@@ -17,6 +18,7 @@ interface CreateViewerOptions {
 interface SceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
   setView(viewId: string): Promise<void>;
@@ -91,6 +93,7 @@ data payload.
 type SceneViewerProps = {
   source: SceneSource;
   adapters?: Record<string, DataAdapter>;
+  canvasLabel?: string;
   className?: string;
   onReady?: (event: ReadyEvent) => void;
   onSelectionChange?: (event: SelectionChangeEvent) => void;
@@ -107,6 +110,7 @@ type SceneViewerHandle = Pick<
 - Prop identity changes do not recreate Viewer unless the container changes.
 - Source changes call transactional `load`.
 - Adapter map changes add, replace or remove only affected adapters.
+- `canvasLabel` changes update the mounted Canvas `aria-label` in place and do not recreate Viewer.
 - Unmount always calls `dispose` and suppresses late async updates.
 
 ## Host Responsibilities

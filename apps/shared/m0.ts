@@ -2,17 +2,46 @@ import { parseSceneDocument, type SceneDocument } from "@web3d/document";
 import { MockAdapter } from "@web3d/runtime";
 
 export const equipment = [
-  { id: "press-01", businessId: "PRESS-01", label: "Press 01", area: "Forming" },
-  { id: "conveyor-01", businessId: "CONVEYOR-01", label: "Conveyor 01", area: "Transfer" },
+  {
+    id: "press-01",
+    businessId: "PRESS-01",
+    labelKey: "press01",
+    areaKey: "forming",
+  },
+  {
+    id: "conveyor-01",
+    businessId: "CONVEYOR-01",
+    labelKey: "conveyor01",
+    areaKey: "transfer",
+  },
 ] as const;
+
+export type M0SceneLoadErrorReason =
+  | { readonly code: "http-request-failed"; readonly status: number }
+  | { readonly code: "scene-document-validation-fallback" };
+
+export class M0SceneLoadError extends Error {
+  readonly reason: M0SceneLoadErrorReason;
+
+  constructor(reason: M0SceneLoadErrorReason) {
+    super(reason.code);
+    this.name = "M0SceneLoadError";
+    this.reason = reason;
+  }
+}
 
 export async function loadM0Scene(signal: AbortSignal): Promise<SceneDocument> {
   const response = await fetch("/m0-scene.json", { signal });
-  if (!response.ok) throw new Error(`Scene request failed with ${response.status}.`);
+  if (!response.ok) {
+    throw new M0SceneLoadError({ code: "http-request-failed", status: response.status });
+  }
   const result = parseSceneDocument(await response.text());
   if (!result.ok) {
     const first = result.diagnostics[0];
-    throw new Error(first === undefined ? "SceneDocument validation failed." : first.message);
+    if (first === undefined) {
+      throw new M0SceneLoadError({ code: "scene-document-validation-fallback" });
+    }
+    throw new Error(first.message);
   }
   return result.value;
 }

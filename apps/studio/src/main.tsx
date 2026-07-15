@@ -8,6 +8,7 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@web3d/demo-support/theme.css";
 
 import { App } from "./App";
+import { StudioI18nProvider } from "./i18n/I18nProvider";
 import "./styles.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");
@@ -18,6 +19,8 @@ if (!root) {
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <StudioI18nProvider>
+      <App />
+    </StudioI18nProvider>
   </React.StrictMode>,
 );

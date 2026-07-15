@@ -11,6 +11,7 @@ import type * as RuntimeGenerationModule from "./runtime-generation";
 import { SelectionOverlay } from "./selection-overlay";
 
 const runtime = vi.hoisted(() => ({
+  canvases: [] as ReturnType<typeof fakeCanvas>[],
   dispose: vi.fn(),
   generationDisposals: [] as Array<ReturnType<typeof vi.fn>>,
   reportError: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock("three", async (importOriginal) => {
   class FakeWebGLRenderer {
     readonly domElement = fakeCanvas();
     readonly info = { render: { calls: 0, triangles: 0 } };
+
+    constructor() {
+      runtime.canvases.push(this.domElement);
+    }
 
     dispose(): void {
       runtime.dispose();
@@ -69,6 +74,7 @@ const assetUrl = new URL("../../../../assets/factory/public/m0-factory-cell.glb"
 
 describe("SceneViewer lifecycle", () => {
   beforeEach(() => {
+    runtime.canvases.length = 0;
     runtime.dispose.mockClear();
     runtime.generationDisposals.length = 0;
     runtime.reportError.mockClear();
@@ -82,6 +88,19 @@ describe("SceneViewer lifecycle", () => {
     vi.stubGlobal("requestAnimationFrame", () => 1);
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
     vi.stubGlobal("reportError", runtime.reportError);
+  });
+
+  it("defaults the canvas aria-label and updates it in place", async () => {
+    const viewer = createSceneViewer(fakeContainer());
+    const canvas = runtime.canvases.at(-1);
+    if (canvas === undefined) throw new Error("Canvas not created.");
+
+    expect(canvas.attributes["aria-label"]).toBe("Interactive 3D scene");
+    const snapshot = viewer.getSnapshot();
+    viewer.setCanvasLabel("Factory operations scene");
+    expect(canvas.attributes["aria-label"]).toBe("Factory operations scene");
+    expect(viewer.getSnapshot()).toEqual(snapshot);
+    await viewer.dispose();
   });
 
   it("stays disposed when an in-flight load aborts after disposal", async () => {
@@ -458,7 +477,9 @@ function deferred<T>() {
 }
 
 function fakeCanvas() {
+  const attributes: Record<string, string> = {};
   return {
+    attributes,
     dataset: {} as Record<string, string>,
     style: {} as Record<string, string>,
     tabIndex: 0,
@@ -473,7 +494,9 @@ function fakeCanvas() {
     }),
     remove(): void {},
     removeEventListener(): void {},
-    setAttribute(): void {},
+    setAttribute(name: string, value: string): void {
+      attributes[name] = value;
+    },
   };
 }
 

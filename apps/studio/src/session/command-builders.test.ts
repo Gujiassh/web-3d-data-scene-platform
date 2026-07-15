@@ -42,6 +42,24 @@ describe("Studio command builders", () => {
     expect(next.entities).toHaveLength(2);
   });
 
+  it("uses an explicit localized fallback when the filename has no display name", () => {
+    const empty = createNewStudioProject({
+      id: "project",
+      name: "Project",
+      createdAt: "2026-07-14T10:00:00Z",
+    }).document;
+    const command = buildImportAssetCommand(
+      empty,
+      { ...modelDescriptor(), fileName: ".glb" },
+      sequentialIds(),
+      { fallbackName: "导入的模型" },
+    );
+
+    expect(command.asset.name).toBe("导入的模型");
+    expect(command.entity.name).toBe("导入的模型");
+    expect(command.target.name).toBe("导入的模型");
+  });
+
   it("rejects an ambiguous or conflicting hash instead of choosing the first asset", () => {
     const empty = createNewStudioProject({
       id: "project",

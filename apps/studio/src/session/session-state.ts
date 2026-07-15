@@ -1,3 +1,5 @@
+import { studioAppErrors } from "../errors";
+
 export type StudioMode = "edit" | "run";
 export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
 
@@ -78,7 +80,7 @@ export function reduceStudioSession(
 }
 
 export function assertCanEdit(state: StudioSessionState): void {
-  if (state.mode === "run") throw new Error("Document commands are disabled in Run mode.");
+  if (state.mode === "run") throw studioAppErrors.documentCommandsDisabledInRunMode();
 }
 
 export function isDirty(state: StudioSessionState): boolean {
@@ -101,6 +103,6 @@ function selectEntity(
 
 function requireMonotonicRevision(current: number, next: number): void {
   if (!Number.isInteger(next) || next <= current) {
-    throw new Error(`Document revision must increase from ${current}; received ${next}.`);
+    throw studioAppErrors.documentRevisionNotMonotonic(current, next);
   }
 }

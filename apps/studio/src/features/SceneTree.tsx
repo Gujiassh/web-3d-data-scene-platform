@@ -2,6 +2,8 @@ import { Box, Boxes, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 
 import type { SceneEntity } from "@web3d/document";
 
+import { useStudioI18n } from "../i18n/I18nProvider";
+
 interface SceneTreeProps {
   readonly entities: readonly SceneEntity[];
   readonly selectedEntityIds: readonly string[];
@@ -12,9 +14,11 @@ interface SceneTreeProps {
 }
 
 export function SceneTree(props: SceneTreeProps) {
+  const { t } = useStudioI18n();
   const rows = sceneTreeRows(props.entities);
+
   return (
-    <div aria-label="Scene tree" className="scene-tree" role="tree">
+    <div aria-label={t.sceneTree.ariaLabel} className="scene-tree" role="tree">
       {rows.map(({ entity, depth }) => {
         const selected = props.selectedEntityIds.includes(entity.id);
         const EntityIcon = entity.type === "group" ? Boxes : Box;
@@ -38,20 +42,20 @@ export function SceneTree(props: SceneTreeProps) {
               <span className="tree-name">{entity.name}</span>
             </button>
             <button
-              aria-label={`${entity.visible ? "Hide" : "Show"} ${entity.name}`}
+              aria-label={t.sceneTree.visibilityAction(entity.visible, entity.name)}
               className="tree-action"
               disabled={!props.editable}
-              title={entity.visible ? "Hide" : "Show"}
+              title={entity.visible ? t.sceneTree.hide : t.sceneTree.show}
               type="button"
               onClick={() => props.onVisibilityChange(entity.id, !entity.visible)}
             >
               {entity.visible ? <Eye size={13} /> : <EyeOff size={13} />}
             </button>
             <button
-              aria-label={`${entity.locked ? "Unlock" : "Lock"} ${entity.name}`}
+              aria-label={t.sceneTree.lockAction(entity.locked, entity.name)}
               className="tree-action"
               disabled={!props.editable}
-              title={entity.locked ? "Unlock" : "Lock"}
+              title={entity.locked ? t.sceneTree.unlock : t.sceneTree.lock}
               type="button"
               onClick={() => props.onLockChange(entity.id, !entity.locked)}
             >

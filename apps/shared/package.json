@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./m0.ts",
+    "./i18n": "./i18n.ts",
+    "./language-switch": "./LanguageSwitch.tsx",
     "./theme.css": "./theme.css"
   },
   "scripts": {
@@ -13,6 +15,10 @@
   },
   "dependencies": {
     "@web3d/document": "workspace:*",
-    "@web3d/runtime": "workspace:*"
+    "@web3d/runtime": "workspace:*",
+    "react": "19.2.7"
+  },
+  "devDependencies": {
+    "react-dom": "19.2.7"
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Box, FolderTree, TriangleAlert } from "lucide-react";
 
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
@@ -9,6 +9,7 @@ import { ImportDialog } from "./features/ImportDialog";
 import { ProjectMenu } from "./features/ProjectMenu";
 import { SceneTree } from "./features/SceneTree";
 import { StudioToolbar } from "./features/StudioToolbar";
+import { useStudioI18n } from "./i18n/I18nProvider";
 import { resolveStudioShortcut } from "./session/shortcuts";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
@@ -16,6 +17,7 @@ type LeftPanel = "scene" | "assets";
 
 export function App() {
   const desktopViewport = useDesktopViewport();
+  const { t } = useStudioI18n();
   const workspace = useStudioWorkspace();
   const viewerRef = useRef<AuthoringSceneHandle>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +30,10 @@ export function App() {
   const activeTool = workspace.session?.tool ?? "select";
   const selectedEntity =
     workspace.project?.document.entities.find((entity) => entity.id === selectedEntityId) ?? null;
+  const project = workspace.project;
+  const session = workspace.session;
+  const history = workspace.history;
+  const openModelPicker = (): void => modelInputRef.current?.click();
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -35,6 +41,12 @@ export function App() {
     viewer.setTool(activeTool);
     viewer.selectEntity(selectedEntityId);
   }, [activeTool, selectedEntityId]);
+
+  useLayoutEffect(() => {
+    const title =
+      project === null ? t.app.documentTitle : `${project.record.name} | ${t.app.documentTitle}`;
+    document.title = title;
+  }, [project, t.app.documentTitle]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -77,16 +89,11 @@ export function App() {
       <div className="studio-app">
         <div className="studio-size-gate">
           <Box size={22} />
-          <strong>Studio requires a 1280px desktop viewport.</strong>
+          <strong>{t.app.sizeGate}</strong>
         </div>
       </div>
     );
   }
-
-  const project = workspace.project;
-  const session = workspace.session;
-  const history = workspace.history;
-  const openModelPicker = (): void => modelInputRef.current?.click();
 
   return (
     <div className="studio-app">
@@ -97,7 +104,7 @@ export function App() {
         exportOutdated={workspace.exportOutdated}
         hasSelection={selectedEntityId !== null}
         mode={session?.mode ?? "edit"}
-        projectName={project?.record.name ?? "Opening project"}
+        projectName={project?.record.name ?? t.app.openingProject}
         save={session?.save ?? { status: "saving", revision: 0 }}
         tool={activeTool}
         onDelete={() => {
@@ -154,21 +161,21 @@ export function App() {
       )}
 
       <main className="studio-workspace">
-        <aside className="studio-left" aria-label="Scene navigation">
+        <aside className="studio-left" aria-label={t.app.navigationLabel}>
           <div className="panel-tabs">
             <button
               className={leftPanel === "scene" ? "is-active" : ""}
               type="button"
               onClick={() => setLeftPanel("scene")}
             >
-              <FolderTree size={14} /> Scene
+              <FolderTree size={14} /> {t.app.sourceSummary.sceneTab}
             </button>
             <button
               className={leftPanel === "assets" ? "is-active" : ""}
               type="button"
               onClick={() => setLeftPanel("assets")}
             >
-              <Box size={14} /> Assets
+              <Box size={14} /> {t.app.sourceSummary.assetsTab}
             </button>
           </div>
           {leftPanel === "scene" ? (
@@ -194,20 +201,28 @@ export function App() {
           <div className="source-summary">
             <span className="status-dot" />
             <span>
-              <strong>{session?.mode === "run" ? "Run mode" : "Local project"}</strong>
-              <small data-testid="document-revision">
-                revision {project?.document.revision ?? 0}
+              <strong>
+                {session?.mode === "run"
+                  ? t.app.sourceSummary.runMode
+                  : t.app.sourceSummary.localProject}
+              </strong>
+              <small
+                data-revision={project?.document.revision ?? 0}
+                data-testid="document-revision"
+              >
+                {t.app.sourceSummary.revision(project?.document.revision ?? 0)}
               </small>
             </span>
           </div>
         </aside>
 
-        <section className="studio-viewport" aria-label="Studio 3D viewport">
+        <section className="studio-viewport" aria-label={t.app.viewport.label}>
           {workspace.loading || project === null ? (
-            <div className="viewport-loading">Opening local project</div>
+            <div className="viewport-loading">{t.app.openingLocalProject}</div>
           ) : (
             <AuthoringScene
               ref={viewerRef}
+              canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
               className="studio-viewer"
               initialTool={activeTool}
@@ -229,8 +244,9 @@ export function App() {
             />
           )}
           <div className="viewport-mode mono" data-testid="viewport-mode">
-            {session?.mode.toUpperCase() ?? "EDIT"} / {activeTool.toUpperCase()} /{` `}
-            {selectedEntityId ?? "NO SELECTION"}
+            {t.app.viewport.modeStatus[session?.mode ?? "edit"]} /{" "}
+            {t.app.viewport.toolStatus[activeTool]} /{" "}
+            {selectedEntityId ?? t.app.viewport.noSelection}
           </div>
         </section>
 
@@ -247,14 +263,14 @@ export function App() {
           }}
         />
 
-        <section className="studio-diagnostics" aria-label="Diagnostics">
+        <section className="studio-diagnostics" aria-label={t.app.diagnostics.label}>
           <div className="diagnostics-title">
-            <TriangleAlert size={14} /> Diagnostics
+            <TriangleAlert size={14} /> {t.app.diagnostics.label}
             <span>{workspace.diagnostics.length}</span>
           </div>
           <div className="diagnostics-stream mono">
             {workspace.diagnostics.length === 0
-              ? "document=valid storage=indexeddb authoring=ready"
+              ? t.app.diagnostics.ready
               : workspace.diagnostics.join(" · ")}
           </div>
         </section>

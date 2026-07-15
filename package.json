@@ -19,7 +19,8 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/e2e/tsconfig.json && pnpm -r --if-present typecheck",
-    "verify:design": "./scripts/verify-product-design.sh"
+    "verify:design": "./scripts/verify-product-design.sh",
+    "verify:i18n": "node scripts/verify-i18n-copy.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -37,6 +37,7 @@ export interface AuthoringSceneProps {
   readonly source: SceneSource;
   readonly adapters?: Readonly<Record<string, DataAdapter>>;
   readonly assetResolver?: AssetResolver;
+  readonly canvasLabel?: string;
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly pixelRatio?: number;
@@ -58,6 +59,7 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     const adaptersRef = useRef<Readonly<Record<string, DataAdapter>>>({});
     const initialOptionsRef = useRef({
       assetResolver: props.assetResolver,
+      canvasLabel: props.canvasLabel,
       initialTool: props.initialTool,
       pixelRatio: props.pixelRatio,
       reducedMotion: props.reducedMotion,
@@ -70,6 +72,7 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
       const options = initialOptionsRef.current;
       const viewer = createAuthoringSceneViewer(container, {
         ...(options.assetResolver === undefined ? {} : { assetResolver: options.assetResolver }),
+        ...(options.canvasLabel === undefined ? {} : { canvasLabel: options.canvasLabel }),
         ...(options.initialTool === undefined ? {} : { initialTool: options.initialTool }),
         ...(options.pixelRatio === undefined ? {} : { pixelRatio: options.pixelRatio }),
         ...(options.reducedMotion === undefined ? {} : { reducedMotion: options.reducedMotion }),
@@ -89,6 +92,10 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
       if (viewer === null) return;
       void viewer.load(props.source).catch(() => undefined);
     }, [props.source]);
+
+    useEffect(() => {
+      viewerRef.current?.setCanvasLabel(props.canvasLabel ?? "Interactive 3D scene");
+    }, [props.canvasLabel]);
 
     useEffect(() => {
       const viewer = viewerRef.current;

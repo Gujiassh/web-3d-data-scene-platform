@@ -8,7 +8,7 @@
 .factory-header {
   z-index: 2;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 16px;
   align-items: center;
   padding: 0 14px;
@@ -50,6 +50,13 @@
   color: var(--ink-muted);
   font-size: 11px;
   line-height: 14px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .connection-state {
@@ -213,11 +220,23 @@
 }
 
 .equipment-icon.state-critical,
-.equipment-icon.state-offline {
+.equipment-icon.state-offline,
+.equipment-icon.state-error {
   background: rgb(185 54 50 / 10%);
 }
 
-.state-warning {
+.state-warning,
+.state-info,
+.state-stale,
+.state-connecting {
+  color: var(--warning);
+}
+
+.equipment-icon.state-warning,
+.equipment-icon.state-info,
+.equipment-icon.state-stale,
+.equipment-icon.state-connecting {
+  background: rgb(169 104 0 / 10%);
   color: var(--warning);
 }
 
@@ -434,6 +453,10 @@
 @media (max-width: 760px) {
   .factory-header {
     grid-template-columns: 1fr auto;
+  }
+
+  .header-actions {
+    gap: 8px;
   }
 
   .connection-state {

@@ -95,6 +95,13 @@ importers:
       '@web3d/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+    devDependencies:
+      react-dom:
+        specifier: 19.2.7
+        version: 19.2.7(react@19.2.7)
 
   apps/studio:
     dependencies:

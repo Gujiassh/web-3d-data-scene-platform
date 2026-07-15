@@ -1,5 +1,6 @@
 import { validateSceneDocument, type SceneDocument } from "@web3d/document";
 
+import { studioAppErrors } from "../errors";
 import type { ProjectRecord, StudioProjectSnapshot } from "../project";
 
 export interface NewProjectInput {
@@ -10,7 +11,7 @@ export interface NewProjectInput {
 
 export function createNewStudioProject(input: NewProjectInput): StudioProjectSnapshot {
   const name = input.name.trim();
-  if (name === "") throw new Error("Project name is required.");
+  if (name === "") throw studioAppErrors.projectNameRequired();
   assertTimestamp(input.createdAt);
 
   const document = createEmptyDocument(input.id, name);
@@ -49,11 +50,14 @@ function createEmptyDocument(id: string, name: string): SceneDocument {
   };
   const validation = validateSceneDocument(candidate);
   if (!validation.ok) {
-    throw new Error(validation.diagnostics[0]?.message ?? "New project is invalid.");
+    const diagnostic = validation.diagnostics[0];
+    throw diagnostic === undefined
+      ? studioAppErrors.newProjectInvalid()
+      : new Error(diagnostic.message);
   }
   return validation.value;
 }
 
 function assertTimestamp(value: string): void {
-  if (Number.isNaN(Date.parse(value))) throw new Error("Project timestamp is invalid.");
+  if (Number.isNaN(Date.parse(value))) throw studioAppErrors.projectTimestampInvalid();
 }

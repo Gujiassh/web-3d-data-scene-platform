@@ -82,6 +82,35 @@ button:focus-visible,
   background: currentColor;
 }
 
+.language-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 36px);
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+}
+
+.language-switch button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-switch button.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(24 32 29 / 14%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

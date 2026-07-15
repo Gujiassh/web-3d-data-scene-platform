@@ -16,6 +16,9 @@ import {
   Upload,
 } from "lucide-react";
 
+import { LanguageSwitch } from "@web3d/demo-support/language-switch";
+
+import { useStudioI18n } from "../i18n/I18nProvider";
 import type { AuthoringTool, SaveState, StudioMode } from "../session/session-state";
 
 interface StudioToolbarProps {
@@ -41,19 +44,21 @@ interface StudioToolbarProps {
 }
 
 const tools = [
-  { value: "select", label: "Select", icon: MousePointer2 },
-  { value: "translate", label: "Move", icon: Move3d },
-  { value: "rotate", label: "Rotate", icon: Rotate3d },
-  { value: "scale", label: "Scale", icon: Scale3d },
+  { value: "select", icon: MousePointer2 },
+  { value: "translate", icon: Move3d },
+  { value: "rotate", icon: Rotate3d },
+  { value: "scale", icon: Scale3d },
 ] as const;
 
 export function StudioToolbar(props: StudioToolbarProps) {
+  const { locale, setLocale, t } = useStudioI18n();
+
   return (
     <header className="studio-toolbar">
       <button
-        aria-label="Open project menu"
+        aria-label={t.toolbar.openProjectMenu}
         className="studio-project project-menu-trigger"
-        title="Project"
+        title={t.toolbar.projectMenu}
         type="button"
         onClick={props.onOpenProjectMenu}
       >
@@ -68,11 +73,11 @@ export function StudioToolbar(props: StudioToolbarProps) {
               className={`save-state save-${props.save.status}`}
               data-testid="save-state"
             >
-              {saveLabel(props.save)}
+              {saveLabel(props.save, t)}
             </small>
             {props.exportOutdated && (
               <small className="export-state" data-testid="export-state">
-                Export outdated
+                {t.toolbar.exportOutdated}
               </small>
             )}
           </span>
@@ -80,55 +85,55 @@ export function StudioToolbar(props: StudioToolbarProps) {
         <FolderOpen size={14} />
       </button>
 
-      <div className="toolbar-group" aria-label="History">
+      <div className="toolbar-group" aria-label={t.toolbar.historyGroup}>
         <IconCommand
           disabled={!props.canUndo}
-          label="Undo"
+          label={t.toolbar.undo}
           icon={<Undo2 size={16} />}
           onClick={props.onUndo}
         />
         <IconCommand
           disabled={!props.canRedo}
-          label="Redo"
+          label={t.toolbar.redo}
           icon={<Redo2 size={16} />}
           onClick={props.onRedo}
         />
-        <IconCommand label="Save local project" icon={<Save size={16} />} onClick={props.onSave} />
+        <IconCommand label={t.toolbar.save} icon={<Save size={16} />} onClick={props.onSave} />
         <IconCommand
           disabled={!props.canEdit || !props.hasSelection}
-          label="Duplicate selection"
+          label={t.toolbar.duplicate}
           icon={<Copy size={16} />}
           onClick={props.onDuplicate}
         />
         <IconCommand
           disabled={!props.canEdit || !props.hasSelection}
-          label="Delete selection"
+          label={t.toolbar.delete}
           icon={<Trash2 size={16} />}
           onClick={props.onDelete}
         />
       </div>
 
-      <div className="toolbar-group" aria-label="Authoring tools">
-        {tools.map(({ value, label, icon: Icon }) => (
+      <div className="toolbar-group" aria-label={t.toolbar.authoringToolsGroup}>
+        {tools.map(({ value, icon: Icon }) => (
           <IconCommand
             active={props.tool === value}
             disabled={!props.canEdit}
             icon={<Icon size={16} />}
             key={value}
-            label={label}
+            label={t.toolbar.tools[value]}
             onClick={() => props.onToolChange(value)}
           />
         ))}
       </div>
 
-      <div className="mode-control" aria-label="Studio mode">
+      <div className="mode-control" aria-label={t.toolbar.modeGroup}>
         <button
           className={props.mode === "edit" ? "is-active" : ""}
           type="button"
           onClick={() => props.onModeChange("edit")}
         >
           <Pause size={14} />
-          Edit
+          {t.toolbar.editMode}
         </button>
         <button
           className={props.mode === "run" ? "is-active" : ""}
@@ -136,11 +141,18 @@ export function StudioToolbar(props: StudioToolbarProps) {
           onClick={() => props.onModeChange("run")}
         >
           <Play size={14} />
-          Run
+          {t.toolbar.runMode}
         </button>
       </div>
 
       <span className="toolbar-spacer" />
+      <LanguageSwitch
+        ariaLabel={t.app.languageSwitch.ariaLabel}
+        chineseLabel={t.app.languageSwitch.chineseLabel}
+        englishLabel={t.app.languageSwitch.englishLabel}
+        locale={locale}
+        onChange={setLocale}
+      />
       <button
         className="secondary-command"
         disabled={!props.canEdit}
@@ -148,11 +160,11 @@ export function StudioToolbar(props: StudioToolbarProps) {
         onClick={props.onImport}
       >
         <Upload size={15} />
-        Import
+        {t.toolbar.import}
       </button>
       <button className="export-command" type="button" onClick={props.onExport}>
         <Download size={15} />
-        Export
+        {t.toolbar.export}
       </button>
     </header>
   );
@@ -186,8 +198,8 @@ function IconCommand({
   );
 }
 
-function saveLabel(save: SaveState): string {
-  if (save.status === "saving") return "Saving";
-  if (save.status === "failed") return "Save failed";
-  return "Saved locally";
+function saveLabel(save: SaveState, t: ReturnType<typeof useStudioI18n>["t"]): string {
+  if (save.status === "saving") return t.toolbar.saveState.saving;
+  if (save.status === "failed") return t.toolbar.saveState.failed;
+  return t.toolbar.saveState.saved;
 }

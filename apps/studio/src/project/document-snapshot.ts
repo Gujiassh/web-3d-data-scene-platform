@@ -5,6 +5,8 @@ import {
   type SceneDocument,
 } from "@web3d/document";
 
+import { studioAppErrors } from "../errors";
+
 const ASSET_URI_PREFIX = "asset://";
 
 export function canonicalizeSceneDocument(document: SceneDocument): SceneDocument {
@@ -24,7 +26,7 @@ export function validateProjectDocument(document: SceneDocument): SceneDocument 
   const canonical = canonicalizeSceneDocument(document);
   for (const asset of canonical.assets) {
     if (asset.uri !== `${ASSET_URI_PREFIX}${asset.sha256}`) {
-      throw new Error(`Asset ${asset.id} must use asset://${asset.sha256}.`);
+      throw studioAppErrors.assetUriMismatch(asset.id, asset.sha256);
     }
   }
   return canonical;
@@ -42,10 +44,5 @@ function sceneDocumentValidationError(
   }[],
 ): Error {
   const first = diagnostics[0];
-  if (!first) {
-    return new Error("SceneDocument validation failed.");
-  }
-  return new Error(
-    `SceneDocument validation failed: ${first.code} at ${first.path || "/"}: ${first.message}`,
-  );
+  return studioAppErrors.sceneDocumentValidationFailed(first);
 }

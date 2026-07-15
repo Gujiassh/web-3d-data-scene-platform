@@ -8,16 +8,19 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@web3d/demo-support/theme.css";
 
 import { App } from "./App";
+import { FactoryI18nProvider } from "./i18n/I18nProvider";
 import "./styles.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");
 
-if (!root) {
+if (root === null) {
   throw new Error("Factory Demo root element was not found.");
 }
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <FactoryI18nProvider>
+      <App />
+    </FactoryI18nProvider>
   </React.StrictMode>,
 );

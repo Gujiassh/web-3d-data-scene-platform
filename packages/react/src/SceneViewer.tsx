@@ -33,6 +33,7 @@ export interface SceneViewerProps {
   readonly source: SceneSource;
   readonly adapters?: Readonly<Record<string, DataAdapter>>;
   readonly assetResolver?: AssetResolver;
+  readonly canvasLabel?: string;
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly pixelRatio?: number;
@@ -52,6 +53,7 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
     const adaptersRef = useRef<Readonly<Record<string, DataAdapter>>>({});
     const initialOptionsRef = useRef({
       assetResolver: props.assetResolver,
+      canvasLabel: props.canvasLabel,
       pixelRatio: props.pixelRatio,
       reducedMotion: props.reducedMotion,
     });
@@ -63,6 +65,7 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
       const options = initialOptionsRef.current;
       const viewer = createSceneViewer(container, {
         ...(options.assetResolver === undefined ? {} : { assetResolver: options.assetResolver }),
+        ...(options.canvasLabel === undefined ? {} : { canvasLabel: options.canvasLabel }),
         ...(options.pixelRatio === undefined ? {} : { pixelRatio: options.pixelRatio }),
         ...(options.reducedMotion === undefined ? {} : { reducedMotion: options.reducedMotion }),
         onEvent: (event) => dispatch(callbacksRef.current, event),
@@ -81,6 +84,10 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
       if (viewer === null) return;
       void viewer.load(props.source).catch(() => undefined);
     }, [props.source]);
+
+    useEffect(() => {
+      viewerRef.current?.setCanvasLabel(props.canvasLabel ?? "Interactive 3D scene");
+    }, [props.canvasLabel]);
 
     useEffect(() => {
       const viewer = viewerRef.current;

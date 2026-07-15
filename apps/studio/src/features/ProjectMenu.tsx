@@ -1,5 +1,7 @@
 import { Braces, Download, FileArchive, FilePlus2, FolderOpen, Trash2, X } from "lucide-react";
 
+import { useStudioI18n } from "../i18n/I18nProvider";
+
 export interface RecentProjectItem {
   readonly id: string;
   readonly name: string;
@@ -20,12 +22,14 @@ interface ProjectMenuProps {
 }
 
 export function ProjectMenu(props: ProjectMenuProps) {
+  const { formatters, t } = useStudioI18n();
+
   return (
-    <section aria-label="Project menu" className="project-menu">
+    <section aria-label={t.projectMenu.ariaLabel} className="project-menu">
       <header>
-        <strong>Project</strong>
+        <strong>{t.projectMenu.title}</strong>
         <button
-          aria-label="Close project menu"
+          aria-label={t.projectMenu.close}
           className="icon-button"
           type="button"
           onClick={props.onClose}
@@ -35,20 +39,20 @@ export function ProjectMenu(props: ProjectMenuProps) {
       </header>
       <div className="project-menu-commands">
         <button type="button" onClick={props.onNew}>
-          <FilePlus2 size={15} /> New
+          <FilePlus2 size={15} /> {t.projectMenu.new}
         </button>
         <button type="button" onClick={props.onImportArchive}>
-          <FileArchive size={15} /> Import archive
+          <FileArchive size={15} /> {t.projectMenu.importArchive}
         </button>
         <button type="button" onClick={props.onImportJson}>
-          <Braces size={15} /> Import JSON
+          <Braces size={15} /> {t.projectMenu.importJson}
         </button>
         <button type="button" onClick={props.onExportJson}>
-          <Download size={15} /> Export JSON
+          <Download size={15} /> {t.projectMenu.exportJson}
         </button>
       </div>
       <div className="recent-projects">
-        <span className="menu-label">Recent</span>
+        <span className="menu-label">{t.projectMenu.recent}</span>
         {props.recent.map((project) => (
           <div
             className={`recent-project ${project.id === props.currentProjectId ? "is-current" : ""}`}
@@ -63,15 +67,16 @@ export function ProjectMenu(props: ProjectMenuProps) {
               <span>
                 <strong>{project.name}</strong>
                 <small>
-                  r{project.revision} · {formatDate(project.updatedAt)}
+                  {t.projectMenu.revision(project.revision)} ·{" "}
+                  {formatters.formatDateTime(project.updatedAt)}
                 </small>
               </span>
             </button>
             <button
-              aria-label={`Delete ${project.name}`}
+              aria-label={t.projectMenu.delete(project.name)}
               className="tree-action"
               disabled={project.id === props.currentProjectId}
-              title="Delete local project"
+              title={t.projectMenu.deleteTitle}
               type="button"
               onClick={() => props.onDelete(project.id)}
             >
@@ -82,16 +87,4 @@ export function ProjectMenu(props: ProjectMenuProps) {
       </div>
     </section>
   );
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf())
-    ? value
-    : new Intl.DateTimeFormat("en", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(date);
 }

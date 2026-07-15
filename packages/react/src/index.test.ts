@@ -31,9 +31,14 @@ describe("react runtime wrappers", () => {
       createElement(
         StrictMode,
         undefined,
-        createElement(SceneViewer, { source, className: "viewer" }),
+        createElement(SceneViewer, {
+          source,
+          canvasLabel: "Interactive 3D scene",
+          className: "viewer",
+        }),
         createElement(AuthoringScene, {
           source,
+          canvasLabel: "Authoring 3D scene",
           className: "authoring",
           initialTool: "rotate",
         }),

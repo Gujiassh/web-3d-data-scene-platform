@@ -3,6 +3,8 @@ import { Box, Lock, Move3d } from "lucide-react";
 
 import type { SceneEntity, Transform, Vec3 } from "@web3d/document";
 
+import { useStudioI18n } from "../i18n/I18nProvider";
+
 interface EntityInspectorProps {
   readonly entity: SceneEntity | null;
   readonly editable: boolean;
@@ -11,11 +13,13 @@ interface EntityInspectorProps {
 }
 
 export function EntityInspector(props: EntityInspectorProps) {
+  const { t } = useStudioI18n();
+
   if (props.entity === null) {
     return (
-      <aside aria-label="Inspector" className="studio-inspector inspector-empty">
-        <div className="inspector-header">Inspector</div>
-        <span>No selection</span>
+      <aside aria-label={t.inspector.ariaLabel} className="studio-inspector inspector-empty">
+        <div className="inspector-header">{t.inspector.title}</div>
+        <span>{t.inspector.empty}</span>
       </aside>
     );
   }
@@ -28,6 +32,7 @@ export function EntityInspector(props: EntityInspectorProps) {
 function EntityInspectorForm(
   props: Omit<EntityInspectorProps, "entity"> & { readonly entity: SceneEntity },
 ) {
+  const { t } = useStudioI18n();
   const [name, setName] = useState(props.entity.name);
   const [transform, setTransform] = useState(props.entity.transform);
 
@@ -43,17 +48,17 @@ function EntityInspectorForm(
   };
 
   return (
-    <aside aria-label="Inspector" className="studio-inspector">
+    <aside aria-label={t.inspector.ariaLabel} className="studio-inspector">
       <div className="inspector-header">
-        <span>Inspector</span>
+        <span>{t.inspector.title}</span>
         <span className="mono">{props.entity.id}</span>
       </div>
       <section className="inspector-section">
         <h2>
-          <Box size={13} /> Entity
+          <Box size={13} /> {t.inspector.entity}
         </h2>
         <label className="inspector-field">
-          <span>Name</span>
+          <span>{t.inspector.name}</span>
           <input
             disabled={!props.editable}
             value={name}
@@ -68,32 +73,40 @@ function EntityInspectorForm(
             }}
           />
         </label>
-        <InspectorValue label="Type" value={props.entity.type} />
-        <InspectorValue label="Parent" value={props.entity.parentId ?? "scene root"} mono />
+        <InspectorValue label={t.inspector.type} value={props.entity.type} />
+        <InspectorValue
+          label={t.inspector.parent}
+          value={props.entity.parentId ?? t.inspector.sceneRoot}
+          mono
+        />
       </section>
       <section className="inspector-section">
         <h2>
-          <Move3d size={13} /> Transform
+          <Move3d size={13} /> {t.inspector.transform}
         </h2>
         <VectorInput
           disabled={!props.editable || props.entity.locked}
-          label="Position"
+          label={t.inspector.position}
           value={transform.position}
           onBlur={commitTransform}
           onChange={(value) => setTransform({ ...transform, position: value })}
         />
         <VectorInput
           disabled={!props.editable || props.entity.locked}
-          label="Scale"
+          label={t.inspector.scale}
           value={transform.scale}
           onBlur={commitTransform}
           onChange={(value) => setTransform({ ...transform, scale: value })}
         />
-        <InspectorValue label="Rotation" value={formatQuaternion(transform.rotation)} mono />
+        <InspectorValue
+          label={t.inspector.rotation}
+          value={formatQuaternion(transform.rotation)}
+          mono
+        />
       </section>
       {props.entity.locked && (
         <div className="inspector-notice">
-          <Lock size={13} /> Locked
+          <Lock size={13} /> {t.inspector.locked}
         </div>
       )}
     </aside>
@@ -113,27 +126,33 @@ function VectorInput({
   readonly onBlur: () => void;
   readonly onChange: (value: Vec3) => void;
 }) {
+  const { t } = useStudioI18n();
+  const axisLabels = [t.inspector.axis.x, t.inspector.axis.y, t.inspector.axis.z] as const;
+
   return (
     <fieldset className="vector-field" disabled={disabled}>
       <legend>{label}</legend>
-      {value.map((number, index) => (
-        <label key={index}>
-          <span>{["X", "Y", "Z"][index]}</span>
-          <input
-            aria-label={`${label} ${["X", "Y", "Z"][index]}`}
-            inputMode="decimal"
-            step="0.1"
-            type="number"
-            value={number}
-            onBlur={onBlur}
-            onChange={(event) => {
-              const next = [...value] as [number, number, number];
-              next[index] = Number(event.target.value);
-              onChange(next);
-            }}
-          />
-        </label>
-      ))}
+      {value.map((number, index) => {
+        const axis = axisLabels[index] ?? t.inspector.axis.x;
+        return (
+          <label key={index}>
+            <span>{axis}</span>
+            <input
+              aria-label={t.inspector.vectorAxis(label, axis)}
+              inputMode="decimal"
+              step="0.1"
+              type="number"
+              value={number}
+              onBlur={onBlur}
+              onChange={(event) => {
+                const next = [...value] as [number, number, number];
+                next[index] = Number(event.target.value);
+                onChange(next);
+              }}
+            />
+          </label>
+        );
+      })}
     </fieldset>
   );
 }

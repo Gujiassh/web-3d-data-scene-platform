@@ -133,6 +133,21 @@ describe("createAuthoringSceneViewer", () => {
     vi.stubGlobal("reportError", runtime.reportError);
   });
 
+  it("applies the initial canvas aria-label and updates it in place", async () => {
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      canvasLabel: "Authoring 3D scene",
+    });
+    const canvas = runtime.canvases.at(-1);
+    if (canvas === undefined) throw new Error("Canvas not created.");
+
+    expect(canvas.attributes["aria-label"]).toBe("Authoring 3D scene");
+    const snapshot = viewer.getSnapshot();
+    viewer.setCanvasLabel("Authoring layout scene");
+    expect(canvas.attributes["aria-label"]).toBe("Authoring layout scene");
+    expect(viewer.getSnapshot()).toEqual(snapshot);
+    await viewer.dispose();
+  });
+
   it("uses the live runtime transform as before across consecutive drags", async () => {
     const { asset, scene } = await fixture();
     const events: AuthoringViewerEvent[] = [];
@@ -474,8 +489,10 @@ function requiredControls(): FakeTransformControls {
 }
 
 function fakeCanvas() {
+  const attributes: Record<string, string> = {};
   const listeners = new Map<string, Set<(event: Record<string, number>) => void>>();
   return {
+    attributes,
     dataset: {} as Record<string, string>,
     style: {} as Record<string, string>,
     tabIndex: 0,
@@ -499,7 +516,9 @@ function fakeCanvas() {
     removeEventListener(type: string, listener: (event: Record<string, number>) => void): void {
       listeners.get(type)?.delete(listener);
     },
-    setAttribute(): void {},
+    setAttribute(name: string, value: string): void {
+      attributes[name] = value;
+    },
   };
 }
 
