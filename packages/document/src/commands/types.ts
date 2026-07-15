@@ -1,5 +1,10 @@
 import type { SceneAsset, SceneDocument, SceneEntity, SceneTarget, Transform } from "../types.js";
 
+export interface RenameDocumentCommand {
+  readonly type: "rename-document";
+  readonly name: string;
+}
+
 export interface RenameEntityCommand {
   readonly type: "rename-entity";
   readonly entityId: string;
@@ -45,6 +50,7 @@ export interface ImportAssetInstanceCommand {
 }
 
 export type DocumentCommand =
+  | RenameDocumentCommand
   | RenameEntityCommand
   | SetEntityVisibilityCommand
   | SetEntityLockCommand

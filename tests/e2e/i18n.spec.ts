@@ -131,7 +131,7 @@ test.describe("Chinese and English interface", () => {
 async function exportCanonicalDocument(page: Page): Promise<unknown> {
   await page.locator(".project-menu-trigger").click();
   const download = page.waitForEvent("download");
-  await page.locator(".project-menu-commands button").nth(3).click();
+  await page.getByTestId("export-json-command").click();
   const downloadPath = await (await download).path();
   if (downloadPath === null) throw new Error("The canonical document download has no local path.");
   return JSON.parse(await readFile(downloadPath, "utf8")) as unknown;

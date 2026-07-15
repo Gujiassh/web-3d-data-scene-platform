@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitch } from "@web3d/demo-support/language-switch";
+import { ThemeSwitch } from "@web3d/demo-support/theme-switch";
+import { useTheme } from "@web3d/demo-support/theme-provider";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
 import type { AuthoringTool, SaveState, StudioMode } from "../session/session-state";
@@ -52,13 +54,14 @@ const tools = [
 
 export function StudioToolbar(props: StudioToolbarProps) {
   const { locale, setLocale, t } = useStudioI18n();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="studio-toolbar">
       <button
         aria-label={t.toolbar.openProjectMenu}
         className="studio-project project-menu-trigger"
-        title={t.toolbar.projectMenu}
+        title={props.projectName}
         type="button"
         onClick={props.onOpenProjectMenu}
       >
@@ -152,6 +155,12 @@ export function StudioToolbar(props: StudioToolbarProps) {
         englishLabel={t.app.languageSwitch.englishLabel}
         locale={locale}
         onChange={setLocale}
+      />
+      <ThemeSwitch
+        darkLabel={t.app.themeSwitch.switchToDark}
+        lightLabel={t.app.themeSwitch.switchToLight}
+        theme={theme}
+        onToggle={toggleTheme}
       />
       <button
         className="secondary-command"

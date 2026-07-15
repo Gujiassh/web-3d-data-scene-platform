@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSwitch } from "@web3d/demo-support/language-switch";
+import { ThemeSwitch } from "@web3d/demo-support/theme-switch";
+import { useTheme } from "@web3d/demo-support/theme-provider";
 import { SceneViewer, type SceneViewerHandle } from "@web3d/react";
 import type {
   ConnectionStatus,
@@ -31,6 +33,7 @@ interface SceneLoadFailure {
 
 export function App() {
   const { catalog, locale, setLocale } = useFactoryI18n();
+  const { theme, toggleTheme } = useTheme();
   const viewerRef = useRef<SceneViewerHandle>(null);
   const [scene, setScene] = useState<Awaited<ReturnType<typeof loadM0Scene>> | null>(null);
   const [loadFailure, setLoadFailure] = useState<SceneLoadFailure | null>(null);
@@ -114,6 +117,12 @@ export function App() {
             englishLabel={catalog.header.switchToEnglish}
             locale={locale}
             onChange={setLocale}
+          />
+          <ThemeSwitch
+            darkLabel={catalog.header.switchToDarkTheme}
+            lightLabel={catalog.header.switchToLightTheme}
+            theme={theme}
+            onToggle={toggleTheme}
           />
           <div
             aria-label={`${catalog.header.connection}: ${connectionDisplay}`}

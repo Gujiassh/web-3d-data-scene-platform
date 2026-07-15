@@ -17,6 +17,7 @@ export type {
   DuplicateSubtreeCommand,
   ExecuteDocumentCommandOptions,
   ImportAssetInstanceCommand,
+  RenameDocumentCommand,
   RenameEntityCommand,
   SetEntityLockCommand,
   SetEntityVisibilityCommand,

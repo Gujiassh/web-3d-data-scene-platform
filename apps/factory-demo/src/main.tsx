@@ -6,6 +6,7 @@ import "@fontsource/ibm-plex-sans/400.css";
 import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "@web3d/demo-support/theme.css";
+import { ThemeProvider } from "@web3d/demo-support/theme-provider";
 
 import { App } from "./App";
 import { FactoryI18nProvider } from "./i18n/I18nProvider";
@@ -19,8 +20,10 @@ if (root === null) {
 
 createRoot(root).render(
   <React.StrictMode>
-    <FactoryI18nProvider>
-      <App />
-    </FactoryI18nProvider>
+    <ThemeProvider storageKey="web3d.factory-demo.theme">
+      <FactoryI18nProvider>
+        <App />
+      </FactoryI18nProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

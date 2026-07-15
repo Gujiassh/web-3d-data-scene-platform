@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { validateSceneDocument, type SceneDocument } from "../index.js";
+import { validateSceneDocument, type RenameDocumentCommand, type SceneDocument } from "../index.js";
 import type { Annotation, AssetEntity, Binding, GroupEntity, SceneTarget } from "../types.js";
 import { executeDocumentCommand } from "./document-command.js";
 import {
@@ -19,6 +19,70 @@ const fixtureUrl = new URL(
 );
 
 describe("document commands", () => {
+  it("renames the document with a trimmed name as one validated revision", () => {
+    const document = loadFixture();
+    const command: RenameDocumentCommand = {
+      type: "rename-document",
+      name: "  Assembly line overview  ",
+    };
+
+    const next = executeDocumentCommand(document, command);
+
+    expect(next.name).toBe("Assembly line overview");
+    expect(next.revision).toBe(document.revision + 1);
+    expectValidationOk(next);
+  });
+
+  it("rejects a whitespace-only document name without changing the document", () => {
+    const document = loadFixture();
+
+    expect(() =>
+      executeDocumentCommand(document, { type: "rename-document", name: "  \t\n  " }),
+    ).toThrow("Document name must not be empty.");
+    expect(document.name).toBe(loadFixture().name);
+    expect(document.revision).toBe(loadFixture().revision);
+  });
+
+  it("treats the current trimmed document name as a history no-op", () => {
+    const document = loadFixture();
+    const renamed = executeHistoryCommand(createDocumentHistory(document), {
+      type: "rename-document",
+      name: "Temporary name",
+    });
+    const history = undoHistoryCommand(renamed);
+
+    const next = executeHistoryCommand(history, {
+      type: "rename-document",
+      name: `  ${document.name}  `,
+    });
+
+    expect(next).toBe(history);
+    expect(next.document.name).toBe(document.name);
+    expect(next.document.revision).toBe(history.document.revision);
+    expect(next.undoStack).toEqual([]);
+    expect(next.redoStack).toHaveLength(1);
+  });
+
+  it("undoes and redoes document renames with monotonic revisions", () => {
+    const original = loadFixture();
+    const renamed = executeHistoryCommand(createDocumentHistory(original), {
+      type: "rename-document",
+      name: "Packaging cell",
+    });
+
+    expect(renamed.document.name).toBe("Packaging cell");
+    expect(renamed.document.revision).toBe(original.revision + 1);
+
+    const undone = undoHistoryCommand(renamed);
+    expect(undone.document.name).toBe(original.name);
+    expect(undone.document.revision).toBe(original.revision + 2);
+
+    const redone = redoHistoryCommand(undone);
+    expect(redone.document.name).toBe("Packaging cell");
+    expect(redone.document.revision).toBe(original.revision + 3);
+    expectValidationOk(redone.document);
+  });
+
   it("supports three-step undo and redo with monotonic revisions", () => {
     const original = loadFixture();
     let history = createDocumentHistory(original);

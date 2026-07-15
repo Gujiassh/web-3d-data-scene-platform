@@ -1,4 +1,13 @@
-import { Braces, Download, FileArchive, FilePlus2, FolderOpen, Trash2, X } from "lucide-react";
+import {
+  Braces,
+  Download,
+  FileArchive,
+  FilePlus2,
+  FolderOpen,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
 
@@ -11,9 +20,11 @@ export interface RecentProjectItem {
 
 interface ProjectMenuProps {
   readonly currentProjectId: string;
+  readonly canRename: boolean;
   readonly recent: readonly RecentProjectItem[];
   readonly onClose: () => void;
   readonly onNew: () => void;
+  readonly onRename: () => void;
   readonly onOpen: (projectId: string) => void;
   readonly onDelete: (projectId: string) => void;
   readonly onImportArchive: () => void;
@@ -41,13 +52,16 @@ export function ProjectMenu(props: ProjectMenuProps) {
         <button type="button" onClick={props.onNew}>
           <FilePlus2 size={15} /> {t.projectMenu.new}
         </button>
+        <button disabled={!props.canRename} type="button" onClick={props.onRename}>
+          <Pencil size={15} /> {t.projectMenu.rename}
+        </button>
         <button type="button" onClick={props.onImportArchive}>
           <FileArchive size={15} /> {t.projectMenu.importArchive}
         </button>
         <button type="button" onClick={props.onImportJson}>
           <Braces size={15} /> {t.projectMenu.importJson}
         </button>
-        <button type="button" onClick={props.onExportJson}>
+        <button data-testid="export-json-command" type="button" onClick={props.onExportJson}>
           <Download size={15} /> {t.projectMenu.exportJson}
         </button>
       </div>

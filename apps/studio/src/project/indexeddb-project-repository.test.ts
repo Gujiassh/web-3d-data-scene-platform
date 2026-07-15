@@ -64,6 +64,29 @@ describe("createIndexedDbProjectRepository", () => {
     await repository.close();
   });
 
+  it("uses the document name as the recent-project metadata source", async () => {
+    const clock = new FixedClock("2026-07-14T08:00:00.000Z");
+    const repository = createIndexedDbProjectRepository({
+      dbName: createDbName(),
+      indexedDB,
+      clock,
+    });
+    const snapshot = await createFixtureProject({ clock, revision: 3 });
+    const renamed = {
+      ...snapshot,
+      record: { ...snapshot.record, name: "Stale project name" },
+      document: { ...snapshot.document, name: "Line A Commissioning" },
+    };
+
+    const saved = await repository.save(renamed);
+    expect(saved.record.name).toBe("Line A Commissioning");
+    expect(saved.document.name).toBe("Line A Commissioning");
+    expect((await repository.listRecent())[0]?.name).toBe("Line A Commissioning");
+    expect((await repository.open(saved.record.id)).record.name).toBe("Line A Commissioning");
+
+    await repository.close();
+  });
+
   it("rejects session or runtime fields without replacing the old project", async () => {
     const clock = new FixedClock("2026-07-14T08:00:00.000Z");
     const repository = createIndexedDbProjectRepository({

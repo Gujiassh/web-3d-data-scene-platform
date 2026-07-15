@@ -20,6 +20,12 @@ export function executeDocumentCommand(
 
 function applyCommand(document: SceneDocument, command: DocumentCommand): SceneDocument {
   switch (command.type) {
+    case "rename-document": {
+      const name = command.name.trim();
+      if (name.length === 0) throw new Error("Document name must not be empty.");
+      if (name === document.name) return document;
+      return reviseDocument(document, { name });
+    }
     case "rename-entity":
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({

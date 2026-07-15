@@ -103,7 +103,7 @@ export function createIndexedDbProjectRepository(
         const recentIds = await readRecentIds(settingsStore);
         const record: PersistedProjectRecord = {
           id: snapshot.record.id,
-          name: snapshot.record.name,
+          name: document.name,
           createdAt: existing?.createdAt ?? snapshot.record.createdAt,
           updatedAt: nowIso,
           lastOpenedAt: nowIso,

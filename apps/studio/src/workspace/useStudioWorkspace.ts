@@ -30,6 +30,11 @@ import {
   type StudioProjectSnapshot,
 } from "../project";
 import {
+  synchronizeRecentProjectName,
+  withProjectDocument,
+  withSavedProjectRecord,
+} from "../project/project-name";
+import {
   buildDuplicateSubtreeCommand,
   buildImportAssetCommand,
   createBrowserIdFactory,
@@ -88,7 +93,8 @@ export interface StudioWorkspace {
   readonly inspectModel: (file: File) => Promise<void>;
   readonly confirmImport: () => Promise<void>;
   readonly closeImport: () => void;
-  readonly createProject: () => Promise<void>;
+  readonly createProject: (name: string) => Promise<boolean>;
+  readonly renameProject: (name: string) => void;
   readonly openProject: (projectId: string) => Promise<void>;
   readonly deleteProject: (projectId: string) => Promise<void>;
   readonly importJson: (file: File) => Promise<void>;
@@ -143,11 +149,20 @@ export function useStudioWorkspace(): StudioWorkspace {
       async save(snapshot) {
         const saved = await repository.save(snapshot);
         if (!active) return;
-        setProject((current) =>
-          current?.record.id === saved.record.id ? { ...current, record: saved.record } : current,
-        );
+        setProject((current) => {
+          if (current?.record.id !== saved.record.id) return current;
+          const next = withSavedProjectRecord(current, saved.record);
+          projectRef.current = next;
+          return next;
+        });
         void repository.listRecent().then((items) => {
-          if (active) setRecent(items);
+          if (!active) return;
+          const current = projectRef.current;
+          setRecent(
+            current === null
+              ? items
+              : synchronizeRecentProjectName(items, current.record.id, current.document.name),
+          );
         });
       },
       onStateChange(state) {
@@ -243,8 +258,14 @@ export function useStudioWorkspace(): StudioWorkspace {
           throw studioAppErrors.importCommitting();
         }
         const nextHistory = executeHistoryCommand(history, command, { mode: session.mode });
+        if (nextHistory === history) return;
+        const nextProject = withProjectDocument(project, nextHistory.document);
         setHistory(nextHistory);
-        setProject({ ...project, document: nextHistory.document });
+        projectRef.current = nextProject;
+        setProject(nextProject);
+        setRecent((current) =>
+          synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
+        );
         setSession(
           reduceStudioSession(session, {
             type: "document-changed",
@@ -264,8 +285,13 @@ export function useStudioWorkspace(): StudioWorkspace {
       assertCanEdit(session);
       const next = undoHistoryCommand(history);
       if (next === history) return;
+      const nextProject = withProjectDocument(project, next.document);
       setHistory(next);
-      setProject({ ...project, document: next.document });
+      projectRef.current = nextProject;
+      setProject(nextProject);
+      setRecent((current) =>
+        synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
+      );
       setSession(
         reduceStudioSession(session, {
           type: "document-changed",
@@ -283,8 +309,13 @@ export function useStudioWorkspace(): StudioWorkspace {
       assertCanEdit(session);
       const next = redoHistoryCommand(history);
       if (next === history) return;
+      const nextProject = withProjectDocument(project, next.document);
       setHistory(next);
-      setProject({ ...project, document: next.document });
+      projectRef.current = nextProject;
+      setProject(nextProject);
+      setRecent((current) =>
+        synchronizeRecentProjectName(current, nextProject.record.id, nextProject.document.name),
+      );
       setSession(
         reduceStudioSession(session, {
           type: "document-changed",
@@ -460,6 +491,7 @@ export function useStudioWorkspace(): StudioWorkspace {
   }, []);
 
   const switchToProject = useCallback(async (next: StudioProjectSnapshot) => {
+    projectRef.current = next;
     activateProject(next, setProject, setHistory, setSession);
     const repository = requireRepository(repositoryRef.current);
     setRecent(await repository.listRecent());
@@ -467,21 +499,34 @@ export function useStudioWorkspace(): StudioWorkspace {
     setImportState(null);
   }, []);
 
-  const createProject = useCallback(async () => {
-    try {
-      await flushBeforeSwitch(project, autosaveRef.current);
-      const repository = requireRepository(repositoryRef.current);
-      const now = new Date().toISOString();
-      const next = createNewStudioProject({
-        id: `project-${globalThis.crypto.randomUUID()}`,
-        name: t.defaults.untitledScene,
-        createdAt: now,
-      });
-      await switchToProject(await repository.save(next));
-    } catch (error) {
-      addDiagnostic(presentError(error));
-    }
-  }, [addDiagnostic, presentError, project, switchToProject, t.defaults.untitledScene]);
+  const createProject = useCallback(
+    async (name: string): Promise<boolean> => {
+      try {
+        const now = new Date().toISOString();
+        const next = createNewStudioProject({
+          id: `project-${globalThis.crypto.randomUUID()}`,
+          name,
+          createdAt: now,
+        });
+        await flushBeforeSwitch(project, autosaveRef.current);
+        const repository = requireRepository(repositoryRef.current);
+        await switchToProject(await repository.save(next));
+        return true;
+      } catch (error) {
+        addDiagnostic(presentError(error));
+        return false;
+      }
+    },
+    [addDiagnostic, presentError, project, switchToProject],
+  );
+
+  const renameProject = useCallback(
+    (name: string) => {
+      if (project === null || name.trim() === project.document.name) return;
+      execute({ type: "rename-document", name });
+    },
+    [execute, project],
+  );
 
   const openProject = useCallback(
     async (projectId: string) => {
@@ -644,6 +689,7 @@ export function useStudioWorkspace(): StudioWorkspace {
     confirmImport,
     closeImport,
     createProject,
+    renameProject,
     openProject,
     deleteProject,
     importJson,

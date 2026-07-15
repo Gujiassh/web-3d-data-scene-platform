@@ -7,6 +7,9 @@
     ".": "./m0.ts",
     "./i18n": "./i18n.ts",
     "./language-switch": "./LanguageSwitch.tsx",
+    "./theme": "./theme.ts",
+    "./theme-provider": "./ThemeProvider.tsx",
+    "./theme-switch": "./ThemeSwitch.tsx",
     "./theme.css": "./theme.css"
   },
   "scripts": {
@@ -16,6 +19,7 @@
   "dependencies": {
     "@web3d/document": "workspace:*",
     "@web3d/runtime": "workspace:*",
+    "lucide-react": "1.24.0",
     "react": "19.2.7"
   },
   "devDependencies": {

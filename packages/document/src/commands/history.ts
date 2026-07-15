@@ -27,6 +27,7 @@ export function executeHistoryCommand(
   }
 
   const nextDocument = executeDocumentCommand(history.document, command);
+  if (nextDocument === history.document) return history;
   const nextEntry: DocumentHistoryEntry = { before: history.document, command };
   return {
     document: nextDocument,

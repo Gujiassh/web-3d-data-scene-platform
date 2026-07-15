@@ -7,6 +7,7 @@ import { AssetList } from "./features/AssetList";
 import { EntityInspector } from "./features/EntityInspector";
 import { ImportDialog } from "./features/ImportDialog";
 import { ProjectMenu } from "./features/ProjectMenu";
+import { SceneNameDialog, type SceneNameDialogMode } from "./features/SceneNameDialog";
 import { SceneTree } from "./features/SceneTree";
 import { StudioToolbar } from "./features/StudioToolbar";
 import { useStudioI18n } from "./i18n/I18nProvider";
@@ -25,6 +26,7 @@ export function App() {
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
 
   const selectedEntityId = workspace.session?.selectedEntityIds.at(-1) ?? null;
   const activeTool = workspace.session?.tool ?? "select";
@@ -34,6 +36,12 @@ export function App() {
   const session = workspace.session;
   const history = workspace.history;
   const openModelPicker = (): void => modelInputRef.current?.click();
+  const closeSceneNameDialog = (): void => {
+    setSceneNameDialogMode(null);
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLButtonElement>(".project-menu-trigger")?.focus(),
+    );
+  };
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -128,6 +136,7 @@ export function App() {
 
       {projectMenuOpen && project !== null && (
         <ProjectMenu
+          canRename={workspace.canEdit}
           currentProjectId={project.record.id}
           recent={workspace.recent.map((item) => ({
             id: item.id,
@@ -151,7 +160,11 @@ export function App() {
           }}
           onNew={() => {
             setProjectMenuOpen(false);
-            void workspace.createProject();
+            setSceneNameDialogMode("create");
+          }}
+          onRename={() => {
+            setProjectMenuOpen(false);
+            setSceneNameDialogMode("rename");
           }}
           onOpen={(projectId) => {
             setProjectMenuOpen(false);
@@ -281,6 +294,25 @@ export function App() {
           state={workspace.importState}
           onCancel={workspace.closeImport}
           onConfirm={() => void workspace.confirmImport()}
+        />
+      )}
+
+      {sceneNameDialogMode !== null && project !== null && (
+        <SceneNameDialog
+          initialName={sceneNameDialogMode === "rename" ? project.document.name : ""}
+          key={sceneNameDialogMode}
+          mode={sceneNameDialogMode}
+          onCancel={closeSceneNameDialog}
+          onConfirm={async (name) => {
+            if (sceneNameDialogMode === "create") {
+              const created = await workspace.createProject(name);
+              if (created) closeSceneNameDialog();
+              return created;
+            }
+            workspace.renameProject(name);
+            closeSceneNameDialog();
+            return true;
+          }}
         />
       )}
 

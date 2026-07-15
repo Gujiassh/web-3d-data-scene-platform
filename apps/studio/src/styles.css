@@ -18,12 +18,14 @@
   gap: 10px;
   padding: 0 10px;
   border-bottom: 1px solid var(--border);
-  background: rgb(255 255 255 / 97%);
+  background: var(--surface-overlay);
 }
 
 .studio-project {
-  min-width: 250px;
+  width: 250px;
+  min-width: 0;
   display: flex;
+  flex: 0 0 250px;
   align-items: center;
   gap: 9px;
 }
@@ -49,10 +51,11 @@
   display: grid;
   width: 28px;
   height: 28px;
+  flex: 0 0 28px;
   place-items: center;
   border-radius: 4px;
   background: var(--ink);
-  color: white;
+  color: var(--ink-inverse);
 }
 
 .studio-project .project-symbol {
@@ -70,8 +73,15 @@
 }
 
 .studio-project strong {
+  overflow: hidden;
   font-size: 12px;
   line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-project > svg {
+  flex: 0 0 auto;
 }
 
 .studio-project span {
@@ -134,8 +144,8 @@
 }
 
 .icon-button.is-active {
-  border-color: rgb(45 108 223 / 45%);
-  background: rgb(45 108 223 / 9%);
+  border-color: var(--selection-border);
+  background: var(--selection-muted);
   color: var(--accent);
 }
 
@@ -170,7 +180,7 @@
 
 .mode-control button.is-active {
   background: var(--surface);
-  box-shadow: 0 1px 3px rgb(24 32 29 / 14%);
+  box-shadow: var(--shadow-sm);
   color: var(--ink);
 }
 
@@ -206,7 +216,7 @@
   border: 1px solid var(--accent);
   border-radius: 4px;
   background: var(--accent);
-  color: white;
+  color: var(--ink-inverse);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -236,7 +246,7 @@
 .primary-command {
   border-color: var(--accent);
   background: var(--accent);
-  color: white;
+  color: var(--ink-inverse);
 }
 
 .studio-workspace {
@@ -325,9 +335,9 @@
 }
 
 .tree-row.is-selected {
-  border-color: rgb(45 108 223 / 40%);
-  background: rgb(45 108 223 / 8%);
-  color: #174fba;
+  border-color: var(--selection-border);
+  background: var(--selection-muted);
+  color: var(--selection);
 }
 
 .tree-line {
@@ -382,7 +392,7 @@
 
 .tree-action:hover:not(:disabled),
 .tree-action:focus-visible {
-  background: rgb(24 32 29 / 8%);
+  background: var(--surface-hover);
   color: var(--ink);
   outline: 0;
 }
@@ -429,7 +439,7 @@
 
 .asset-import-command:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgb(45 108 223 / 5%);
+  background: var(--accent-muted);
   color: var(--accent);
 }
 
@@ -532,7 +542,7 @@
   padding: 5px 7px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: rgb(255 255 255 / 86%);
+  background: var(--surface-overlay);
   color: var(--ink-muted);
   font-size: 9px;
   backdrop-filter: blur(8px);
@@ -657,7 +667,7 @@
   margin: 10px 12px;
   padding: 7px 8px;
   border-left: 2px solid var(--warning);
-  background: rgb(184 115 22 / 7%);
+  background: var(--warning-muted);
   color: var(--warning);
   font-size: 10px;
   font-weight: 600;
@@ -672,7 +682,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 5px;
   background: var(--surface);
-  box-shadow: 0 14px 40px rgb(24 32 29 / 18%);
+  box-shadow: var(--shadow);
 }
 
 .project-menu > header {
@@ -778,21 +788,27 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgb(18 25 22 / 34%);
+  background: var(--backdrop);
   backdrop-filter: blur(2px);
 }
 
-.import-dialog {
+.import-dialog,
+.scene-name-dialog {
   width: min(520px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);
   overflow: auto;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: var(--surface);
-  box-shadow: 0 24px 70px rgb(18 25 22 / 25%);
+  box-shadow: var(--shadow-lg);
 }
 
-.import-dialog > header {
+.scene-name-dialog {
+  width: min(420px, calc(100vw - 40px));
+}
+
+.import-dialog > header,
+.scene-name-dialog > header {
   min-height: 52px;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) 30px;
@@ -809,12 +825,60 @@
   place-items: center;
   border-radius: 4px;
   background: var(--ink);
-  color: white;
+  color: var(--ink-inverse);
 }
 
-.import-dialog h2 {
+.import-dialog h2,
+.scene-name-dialog h2 {
   margin: 0;
   font-size: 12px;
+}
+
+.scene-name-dialog form {
+  display: grid;
+  gap: 7px;
+  padding: 18px 14px 12px;
+}
+
+.scene-name-dialog label {
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.scene-name-dialog input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.scene-name-dialog input:focus {
+  border-color: var(--selection);
+  outline: 2px solid var(--selection-muted);
+  outline-offset: 1px;
+}
+
+.scene-name-dialog input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field-error {
+  min-height: 14px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.scene-name-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  padding-top: 5px;
 }
 
 .import-dialog header .mono {
@@ -918,7 +982,7 @@
   gap: 7px;
   padding: 7px 8px;
   border-left: 2px solid var(--warning);
-  background: rgb(184 115 22 / 7%);
+  background: var(--warning-muted);
   color: var(--warning);
   font-size: 10px;
 }
@@ -1009,7 +1073,7 @@
   grid-template-columns: 150px minmax(0, 1fr);
   align-items: center;
   border-top: 1px solid var(--border);
-  background: #f7f8f7;
+  background: var(--surface-hover);
 }
 
 .diagnostics-title {
