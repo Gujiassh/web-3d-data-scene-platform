@@ -239,6 +239,8 @@ export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, 
 export interface SceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
   setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
@@ -253,6 +255,8 @@ export interface AuthoringSceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
   setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
   selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;

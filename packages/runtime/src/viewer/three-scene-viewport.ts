@@ -83,6 +83,7 @@ interface InternalViewportOptions extends CreateViewerOptions {
 }
 
 const DEFAULT_CANVAS_LABEL = "Interactive 3D scene";
+const SCENE_BACKGROUND_COLOR_PATTERN = /^#[A-Fa-f0-9]{6}$/u;
 
 class ThreeSceneViewport {
   readonly #container: HTMLElement;
@@ -105,6 +106,8 @@ class ThreeSceneViewport {
 
   #generation: RuntimeGeneration | null = null;
   #document: SceneDocument | null = null;
+  #themeBackground: Color | null = null;
+  #backgroundPreview: Color | null = null;
   #dataRuntimeEnabled: boolean;
   #lifecycle: ViewerLifecycle = "created";
   #selectedTargetId: string | null = null;
@@ -373,6 +376,20 @@ class ThreeSceneViewport {
   setCanvasLabel(label: string): void {
     this.#ensureActive();
     this.#applyCanvasLabel(label);
+  }
+
+  setThemeBackground(color: string | null): void {
+    this.#ensureActive();
+    const next = parseSceneBackground(color);
+    this.#themeBackground = next;
+    this.#applyResolvedBackground();
+  }
+
+  setBackgroundPreview(color: string | null): void {
+    this.#ensureActive();
+    const next = parseSceneBackground(color);
+    this.#backgroundPreview = next;
+    this.#applyResolvedBackground();
   }
 
   selectTarget(targetId: string | null): void {
@@ -650,12 +667,31 @@ class ThreeSceneViewport {
   }
 
   #applyEnvironment(document: SceneDocument): void {
-    this.#scene.background = new Color(document.environment.background);
+    this.#applyResolvedBackground();
     this.#disposeGrid();
     if (document.environment.grid) {
       this.#grid = new GridHelper(20, 40, 0x9ba7a1, 0xd6dcda);
       this.#scene.add(this.#grid);
     }
+  }
+
+  #applyResolvedBackground(): void {
+    const next = this.#resolveBackground();
+    if (next === null) return;
+    const current = this.#scene.background;
+    if (current instanceof Color && current.equals(next)) return;
+    this.#scene.background = next;
+    this.#requestRender();
+  }
+
+  #resolveBackground(): Color | null {
+    if (this.#backgroundPreview !== null) return this.#backgroundPreview;
+    const document = this.#document;
+    if (document === null) return null;
+    if (document.environment.backgroundMode === "theme" && this.#themeBackground !== null) {
+      return this.#themeBackground;
+    }
+    return new Color(document.environment.background);
   }
 
   #disposeGrid(): void {
@@ -834,6 +870,14 @@ class ThreeSceneViewport {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+function parseSceneBackground(color: string | null): Color | null {
+  if (color === null) return null;
+  if (!SCENE_BACKGROUND_COLOR_PATTERN.test(color)) {
+    throw new TypeError("Scene background colors must use the #RRGGBB format.");
+  }
+  return new Color(color);
 }
 
 function abortError(): DOMException {

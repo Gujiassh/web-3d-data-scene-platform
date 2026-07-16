@@ -8,6 +8,7 @@ import {
   validateSceneDocument,
   type SceneDocument,
 } from "./index.js";
+import * as validationModule from "./validate.js";
 
 const fixtureUrl = new URL(
   "../../../specs/001-product-foundation/contracts/scene.example.json",
@@ -27,11 +28,53 @@ describe("SceneDocument", () => {
   });
 
   it("validates the generated M0 factory fixture", () => {
-    const result = parseSceneDocument(readFileSync(m0FixtureUrl, "utf8"));
+    const legacy = JSON.parse(readFileSync(m0FixtureUrl, "utf8")) as Record<string, unknown>;
+    legacy["schemaVersion"] = "1.0.0";
+    delete (legacy["environment"] as Record<string, unknown>)["backgroundMode"];
+    const result = parseSceneDocument(JSON.stringify(legacy));
 
     expect(result.ok).toBe(true);
-    if (result.ok)
+    expect(validateSceneDocument(legacy).ok).toBe(false);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        ...legacy,
+        schemaVersion: "1.1.0",
+        environment: {
+          ...(legacy["environment"] as Record<string, unknown>),
+          backgroundMode: "custom",
+        },
+      });
       expect(result.value.targets.map((target) => target.id)).toEqual(["press-01", "conveyor-01"]);
+    }
+  });
+
+  it("validates legacy semantics before migration", () => {
+    const validateLegacy = (
+      validationModule as typeof validationModule & {
+        readonly validateSceneDocument1_0?: (value: unknown) => DiagnosticResult;
+      }
+    ).validateSceneDocument1_0;
+    expect(validateLegacy).toBeTypeOf("function");
+    if (validateLegacy === undefined) return;
+
+    const cycle = loadLegacyFixture();
+    records(cycle["entities"])[0]!["parentId"] = "press-01";
+    expect(codes(validateLegacy(cycle))).toContain("ENTITY_CYCLE");
+    expect(codes(parseSceneDocument(JSON.stringify(cycle)))).toContain("ENTITY_CYCLE");
+
+    const missingReference = loadLegacyFixture();
+    records(missingReference["bindings"])[0]!["sourceId"] = "missing-source";
+    expect(codes(validateLegacy(missingReference))).toContain("BINDING_SOURCE_NOT_FOUND");
+    expect(codes(parseSceneDocument(JSON.stringify(missingReference)))).toContain(
+      "BINDING_SOURCE_NOT_FOUND",
+    );
+
+    const invalidThreshold = loadLegacyFixture();
+    records(invalidThreshold["dataSources"])[0]!["offlineAfterMs"] = 5000;
+    expect(codes(validateLegacy(invalidThreshold))).toContain("DATA_SOURCE_THRESHOLD_ORDER");
+    expect(codes(parseSceneDocument(JSON.stringify(invalidThreshold)))).toContain(
+      "DATA_SOURCE_THRESHOLD_ORDER",
+    );
   });
 
   it("returns stable diagnostics for malformed structure", () => {
@@ -156,12 +199,27 @@ function loadFixture(): Record<string, unknown> {
   return JSON.parse(readFileSync(fixtureUrl, "utf8")) as Record<string, unknown>;
 }
 
+function loadLegacyFixture(): Record<string, unknown> {
+  const legacy = loadFixture();
+  legacy["schemaVersion"] = "1.0.0";
+  const environment = legacy["environment"];
+  if (environment === null || typeof environment !== "object" || Array.isArray(environment)) {
+    throw new TypeError("Expected fixture environment.");
+  }
+  delete (environment as Record<string, unknown>)["backgroundMode"];
+  return legacy;
+}
+
 function records(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new TypeError("Expected fixture array.");
   return value as Record<string, unknown>[];
 }
 
-function codes(result: ReturnType<typeof validateSceneDocument>): string[] {
+interface DiagnosticResult {
+  readonly diagnostics: readonly { readonly code: string }[];
+}
+
+function codes(result: DiagnosticResult): string[] {
   return result.diagnostics.map((diagnostic) => diagnostic.code);
 }
 

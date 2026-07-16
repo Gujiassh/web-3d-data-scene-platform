@@ -11,6 +11,7 @@ import {
   type ArchiveManifest,
   type ArchiveManifestFile,
   type AssetMediaType,
+  type SceneSchemaVersion,
 } from "./types.js";
 
 const CREATED_AT_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$/;
@@ -21,7 +22,7 @@ export function buildArchiveManifest(options: {
   readonly createdAt: string;
   readonly sceneBytes: Uint8Array;
   readonly sceneSha256: string;
-  readonly sceneSchemaVersion: string;
+  readonly sceneSchemaVersion: SceneSchemaVersion;
   readonly assets: readonly ArchiveAsset[];
 }): ArchiveManifest {
   assertCreatedAt(options.createdAt);
@@ -48,7 +49,7 @@ export function buildArchiveManifest(options: {
     archiveVersion: ARCHIVE_VERSION,
     createdAt: options.createdAt,
     entry: SCENE_ENTRY_PATH,
-    sceneSchemaVersion: ARCHIVE_VERSION,
+    sceneSchemaVersion: options.sceneSchemaVersion,
     files,
   };
 }
@@ -78,9 +79,7 @@ export function parseArchiveManifest(value: unknown): ArchiveManifest {
   if (record["entry"] !== SCENE_ENTRY_PATH) {
     throw new Error("Archive entry must be scene.json.");
   }
-  if (record["sceneSchemaVersion"] !== ARCHIVE_VERSION) {
-    throw new Error("Scene schema version must be 1.0.0.");
-  }
+  assertSceneSchemaVersion(record["sceneSchemaVersion"]);
   assertCreatedAt(record["createdAt"]);
 
   if (!Array.isArray(record["files"])) {
@@ -94,7 +93,7 @@ export function parseArchiveManifest(value: unknown): ArchiveManifest {
     archiveVersion: ARCHIVE_VERSION,
     createdAt: record["createdAt"] as string,
     entry: SCENE_ENTRY_PATH,
-    sceneSchemaVersion: ARCHIVE_VERSION,
+    sceneSchemaVersion: record["sceneSchemaVersion"],
     files,
   };
 }
@@ -224,9 +223,9 @@ export function assertByteLength(value: unknown): asserts value is number {
   }
 }
 
-export function assertSceneSchemaVersion(value: unknown): void {
-  if (value !== ARCHIVE_VERSION) {
-    throw new Error("SceneDocument schemaVersion must be 1.0.0.");
+export function assertSceneSchemaVersion(value: unknown): asserts value is SceneSchemaVersion {
+  if (value !== "1.0.0" && value !== "1.1.0") {
+    throw new Error("SceneDocument schemaVersion must be 1.0.0 or 1.1.0.");
   }
 }
 

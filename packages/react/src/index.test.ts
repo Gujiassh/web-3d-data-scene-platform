@@ -7,10 +7,12 @@ import {
   SceneViewer,
   type AuthoringSceneHandle,
   type AuthoringSceneProps,
+  type SceneViewerHandle,
+  type SceneViewerProps,
 } from "./index";
 
 const source = {
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.1.0",
   id: "scene-1",
   name: "Scene",
   revision: 0,
@@ -23,6 +25,7 @@ const source = {
   annotations: [],
   views: [],
   environment: {
+    backgroundMode: "theme",
     background: "#FFFFFF",
     grid: false,
     unit: "m",
@@ -64,6 +67,8 @@ describe("react runtime wrappers", () => {
     expect(html).toContain('class="viewer"');
     expect(html).toContain('class="authoring"');
     expectTypeOf<AuthoringSceneHandle["selectEntities"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setThemeBackground"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setBackgroundPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setTransformSettings"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["getEntitySpatialSnapshots"]>().toBeFunction();
     expectTypeOf<
@@ -73,5 +78,11 @@ describe("react runtime wrappers", () => {
       ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]
     >().not.toHaveProperty("revision");
     expectTypeOf<AuthoringSceneProps>().not.toHaveProperty("onSelectionSetChange");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("themeBackground");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("backgroundPreview");
+    expectTypeOf<SceneViewerHandle["setThemeBackground"]>().toBeFunction();
+    expectTypeOf<SceneViewerHandle["setBackgroundPreview"]>().toBeFunction();
+    expectTypeOf<SceneViewerProps>().toHaveProperty("themeBackground");
+    expectTypeOf<SceneViewerProps>().toHaveProperty("backgroundPreview");
   });
 });

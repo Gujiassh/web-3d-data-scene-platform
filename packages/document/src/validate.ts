@@ -1,6 +1,11 @@
 import { sortDiagnostics, type DocumentValidationResult } from "./diagnostics.js";
-import { validateSceneDocumentSemantics } from "./semantics.js";
-import { validateSceneDocumentStructure } from "./structure.js";
+import { migrateSceneDocument1_0 } from "./migration.js";
+import { validateSceneDocumentSemantics, type SceneDocumentSemanticsInput } from "./semantics.js";
+import {
+  validateSceneDocument1_0Structure,
+  validateSceneDocumentStructure,
+  type SceneDocument1_0ValidationResult,
+} from "./structure.js";
 
 export function validateSceneDocument(value: unknown): DocumentValidationResult {
   const structural = validateSceneDocumentStructure(value);
@@ -9,6 +14,20 @@ export function validateSceneDocument(value: unknown): DocumentValidationResult 
   }
 
   const diagnostics = validateSceneDocumentSemantics(structural.value);
+  return diagnostics.length === 0
+    ? structural
+    : { ok: false, diagnostics: sortDiagnostics(diagnostics) };
+}
+
+export function validateSceneDocument1_0(value: unknown): SceneDocument1_0ValidationResult {
+  const structural = validateSceneDocument1_0Structure(value);
+  if (!structural.ok) {
+    return structural;
+  }
+
+  const diagnostics = validateSceneDocumentSemantics(
+    structural.value as SceneDocumentSemanticsInput,
+  );
   return diagnostics.length === 0
     ? structural
     : { ok: false, diagnostics: sortDiagnostics(diagnostics) };
@@ -25,5 +44,16 @@ export function parseSceneDocument(json: string): DocumentValidationResult {
     };
   }
 
+  if (sceneSchemaVersion(value) === "1.0.0") {
+    const legacy = validateSceneDocument1_0(value);
+    if (!legacy.ok) return legacy;
+    return validateSceneDocument(migrateSceneDocument1_0(legacy.value));
+  }
   return validateSceneDocument(value);
+}
+
+function sceneSchemaVersion(value: unknown): unknown {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)["schemaVersion"]
+    : undefined;
 }

@@ -163,7 +163,7 @@ function snapshot(revision: number): StudioProjectSnapshot {
   };
 
   const document: SceneDocument = {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     id: "project",
     name: "Project",
     revision,
@@ -176,6 +176,7 @@ function snapshot(revision: number): StudioProjectSnapshot {
     annotations: [],
     views: [],
     environment: {
+      backgroundMode: "custom",
       background: "#ffffff",
       grid: true,
       unit: "m",

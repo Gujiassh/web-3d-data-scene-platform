@@ -43,6 +43,8 @@ export interface AuthoringSceneHandle {
   setTransformSettings(settings: AuthoringTransformSettings): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
 }
@@ -58,6 +60,8 @@ export interface AuthoringSceneProps {
   readonly reducedMotion?: boolean;
   readonly initialTool?: AuthoringTool;
   readonly dataRuntimeEnabled?: boolean;
+  readonly themeBackground?: string | null;
+  readonly backgroundPreview?: string | null;
   readonly selectedEntityIds?: readonly string[];
   readonly primaryEntityId?: string | null;
   readonly transformSettings?: AuthoringTransformSettings;
@@ -130,6 +134,14 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     useEffect(() => {
       viewerRef.current?.setCanvasLabel(props.canvasLabel ?? "Interactive 3D scene");
     }, [props.canvasLabel]);
+
+    useEffect(() => {
+      viewerRef.current?.setThemeBackground(props.themeBackground ?? null);
+    }, [props.themeBackground]);
+
+    useEffect(() => {
+      viewerRef.current?.setBackgroundPreview(props.backgroundPreview ?? null);
+    }, [props.backgroundPreview]);
 
     useEffect(() => {
       const viewer = viewerRef.current;
@@ -208,6 +220,12 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         setDataRuntimeEnabled(enabled) {
           return requiredViewer(viewerRef).setDataRuntimeEnabled(enabled);
+        },
+        setThemeBackground(color) {
+          requiredViewer(viewerRef).setThemeBackground(color);
+        },
+        setBackgroundPreview(color) {
+          requiredViewer(viewerRef).setBackgroundPreview(color);
         },
         setView(viewId) {
           return requiredViewer(viewerRef).setView(viewId);

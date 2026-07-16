@@ -8,6 +8,8 @@ export const MAX_ARCHIVE_FILES = 128;
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_TOTAL_BYTES = 150 * 1024 * 1024;
 
+export type SceneSchemaVersion = "1.0.0" | "1.1.0";
+
 export type ArchiveMediaType = "application/json" | "model/gltf-binary" | "model/gltf+json";
 export type AssetMediaType = Exclude<ArchiveMediaType, "application/json">;
 
@@ -22,7 +24,7 @@ export interface ArchiveManifest {
   readonly archiveVersion: "1.0.0";
   readonly createdAt: string;
   readonly entry: "scene.json";
-  readonly sceneSchemaVersion: "1.0.0";
+  readonly sceneSchemaVersion: SceneSchemaVersion;
   readonly files: readonly ArchiveManifestFile[];
 }
 

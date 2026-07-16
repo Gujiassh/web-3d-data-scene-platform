@@ -2,6 +2,7 @@
 
 > Status: MVP v1 design
 > Machine-readable schema: `scene-document.schema.json`
+> Current version: `1.1.0`; immutable legacy schema: `scene-document-1.0.schema.json`
 
 ## Purpose
 
@@ -41,6 +42,10 @@ Object3D or InstancedMesh instance IDs.
 | `views`       | Named camera bookmarks                           |
 | `environment` | Scene-level rendering configuration              |
 
+`environment.backgroundMode` is `theme | custom`. Theme mode resolves against a transient host
+presentation color and keeps `environment.background` as the dormant custom color/fallback. Custom
+mode always renders `environment.background`.
+
 ## Persistence Rules
 
 - Arrays do not imply business priority unless a field explicitly says so.
@@ -48,6 +53,8 @@ Object3D or InstancedMesh instance IDs.
 - The serializer sorts top-level arrays by ID before hashing/export to produce deterministic output.
 - Unknown fields are rejected in MVP rather than silently ignored.
 - `schemaVersion` uses semantic versioning. Major changes require explicit migration or rejection.
+- Valid 1.0.0 documents migrate deterministically to 1.1.0/custom before current business use; persisted
+  stores and imports write current data rather than carrying a frontend-only compatibility view.
 - Runtime values are never written back by Viewer.
 
 ## Asset Replacement

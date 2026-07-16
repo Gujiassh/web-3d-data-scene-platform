@@ -21,7 +21,7 @@ license in `tests/fixtures/m0-factory/LICENSE-CC0.txt`.
 
 ## Scene Shape
 
-`layout.scene.json` is a valid `SceneDocument 1.0.0` with:
+`layout.scene.json` is a valid `SceneDocument 1.1.0` with explicit custom background mode and:
 
 - one identity root Group, `layout-root`;
 - four visible, unlocked asset entities sharing `layout-root` as explicit parent;

@@ -29,6 +29,15 @@ host 已删除。
 中英文界面、主题和场景命名已完成历史验收。其 Factory-specific 证据仍是当时有效事实，但
 Factory 产品表面由 feature 005 supersede；Studio 的 i18n/theme/naming 合同继续有效。
 
+### 004A：主题感知场景背景
+
+> 状态：Implemented and accepted on 2026-07-16；规格见
+> `../004a-theme-aware-scene-background/spec.md`
+
+004A 修订 Feature 004 的场景背景隔离规则，但不占用已分配给热点与交互的 Feature 007。当前
+SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主题解析和固定 authored color；
+旧 1.0.0 项目、JSON 和 ZIP 必须真实迁移，不能只在渲染层兼容。
+
 ## 005：单 Studio 数据绑定
 
 > 状态：Implemented and locally verified on 2026-07-15；规格见

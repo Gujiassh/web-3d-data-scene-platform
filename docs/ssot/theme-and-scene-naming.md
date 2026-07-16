@@ -1,5 +1,9 @@
 # Theme And Scene Naming
 
+> 2026-07-16 supersession：本文件关于“主题切换不得改变有效 3D 背景”的历史规则已由
+> `theme-aware-scene-background.md` 修订。应用 `light | dark` 偏好仍是 presentation-only；
+> SceneDocument 1.1.0 现在只持久化 `theme | custom` 背景解析策略和自定义颜色。
+
 This document records the stable ownership and persistence rules introduced by
 `specs/004-theme-project-naming`.
 

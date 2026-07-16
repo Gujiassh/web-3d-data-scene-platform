@@ -193,7 +193,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     transform: transform([1, 0, 0]),
   };
   const document: SceneDocument = {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     id: "spatial-document",
     name: "Spatial document",
     revision: 7,
@@ -212,7 +212,13 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     ruleSets: [],
     annotations: [],
     views: [],
-    environment: { background: "#FFFFFF", grid: false, unit: "m", upAxis: "Y" },
+    environment: {
+      backgroundMode: "custom",
+      background: "#FFFFFF",
+      grid: false,
+      unit: "m",
+      upAxis: "Y",
+    },
   };
 
   const root = new Group();

@@ -13,7 +13,7 @@ import {
   type StudioProjectSnapshot,
 } from "./index";
 
-import type { SceneDocument } from "@web3d/document";
+import { parseSceneDocument, type SceneDocument } from "@web3d/document";
 
 const FIXTURE_PATH = resolve(process.cwd(), "tests/fixtures/m0-factory/public/m0-scene.json");
 
@@ -36,6 +36,122 @@ class FixedClock {
 describe("createIndexedDbProjectRepository", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("rewrites every stored 1.0.0 project atomically before normal repository use", async () => {
+    const dbName = createDbName();
+    const original = [
+      legacyStoredProject("legacy-a", "Legacy A", "2026-07-10T08:00:00.000Z", 4),
+      legacyStoredProject("legacy-b", "Legacy B", "2026-07-11T09:30:00.000Z", 9),
+      currentStoredProject(
+        legacyStoredProject("current", "Current", "2026-07-12T10:45:00.000Z", 12),
+      ),
+    ];
+    await seedStoredProjects(dbName, original);
+
+    const rewrittenIds: string[] = [];
+    const originalPut = IDBObjectStore.prototype.put;
+    const putSpy = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ): IDBRequest<IDBValidKey> {
+      if (this.name === "projects" && isStoredProject(value)) rewrittenIds.push(value.id);
+      return originalPut.call(this, value, key);
+    });
+
+    const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
+    await expect(repository.listRecent()).resolves.toHaveLength(3);
+    await repository.close();
+    expect(rewrittenIds.sort()).toEqual(["legacy-a", "legacy-b"]);
+    putSpy.mockRestore();
+
+    const migrated = await readStoredProjects(dbName);
+    expect(migrated.version).toBe(1);
+    expect(migrated.records).toHaveLength(3);
+    for (const before of original) {
+      const after = migrated.records.find((record) => record.id === before.id)!;
+      expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+      expect(stripStoredDocument(after)).toEqual(stripStoredDocument(before));
+      const beforeDocument = storedDocument(before);
+      const afterDocument = storedDocument(after);
+      expect(afterDocument).toMatchObject({
+        schemaVersion: "1.1.0",
+        revision: beforeDocument.revision,
+        environment: {
+          background: beforeDocument.environment.background,
+          backgroundMode: "custom",
+        },
+      });
+    }
+  });
+
+  it("rolls back every stored project when one migration rewrite fails", async () => {
+    const dbName = createDbName();
+    const original = [
+      legacyStoredProject("legacy-a", "Legacy A", "2026-07-10T08:00:00.000Z", 4),
+      legacyStoredProject("legacy-b", "Legacy B", "2026-07-11T09:30:00.000Z", 9),
+    ];
+    await seedStoredProjects(dbName, original);
+
+    const originalPut = IDBObjectStore.prototype.put;
+    const putSpy = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ): IDBRequest<IDBValidKey> {
+      if (
+        this.name === "projects" &&
+        isStoredProject(value) &&
+        value.id === "legacy-b" &&
+        storedDocument(value).schemaVersion === "1.1.0"
+      ) {
+        throw new DOMException("migration write failed", "QuotaExceededError");
+      }
+      return originalPut.call(this, value, key);
+    });
+
+    const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
+    await expect(repository.listRecent()).rejects.toThrow(/migration write failed/);
+    expect(putSpy).toHaveBeenCalled();
+    putSpy.mockRestore();
+
+    const afterFailure = await readStoredProjects(dbName);
+    expect(afterFailure.records).toEqual(original);
+  });
+
+  it("rejects one mixed initialization atomically when a stored document is invalid", async () => {
+    const dbName = createDbName();
+    const original = [
+      legacyStoredProject("a-valid-legacy", "Valid legacy", "2026-07-10T08:00:00.000Z", 4),
+      structurallyInvalidStoredProject(
+        currentStoredProject(
+          legacyStoredProject("b-invalid", "Invalid", "2026-07-11T09:30:00.000Z", 9),
+        ),
+      ),
+      currentStoredProject(
+        legacyStoredProject("c-valid-current", "Valid current", "2026-07-12T10:45:00.000Z", 12),
+      ),
+    ];
+    await seedStoredProjects(dbName, original);
+    const openSpy = vi.spyOn(indexedDB, "open");
+
+    const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
+    const firstFailure = await rejectionOf(repository.listRecent());
+    const secondFailure = await rejectionOf(repository.open("a-valid-legacy"));
+    expect(secondFailure).toBe(firstFailure);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    openSpy.mockRestore();
+
+    const afterFailure = await readStoredProjects(dbName);
+    expect(afterFailure.version).toBe(1);
+    expect(afterFailure.records).toHaveLength(3);
+    for (const before of original) {
+      const after = afterFailure.records.find((record) => record.id === before.id)!;
+      expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+      expect(stripStoredDocument(after)).toEqual(stripStoredDocument(before));
+      expect(after.documentJson).toBe(before.documentJson);
+    }
   });
 
   it("saves a validated canonical SceneDocument atomically with new assets", async () => {
@@ -363,4 +479,165 @@ async function sha256FromBlob(blob: Blob): Promise<string> {
 
 function createDbName(): string {
   return `studio-project-tests-${globalThis.crypto.randomUUID()}`;
+}
+
+interface StoredProject extends ProjectRecord {
+  readonly documentJson: string;
+}
+
+interface StoredDocumentShape {
+  readonly schemaVersion: string;
+  readonly revision: number;
+  readonly environment: {
+    readonly background: string;
+    readonly backgroundMode?: string;
+  };
+}
+
+function legacyStoredProject(
+  id: string,
+  name: string,
+  timestamp: string,
+  revision: number,
+): StoredProject {
+  const document = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as Record<string, unknown> & {
+    readonly assets: readonly (Record<string, unknown> & { readonly sha256: string })[];
+    readonly environment: Record<string, unknown>;
+  };
+  const legacyEnvironment = { ...document.environment };
+  delete legacyEnvironment["backgroundMode"];
+  return {
+    ...createRecord(id, name, timestamp, revision),
+    documentJson: JSON.stringify({
+      ...document,
+      id,
+      name,
+      revision,
+      schemaVersion: "1.0.0",
+      assets: document.assets.map((asset) => ({
+        ...asset,
+        uri: `asset://${asset.sha256}`,
+      })),
+      environment: legacyEnvironment,
+    }),
+  };
+}
+
+function storedDocument(record: StoredProject): StoredDocumentShape {
+  return JSON.parse(record.documentJson) as StoredDocumentShape;
+}
+
+function currentStoredProject(record: StoredProject): StoredProject {
+  const parsed = parseSceneDocument(record.documentJson);
+  if (!parsed.ok) throw new Error("Legacy test project could not be migrated.");
+  return { ...record, documentJson: serializeProjectDocument(parsed.value) };
+}
+
+function structurallyInvalidStoredProject(record: StoredProject): StoredProject {
+  const document = JSON.parse(record.documentJson) as Record<string, unknown> & {
+    readonly environment: Record<string, unknown>;
+  };
+  return {
+    ...record,
+    documentJson: JSON.stringify({
+      ...document,
+      environment: { ...document.environment, background: "#BAD" },
+    }),
+  };
+}
+
+async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  throw new Error("Expected repository initialization to reject.");
+}
+
+function stripStoredDocument(record: StoredProject): ProjectRecord {
+  return {
+    id: record.id,
+    name: record.name,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    lastOpenedAt: record.lastOpenedAt,
+    lastSavedRevision: record.lastSavedRevision,
+    lastExportedRevision: record.lastExportedRevision,
+  };
+}
+
+function isStoredProject(value: unknown): value is StoredProject {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "documentJson" in value &&
+    typeof value.documentJson === "string"
+  );
+}
+
+async function seedStoredProjects(
+  dbName: string,
+  records: readonly StoredProject[],
+): Promise<void> {
+  const db = await openRawDatabase(dbName);
+  const tx = db.transaction("projects", "readwrite");
+  const completed = rawTransactionComplete(tx);
+  const store = tx.objectStore("projects");
+  for (const record of records) store.put(record);
+  await completed;
+  db.close();
+}
+
+async function readStoredProjects(
+  dbName: string,
+): Promise<{ readonly version: number; readonly records: readonly StoredProject[] }> {
+  const db = await openRawDatabase(dbName);
+  const tx = db.transaction("projects", "readonly");
+  const completed = rawTransactionComplete(tx);
+  const records = await rawRequest<StoredProject[]>(tx.objectStore("projects").getAll());
+  await completed;
+  const result = { version: db.version, records };
+  db.close();
+  return result;
+}
+
+function openRawDatabase(dbName: string): Promise<IDBDatabase> {
+  return new Promise((resolveDatabase, rejectDatabase) => {
+    const request = indexedDB.open(dbName, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("projects")) {
+        db.createObjectStore("projects", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("assets")) {
+        db.createObjectStore("assets", { keyPath: "sha256" });
+      }
+      if (!db.objectStoreNames.contains("settings")) {
+        db.createObjectStore("settings", { keyPath: "key" });
+      }
+    };
+    request.onsuccess = () => resolveDatabase(request.result);
+    request.onerror = () =>
+      rejectDatabase(request.error ?? new Error("Test database open failed."));
+  });
+}
+
+function rawRequest<TResult>(source: IDBRequest<TResult>): Promise<TResult> {
+  return new Promise((resolveRequest, rejectRequest) => {
+    source.onsuccess = () => resolveRequest(source.result);
+    source.onerror = () => rejectRequest(source.error ?? new Error("Test request failed."));
+  });
+}
+
+function rawTransactionComplete(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolveTransaction, rejectTransaction) => {
+    transaction.oncomplete = () => resolveTransaction();
+    transaction.onabort = () =>
+      rejectTransaction(transaction.error ?? new Error("Test transaction aborted."));
+    transaction.onerror = () =>
+      rejectTransaction(transaction.error ?? new Error("Test transaction failed."));
+  });
 }

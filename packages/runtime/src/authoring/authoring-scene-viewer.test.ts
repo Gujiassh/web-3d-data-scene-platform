@@ -20,6 +20,7 @@ const runtime = vi.hoisted(() => ({
   dispose: vi.fn(),
   frames: [] as FrameRequestCallback[],
   reportError: vi.fn(),
+  scenes: [] as Array<{ background: unknown }>,
   transformControls: [] as FakeTransformControls[],
 }));
 
@@ -42,7 +43,14 @@ vi.mock("three", async (importOriginal) => {
     setSize(): void {}
   }
 
-  return { ...actual, WebGLRenderer: FakeWebGLRenderer };
+  class FakeScene extends actual.Scene {
+    constructor() {
+      super();
+      runtime.scenes.push(this);
+    }
+  }
+
+  return { ...actual, Scene: FakeScene, WebGLRenderer: FakeWebGLRenderer };
 });
 
 vi.mock("three/addons/controls/OrbitControls.js", async () => {
@@ -126,6 +134,7 @@ describe("createAuthoringSceneViewer", () => {
   beforeEach(() => {
     runtime.canvases.length = 0;
     runtime.frames.length = 0;
+    runtime.scenes.length = 0;
     runtime.transformControls.length = 0;
     runtime.dispose.mockClear();
     runtime.reportError.mockClear();
@@ -157,6 +166,30 @@ describe("createAuthoringSceneViewer", () => {
     viewer.setCanvasLabel("Authoring layout scene");
     expect(canvas.attributes["aria-label"]).toBe("Authoring layout scene");
     expect(viewer.getSnapshot()).toEqual(snapshot);
+    await viewer.dispose();
+  });
+
+  it("updates transient backgrounds without recreating authoring controls or lifecycle", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const canvas = runtime.canvases.at(-1);
+    await viewer.load(withBackground(scene, "theme", "#102030"));
+    const controls = requiredControls();
+
+    viewer.setThemeBackground("#336699");
+    expect(sceneBackground()).toBe("#336699");
+    viewer.setBackgroundPreview("#AABBCC");
+    expect(sceneBackground()).toBe("#AABBCC");
+    viewer.setBackgroundPreview(null);
+    expect(sceneBackground()).toBe("#336699");
+
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(runtime.transformControls).toEqual([controls]);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(1);
     await viewer.dispose();
   });
 
@@ -878,6 +911,23 @@ async function fixture(): Promise<{ asset: Uint8Array<ArrayBuffer>; scene: Scene
   const parsed = parseSceneDocument(sceneJson);
   if (!parsed.ok) throw new Error(parsed.diagnostics[0]?.message ?? "M0 fixture is invalid.");
   return { asset: Uint8Array.from(asset), scene: parsed.value };
+}
+
+function withBackground(
+  scene: SceneDocument,
+  backgroundMode: "theme" | "custom",
+  background: string,
+): SceneDocument {
+  return {
+    ...scene,
+    environment: { ...scene.environment, background, backgroundMode },
+  };
+}
+
+function sceneBackground(): string {
+  const background = runtime.scenes.at(-1)?.background;
+  if (!(background instanceof Color)) throw new Error("Scene color background is missing.");
+  return `#${background.getHexString().toUpperCase()}`;
 }
 
 function lockEntity(

@@ -1,5 +1,26 @@
 import { sortDiagnostics, type DocumentDiagnostic } from "./diagnostics.js";
-import type { SceneAsset, SceneDocument, SceneEntity } from "./types.js";
+import type {
+  Annotation,
+  Binding,
+  DataSource,
+  RuleSet,
+  SceneAsset,
+  SceneEntity,
+  SceneTarget,
+  SceneView,
+} from "./types.js";
+
+export interface SceneDocumentSemanticsInput {
+  readonly id: string;
+  readonly assets: readonly SceneAsset[];
+  readonly entities: readonly SceneEntity[];
+  readonly targets: readonly SceneTarget[];
+  readonly dataSources: readonly DataSource[];
+  readonly bindings: readonly Binding[];
+  readonly ruleSets: readonly RuleSet[];
+  readonly annotations: readonly Annotation[];
+  readonly views: readonly SceneView[];
+}
 
 interface LocatedId {
   readonly id: string;
@@ -7,7 +28,7 @@ interface LocatedId {
 }
 
 export function validateSceneDocumentSemantics(
-  document: SceneDocument,
+  document: SceneDocumentSemanticsInput,
 ): readonly DocumentDiagnostic[] {
   const diagnostics: DocumentDiagnostic[] = [];
   diagnostics.push(...findDuplicateIds(document));
@@ -133,7 +154,9 @@ export function validateSceneDocumentSemantics(
 
 const ALLOWED_LABEL_TOKENS = new Set(["value", "quality", "connection", "sourceTime"]);
 
-function findInvalidLabelTokens(document: SceneDocument): readonly DocumentDiagnostic[] {
+function findInvalidLabelTokens(
+  document: SceneDocumentSemanticsInput,
+): readonly DocumentDiagnostic[] {
   const diagnostics: DocumentDiagnostic[] = [];
   document.ruleSets.forEach((ruleSet, ruleSetIndex) => {
     const groups = [
@@ -166,7 +189,7 @@ function findInvalidLabelTokens(document: SceneDocument): readonly DocumentDiagn
   return diagnostics;
 }
 
-function findDuplicateIds(document: SceneDocument): readonly DocumentDiagnostic[] {
+function findDuplicateIds(document: SceneDocumentSemanticsInput): readonly DocumentDiagnostic[] {
   const ids: LocatedId[] = [{ id: document.id, path: "/id" }];
   const add = (values: readonly { readonly id: string }[], section: string): void => {
     values.forEach((value, index) => ids.push({ id: value.id, path: `/${section}/${index}/id` }));
@@ -266,7 +289,9 @@ function validateTargetAsset(
   }
 }
 
-function findBindingWriteConflicts(document: SceneDocument): readonly DocumentDiagnostic[] {
+function findBindingWriteConflicts(
+  document: SceneDocumentSemanticsInput,
+): readonly DocumentDiagnostic[] {
   const owners = new Map<string, { readonly bindingId: string; readonly path: string }[]>();
   document.bindings.forEach((binding, bindingIndex) => {
     if (!binding.enabled) return;

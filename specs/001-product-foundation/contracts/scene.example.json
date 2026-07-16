@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "id": "factory-demo",
   "name": "Factory Demo",
   "revision": 1,
@@ -162,6 +162,7 @@
     }
   ],
   "environment": {
+    "backgroundMode": "theme",
     "background": "#F4F6F5",
     "grid": true,
     "unit": "m",

@@ -8,7 +8,12 @@ import type {
   SceneTarget,
   Transform,
 } from "../types.js";
-import type { DocumentCommand, ImportAssetInstanceCommand } from "./types.js";
+import type {
+  DocumentCommand,
+  ImportAssetInstanceCommand,
+  SceneBackgroundSettings,
+  SetSceneBackgroundCommand,
+} from "./types.js";
 import { applyDataBindingDocumentCommand } from "./data-binding-command.js";
 import { applyLayoutDocumentCommand } from "./layout-command.js";
 
@@ -28,6 +33,8 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
       if (name === document.name) return document;
       return reviseDocument(document, { name });
     }
+    case "set-scene-background":
+      return applySceneBackgroundCommand(document, command);
     case "rename-entity":
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({
@@ -68,6 +75,47 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
     case "remove-mock-data-source":
       return applyDataBindingDocumentCommand(document, command);
   }
+}
+
+const COLOR_PATTERN = /^#[A-Fa-f0-9]{6}$/u;
+
+function applySceneBackgroundCommand(
+  document: SceneDocument,
+  command: SetSceneBackgroundCommand,
+): SceneDocument {
+  assertSceneBackgroundSettings(command.before, "Background before snapshot");
+  assertSceneBackgroundSettings(command.after, "Background after snapshot");
+  const current: SceneBackgroundSettings = {
+    mode: document.environment.backgroundMode,
+    color: document.environment.background,
+  };
+  if (!sceneBackgroundSettingsEqual(current, command.before)) {
+    throw new Error("Background before snapshot does not match the document environment.");
+  }
+  if (sceneBackgroundSettingsEqual(command.before, command.after)) return document;
+  return reviseDocument(document, {
+    environment: {
+      ...document.environment,
+      backgroundMode: command.after.mode,
+      background: command.after.color,
+    },
+  });
+}
+
+function assertSceneBackgroundSettings(settings: SceneBackgroundSettings, label: string): void {
+  if (settings.mode !== "theme" && settings.mode !== "custom") {
+    throw new Error(`${label} mode must be theme or custom.`);
+  }
+  if (!COLOR_PATTERN.test(settings.color)) {
+    throw new Error(`${label} color must be a six-digit hex color.`);
+  }
+}
+
+function sceneBackgroundSettingsEqual(
+  left: SceneBackgroundSettings,
+  right: SceneBackgroundSettings,
+): boolean {
+  return left.mode === right.mode && left.color === right.color;
 }
 
 function applyTransformCommand(

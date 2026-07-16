@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "id": "m0-factory-cell",
   "name": "M0 Factory Cell",
   "revision": 1,
@@ -187,6 +187,7 @@
   ],
   "environment": {
     "background": "#F4F6F5",
+    "backgroundMode": "custom",
     "grid": true,
     "unit": "m",
     "upAxis": "Y"

@@ -15,6 +15,17 @@ export interface RenameDocumentCommand {
   readonly name: string;
 }
 
+export interface SceneBackgroundSettings {
+  readonly mode: "theme" | "custom";
+  readonly color: string;
+}
+
+export interface SetSceneBackgroundCommand {
+  readonly type: "set-scene-background";
+  readonly before: SceneBackgroundSettings;
+  readonly after: SceneBackgroundSettings;
+}
+
 export interface RenameEntityCommand {
   readonly type: "rename-entity";
   readonly entityId: string;
@@ -152,6 +163,7 @@ export type LayoutDocumentCommand =
 
 export type DocumentCommand =
   | RenameDocumentCommand
+  | SetSceneBackgroundCommand
   | RenameEntityCommand
   | SetEntityVisibilityCommand
   | SetEntityLockCommand

@@ -103,3 +103,13 @@ feature 008 验收。更窄设备不提供完整编辑能力。
 
 **理由：** 将 authoring、interaction、distribution 和 release evidence 分开验收，避免临时
 演示壳或跨层捷径重新成为产品结构。
+
+## PD-014：主题感知场景背景与 1.1 迁移
+
+**决策：** Feature 004A 不占用既定 Feature 007。SceneDocument 升级为 1.1.0，并以 required
+`environment.backgroundMode: theme | custom` 区分宿主主题解析和固定 authored color。新场景默认
+theme；所有旧 1.0.0 数据迁为 custom 并实际重写 IndexedDB/导入结果。
+
+**理由：** 单一颜色无法区分“跟随主题”和“用户恰好选择同色”。显式 mode 可以保证自定义颜色
+不被主题切换覆盖，并让 JSON/ZIP 在不同宿主中保留确定语义；真实迁移避免长期兼容分支进入业务
+路径。

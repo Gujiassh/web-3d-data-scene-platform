@@ -86,7 +86,7 @@ function derive(document: SceneDocument, selected: readonly string[], primary: s
 
 function scene(entities: readonly SceneEntity[]): SceneDocument {
   return {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     id: "scene",
     name: "Scene",
     revision: 3,
@@ -98,7 +98,13 @@ function scene(entities: readonly SceneEntity[]): SceneDocument {
     ruleSets: [],
     annotations: [],
     views: [],
-    environment: { background: "#FFFFFF", grid: true, unit: "m", upAxis: "Y" },
+    environment: {
+      backgroundMode: "custom",
+      background: "#FFFFFF",
+      grid: true,
+      unit: "m",
+      upAxis: "Y",
+    },
   };
 }
 

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "id": "feature-006-layout-fixture",
   "name": "Feature 006 Layout Fixture",
   "revision": 1,
@@ -252,6 +252,7 @@
   ],
   "environment": {
     "background": "#F4F6F5",
+    "backgroundMode": "custom",
     "grid": true,
     "unit": "m",
     "upAxis": "Y"

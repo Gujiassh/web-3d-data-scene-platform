@@ -1,0 +1,251 @@
+// @vitest-environment happy-dom
+
+import { act, createElement } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ThemeProvider } from "@web3d/demo-support/theme-provider";
+
+import { StudioI18nProvider } from "./i18n/I18nProvider";
+
+type TestCommandOutcome =
+  | { readonly status: "changed"; readonly revision: number }
+  | { readonly status: "unchanged"; readonly revision: number };
+
+interface TestReadyEvent {
+  readonly type: "ready";
+  readonly documentId: string;
+  readonly revision: number;
+}
+
+const harness = vi.hoisted(() => ({
+  authoringReady: undefined as ((event: TestReadyEvent) => void) | undefined,
+  authoringSceneRenders: [] as Array<string | null | undefined>,
+  workspace: {
+    loading: false,
+    project: {
+      record: {
+        id: "project-a",
+        name: "Project A",
+        createdAt: "2026-07-16T00:00:00.000Z",
+        updatedAt: "2026-07-16T00:00:00.000Z",
+        lastOpenedAt: "2026-07-16T00:00:00.000Z",
+        lastSavedRevision: 1,
+        lastExportedRevision: null,
+      },
+      document: {
+        schemaVersion: "1.1.0" as const,
+        id: "scene-a",
+        name: "Project A",
+        revision: 1,
+        assets: [],
+        entities: [],
+        targets: [],
+        dataSources: [],
+        bindings: [],
+        ruleSets: [],
+        annotations: [],
+        views: [],
+        environment: {
+          backgroundMode: "theme" as const,
+          background: "#F4F6F5",
+          grid: true,
+          unit: "m" as const,
+          upAxis: "Y" as const,
+        },
+      },
+      assets: [],
+    },
+    history: { document: null, undoStack: [], redoStack: [] },
+    session: {
+      mode: "edit" as const,
+      tool: "select" as const,
+      selectedEntityIds: [],
+      primaryEntityId: null,
+      save: { status: "saved" as const, revision: 1 },
+    },
+    recent: [],
+    diagnostics: [],
+    importState: null,
+    assetResolver: { resolve: vi.fn() },
+    dirty: false,
+    exportOutdated: false,
+    canEdit: true,
+    execute: vi.fn((): TestCommandOutcome => ({ status: "unchanged", revision: 1 })),
+    undo: vi.fn(),
+    redo: vi.fn(),
+    save: vi.fn(async () => undefined),
+    setMode: vi.fn(),
+    setTool: vi.fn(),
+    selectEntity: vi.fn(),
+    selectEntities: vi.fn(),
+    deleteEntity: vi.fn(),
+    inspectModel: vi.fn(async () => undefined),
+    confirmImport: vi.fn(async () => undefined),
+    closeImport: vi.fn(),
+    createProject: vi.fn(async () => true),
+    renameProject: vi.fn(),
+    openProject: vi.fn(async () => undefined),
+    deleteProject: vi.fn(async () => undefined),
+    importJson: vi.fn(async () => undefined),
+    importArchive: vi.fn(async () => undefined),
+    exportJson: vi.fn(async () => undefined),
+    exportArchive: vi.fn(async () => undefined),
+    addDiagnostic: vi.fn(),
+  },
+}));
+
+vi.mock("@web3d/react", async () => {
+  const React = await import("react");
+  return {
+    AuthoringScene: React.forwardRef(function MockAuthoringScene(
+      props: {
+        readonly backgroundPreview?: string | null;
+        readonly onReady?: (event: TestReadyEvent) => void;
+      },
+      ref,
+    ) {
+      void ref;
+      harness.authoringReady = props.onReady;
+      harness.authoringSceneRenders.push(props.backgroundPreview);
+      return React.createElement("div", { "data-authoring-scene": true });
+    }),
+  };
+});
+
+vi.mock("./workspace/useStudioWorkspace", () => ({
+  useStudioWorkspace: () => harness.workspace,
+}));
+
+vi.mock("./data-binding/useStudioDataBinding", () => ({
+  useStudioDataBinding: () => ({
+    adapters: {},
+    preview: { active: false, connections: {}, values: {}, alarms: [], diagnostics: [] },
+    targetResolution: { status: "no-selection" },
+    handleViewerEvent: vi.fn(),
+  }),
+}));
+
+vi.mock("./layout/useStudioSceneLayout", () => ({
+  useStudioSceneLayout: () => ({
+    capabilities: { duplicate: { enabled: false, reason: null } },
+    transformSettings: { translationSnap: null, rotationSnapRadians: null, scaleSnap: null },
+    duplicateSelection: vi.fn(),
+    selectFromTree: vi.fn(),
+    handleReady: vi.fn(),
+    handleSelectionChange: vi.fn(),
+    handleTransformPreview: vi.fn(),
+    handleTransformCommit: vi.fn(),
+  }),
+}));
+
+vi.mock("./features/SceneTree", () => ({ SceneTree: () => null }));
+vi.mock("./features/AssetList", () => ({ AssetList: () => null }));
+vi.mock("./features/StudioInspector", () => ({ StudioInspector: () => null }));
+vi.mock("./features/ImportDialog", () => ({ ImportDialog: () => null }));
+
+import { App } from "./App";
+
+describe("App scene background preview", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    harness.authoringReady = undefined;
+    harness.authoringSceneRenders.length = 0;
+    harness.workspace.execute.mockReset();
+    harness.workspace.execute.mockReturnValue({ status: "unchanged", revision: 1 });
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    );
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("does not loop when the settings dialog reports its initial preview", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    act(() => {
+      root.render(
+        createElement(ThemeProvider, {
+          storageKey: "app-preview-test-theme",
+          children: createElement(StudioI18nProvider, null, createElement(App)),
+        }),
+      );
+    });
+
+    act(() => container.querySelector<HTMLButtonElement>(".project-menu-trigger")!.click());
+    const beforeOpen = harness.authoringSceneRenders.length;
+    expect(() => {
+      act(() =>
+        container.querySelector<HTMLButtonElement>('button[aria-label="Scene settings"]')!.click(),
+      );
+    }).not.toThrow();
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("Maximum update depth exceeded");
+    expect(harness.authoringSceneRenders.length - beforeOpen).toBeLessThan(8);
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe(
+      "Scene settings",
+    );
+  });
+
+  it("releases an applied preview when a newer ready revision supersedes its source load", () => {
+    renderApp();
+    openSceneSettings();
+    act(() => input("Custom color").click());
+    changeInput(input("Background color"), "#336699");
+    harness.workspace.execute.mockReturnValueOnce({ status: "changed", revision: 2 });
+
+    act(() => button("Apply").click());
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 1 }));
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 3 }));
+    expect(harness.authoringSceneRenders.at(-1)).toBeNull();
+  });
+
+  function renderApp(): void {
+    act(() => {
+      root.render(
+        createElement(ThemeProvider, {
+          storageKey: "app-preview-test-theme",
+          children: createElement(StudioI18nProvider, null, createElement(App)),
+        }),
+      );
+    });
+  }
+
+  function openSceneSettings(): void {
+    act(() => container.querySelector<HTMLButtonElement>(".project-menu-trigger")!.click());
+    act(() => button("Scene settings").click());
+  }
+
+  function input(label: string): HTMLInputElement {
+    return container.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+  }
+
+  function button(label: string): HTMLButtonElement {
+    return container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  }
+
+  function changeInput(element: HTMLInputElement, value: string): void {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter === undefined) throw new Error("HTMLInputElement value setter is unavailable.");
+    act(() => {
+      setter.call(element, value);
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+});

@@ -30,6 +30,8 @@ export type {
   RemoveMockDataSourceCommand,
   RenameDocumentCommand,
   RenameEntityCommand,
+  SceneBackgroundSettings,
+  SetSceneBackgroundCommand,
   SetEntityLockCommand,
   SetEntityVisibilityCommand,
   SetTargetBusinessIdCommand,
@@ -56,6 +58,7 @@ export type {
   AssetMediaType,
   ExportSceneArchiveOptions,
   ImportedSceneArchive,
+  SceneSchemaVersion,
 } from "./archive/types.js";
 export type {
   DocumentDiagnostic,

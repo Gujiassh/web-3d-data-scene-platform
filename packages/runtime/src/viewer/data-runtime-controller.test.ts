@@ -138,7 +138,7 @@ function viewerEvent(event: Extract<ViewerEvent, { type: "alarm" | "connection-c
 
 function document(): SceneDocument {
   return {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     id: "scene-1",
     name: "Scene",
     revision: 0,
@@ -207,7 +207,13 @@ function document(): SceneDocument {
     ],
     annotations: [],
     views: [],
-    environment: { background: "#FFFFFF", grid: false, unit: "m", upAxis: "Y" },
+    environment: {
+      backgroundMode: "custom",
+      background: "#FFFFFF",
+      grid: false,
+      unit: "m",
+      upAxis: "Y",
+    },
   };
 }
 

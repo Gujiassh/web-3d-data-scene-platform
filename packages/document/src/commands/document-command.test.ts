@@ -19,6 +19,74 @@ const fixtureUrl = new URL(
 );
 
 describe("document commands", () => {
+  it("sets scene background atomically with no-op and undo/redo history", () => {
+    const original = loadFixture();
+    const before = backgroundSettings(original);
+    const command = backgroundCommand(before, { mode: "custom", color: "#123456" });
+    const applied = executeHistoryCommand(createDocumentHistory(original), command);
+
+    expect(applied.document.environment).toMatchObject({
+      backgroundMode: "custom",
+      background: "#123456",
+    });
+    expect(applied.document.revision).toBe(original.revision + 1);
+    expect(applied.undoStack).toHaveLength(1);
+    expect(applied.document.entities).toBe(original.entities);
+    expect(applied.document.targets).toBe(original.targets);
+    expect(applied.document.dataSources).toBe(original.dataSources);
+    expect(applied.document.bindings).toBe(original.bindings);
+    expect(applied.document.ruleSets).toBe(original.ruleSets);
+    expect(applied.document.annotations).toBe(original.annotations);
+
+    const undone = undoHistoryCommand(applied);
+    expect(undone.document.environment).toEqual(original.environment);
+    const undoneBackground = backgroundSettings(undone.document);
+    const noop = executeHistoryCommand(
+      undone,
+      backgroundCommand(undoneBackground, undoneBackground),
+    );
+    expect(noop).toBe(undone);
+    expect(noop.redoStack).toHaveLength(1);
+    const redone = redoHistoryCommand(noop);
+    expect(redone.document.environment).toMatchObject({
+      backgroundMode: "custom",
+      background: "#123456",
+    });
+    expect(redone.document.revision).toBe(original.revision + 3);
+  });
+
+  it("rejects stale and malformed scene background commands without history mutation", () => {
+    const original = loadFixture();
+    const history = createDocumentHistory(original);
+
+    expect(() =>
+      executeHistoryCommand(
+        history,
+        backgroundCommand(
+          { mode: "custom", color: "#000000" },
+          { mode: "custom", color: "#123456" },
+        ),
+      ),
+    ).toThrow();
+    expect(() =>
+      executeHistoryCommand(
+        history,
+        backgroundCommand(backgroundSettings(original), { mode: "custom", color: "red" }),
+      ),
+    ).toThrow();
+    expect(() =>
+      executeHistoryCommand(
+        history,
+        backgroundCommand(backgroundSettings(original), {
+          mode: "system" as "theme",
+          color: "#123456",
+        }),
+      ),
+    ).toThrow();
+    expect(history.document).toEqual(original);
+    expect(history.undoStack).toEqual([]);
+    expect(history.redoStack).toEqual([]);
+  });
   it("renames the document with a trimmed name as one validated revision", () => {
     const document = loadFixture();
     const command: RenameDocumentCommand = {
@@ -383,6 +451,20 @@ describe("document commands", () => {
     expect(history.redoStack).toEqual([]);
   });
 });
+
+function backgroundSettings(document: SceneDocument): { mode: "theme" | "custom"; color: string } {
+  const environment = document.environment as SceneDocument["environment"] & {
+    readonly backgroundMode?: "theme" | "custom";
+  };
+  return { mode: environment.backgroundMode ?? "theme", color: environment.background };
+}
+
+function backgroundCommand(
+  before: { mode: "theme" | "custom"; color: string },
+  after: { mode: "theme" | "custom"; color: string },
+): DocumentCommand {
+  return { type: "set-scene-background", before, after };
+}
 
 function loadFixture(): SceneDocument {
   const result = validateSceneDocument(JSON.parse(readFileSync(fixtureUrl, "utf8")) as unknown);

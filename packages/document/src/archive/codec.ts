@@ -2,7 +2,7 @@ import { validateSceneDocument } from "../validate.js";
 import { serializeSceneDocument } from "../serialize.js";
 import type { SceneAsset, SceneDocument } from "../types.js";
 import { sha256Hex } from "./hash.js";
-import { importCanonicalSceneJson } from "./json.js";
+import { importCanonicalSceneJson, readCanonicalSceneSchemaVersion } from "./json.js";
 import {
   assetPathFromSha,
   buildArchiveManifest,
@@ -90,6 +90,10 @@ export async function importSceneArchive(bytes: Uint8Array): Promise<ImportedSce
     throw new Error("scene.json hash mismatch.");
   }
 
+  const rawSceneSchemaVersion = readCanonicalSceneSchemaVersion(sceneBytes);
+  if (manifest.sceneSchemaVersion !== rawSceneSchemaVersion) {
+    throw new Error("Archive manifest scene schema version does not match raw scene.json.");
+  }
   const archiveDocument = importCanonicalSceneJson(sceneBytes);
   const importedAssets = await validateImportedAssets(archiveDocument, manifest, files);
   const localDocument = toLocalDocument(archiveDocument);

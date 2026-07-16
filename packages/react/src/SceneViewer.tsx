@@ -25,6 +25,8 @@ type AlarmEvent = Extract<ViewerEvent, { type: "alarm" }>;
 export interface SceneViewerHandle {
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string): Promise<void>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
   setView(viewId: string): Promise<void>;
   getSnapshot(): ViewerSnapshot;
 }
@@ -38,6 +40,8 @@ export interface SceneViewerProps {
   readonly style?: CSSProperties;
   readonly pixelRatio?: number;
   readonly reducedMotion?: boolean;
+  readonly themeBackground?: string | null;
+  readonly backgroundPreview?: string | null;
   readonly onReady?: (event: ReadyEvent) => void;
   readonly onSelectionChange?: (event: SelectionEvent) => void;
   readonly onAlarm?: (event: AlarmEvent) => void;
@@ -90,6 +94,14 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
     }, [props.canvasLabel]);
 
     useEffect(() => {
+      viewerRef.current?.setThemeBackground(props.themeBackground ?? null);
+    }, [props.themeBackground]);
+
+    useEffect(() => {
+      viewerRef.current?.setBackgroundPreview(props.backgroundPreview ?? null);
+    }, [props.backgroundPreview]);
+
+    useEffect(() => {
       const viewer = viewerRef.current;
       if (viewer === null) return;
       reconcileAdapters(viewer, adaptersRef.current, props.adapters ?? {});
@@ -104,6 +116,12 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
         },
         focusTarget(targetId) {
           return requiredViewer(viewerRef).focusTarget(targetId, { select: true });
+        },
+        setThemeBackground(color) {
+          requiredViewer(viewerRef).setThemeBackground(color);
+        },
+        setBackgroundPreview(color) {
+          requiredViewer(viewerRef).setBackgroundPreview(color);
         },
         setView(viewId) {
           return requiredViewer(viewerRef).setView(viewId);

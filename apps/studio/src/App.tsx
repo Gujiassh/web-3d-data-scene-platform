@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Box, FolderTree, TriangleAlert } from "lucide-react";
 
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
+import { useTheme } from "@web3d/demo-support/theme-provider";
 
 import { AssetList } from "./features/AssetList";
 import { ImportDialog } from "./features/ImportDialog";
@@ -15,6 +16,20 @@ import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
 import { resolveExecutableStudioShortcut } from "./session/shortcuts";
+import { SceneBackgroundSettingsDialog } from "./scene-background/SceneBackgroundSettingsDialog";
+import {
+  createSetSceneBackgroundCommand,
+  sceneBackgroundStateKey,
+  themeBackgroundFor,
+  type SceneBackgroundSettings,
+} from "./scene-background/model";
+import {
+  createSceneBackgroundDraftPreview,
+  holdSceneBackgroundPreviewUntilReady,
+  releaseSceneBackgroundPreviewOnReady,
+  resolveSceneBackgroundPreview,
+  type SceneBackgroundPreviewState,
+} from "./scene-background/preview-state";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
 type LeftPanel = "scene" | "assets";
@@ -22,6 +37,7 @@ type LeftPanel = "scene" | "assets";
 export function App() {
   const desktopViewport = useDesktopViewport();
   const { t } = useStudioI18n();
+  const { theme } = useTheme();
   const workspace = useStudioWorkspace();
   const viewerRef = useRef<AuthoringSceneHandle>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +46,9 @@ export function App() {
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
+  const [sceneSettingsKey, setSceneSettingsKey] = useState<string | null>(null);
+  const [sceneBackgroundPreview, setSceneBackgroundPreview] =
+    useState<SceneBackgroundPreviewState | null>(null);
 
   const selectedEntityId = workspace.session?.primaryEntityId ?? null;
   const activeTool = workspace.session?.tool ?? "select";
@@ -38,6 +57,15 @@ export function App() {
   const project = workspace.project;
   const session = workspace.session;
   const history = workspace.history;
+  const themeBackground = themeBackgroundFor(theme);
+  const projectDocumentKey =
+    project === null ? null : sceneBackgroundStateKey(project.record.id, project.document.id);
+  const sceneSettingsOpen = sceneSettingsKey !== null && sceneSettingsKey === projectDocumentKey;
+  const resolvedSceneBackgroundPreview = resolveSceneBackgroundPreview(
+    sceneBackgroundPreview,
+    projectDocumentKey,
+    themeBackground,
+  );
   const historyCapabilities = studioHistoryCapabilities(
     workspace.canEdit,
     history?.undoStack.length ?? 0,
@@ -70,6 +98,24 @@ export function App() {
       document.querySelector<HTMLButtonElement>(".project-menu-trigger")?.focus(),
     );
   };
+  const closeSceneSettings = (): void => {
+    setSceneSettingsKey(null);
+    setSceneBackgroundPreview(null);
+    restoreSceneSettingsFocus();
+  };
+  const restoreSceneSettingsFocus = (): void => {
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLButtonElement>(".project-menu-trigger")?.focus(),
+    );
+  };
+  const handleSceneBackgroundPreview = useCallback(
+    (color: string) => {
+      if (projectDocumentKey !== null) {
+        setSceneBackgroundPreview(createSceneBackgroundDraftPreview(projectDocumentKey, color));
+      }
+    },
+    [projectDocumentKey],
+  );
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -172,6 +218,7 @@ export function App() {
 
       {projectMenuOpen && project !== null && (
         <ProjectMenu
+          canConfigureScene={workspace.canEdit}
           canRename={workspace.canEdit}
           currentProjectId={project.record.id}
           recent={workspace.recent.map((item) => ({
@@ -201,6 +248,11 @@ export function App() {
           onRename={() => {
             setProjectMenuOpen(false);
             setSceneNameDialogMode("rename");
+          }}
+          onSceneSettings={() => {
+            if (!workspace.canEdit || projectDocumentKey === null) return;
+            setProjectMenuOpen(false);
+            setSceneSettingsKey(projectDocumentKey);
           }}
           onOpen={(projectId) => {
             setProjectMenuOpen(false);
@@ -273,6 +325,7 @@ export function App() {
             <AuthoringScene
               ref={viewerRef}
               adapters={dataBinding.adapters}
+              backgroundPreview={resolvedSceneBackgroundPreview}
               dataRuntimeEnabled={session?.mode === "run"}
               canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
@@ -282,12 +335,20 @@ export function App() {
               primaryEntityId={session?.primaryEntityId ?? null}
               selectedEntityIds={session?.selectedEntityIds ?? []}
               source={project.document}
+              themeBackground={themeBackground}
               transformSettings={sceneLayout.transformSettings}
               onDiagnostic={(diagnostic) =>
                 workspace.addDiagnostic(`${diagnostic.code} ${diagnostic.message}`)
               }
               onEvent={dataBinding.handleViewerEvent}
-              onReady={() => {
+              onReady={(event) => {
+                setSceneBackgroundPreview((current) =>
+                  releaseSceneBackgroundPreviewOnReady(
+                    current,
+                    sceneBackgroundStateKey(project.record.id, event.documentId),
+                    event.revision,
+                  ),
+                );
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
                 viewer.setTool(activeTool);
@@ -381,6 +442,45 @@ export function App() {
             closeSceneNameDialog();
             return true;
           }}
+        />
+      )}
+
+      {sceneSettingsOpen && project !== null && (
+        <SceneBackgroundSettingsDialog
+          initialSettings={{
+            backgroundMode: project.document.environment.backgroundMode,
+            background: project.document.environment.background,
+          }}
+          key={projectDocumentKey ?? undefined}
+          themeBackground={themeBackground}
+          onApply={(settings: SceneBackgroundSettings) => {
+            const outcome = workspace.execute(
+              createSetSceneBackgroundCommand(
+                {
+                  backgroundMode: project.document.environment.backgroundMode,
+                  background: project.document.environment.background,
+                },
+                settings,
+              ),
+            );
+            if (outcome.status === "rejected" || outcome.status === "unavailable") return false;
+            if (outcome.status === "changed") {
+              setSceneSettingsKey(null);
+              setSceneBackgroundPreview(
+                holdSceneBackgroundPreviewUntilReady(
+                  sceneBackgroundStateKey(project.record.id, project.document.id),
+                  settings,
+                  outcome.revision,
+                ),
+              );
+              restoreSceneSettingsFocus();
+            } else {
+              closeSceneSettings();
+            }
+            return true;
+          }}
+          onCancel={closeSceneSettings}
+          onPreview={handleSceneBackgroundPreview}
         />
       )}
 

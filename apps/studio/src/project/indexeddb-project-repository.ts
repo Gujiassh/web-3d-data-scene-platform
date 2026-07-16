@@ -237,12 +237,40 @@ export function createIndexedDbProjectRepository(
             db.createObjectStore(SETTINGS_STORE, { keyPath: "key" });
           }
         };
-        openRequest.onsuccess = () => resolve(openRequest.result);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          void migrateStoredProjects(db).then(
+            () => resolve(db),
+            (error: unknown) => {
+              db.close();
+              reject(error);
+            },
+          );
+        };
         openRequest.onerror = () =>
           reject(openRequest.error ?? studioAppErrors.indexedDbOpenFailed());
       });
     }
     return databasePromise;
+  }
+}
+
+async function migrateStoredProjects(db: IDBDatabase): Promise<void> {
+  const tx = db.transaction(PROJECTS_STORE, "readwrite");
+  const done = transactionComplete(tx);
+  try {
+    const projectStore = tx.objectStore(PROJECTS_STORE);
+    const records = await request<PersistedProjectRecord[]>(projectStore.getAll());
+    const rewrites = records.flatMap((record) => {
+      const document = parseStoredDocument(record.documentJson, record.id);
+      const documentJson = serializeProjectDocument(document);
+      return documentJson === record.documentJson ? [] : [{ ...record, documentJson }];
+    });
+    for (const record of rewrites) projectStore.put(record);
+    await done;
+  } catch (error) {
+    await abortAndWaitForTransaction(tx, done);
+    throw error;
   }
 }
 

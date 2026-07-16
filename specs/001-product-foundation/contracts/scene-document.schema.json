@@ -21,7 +21,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "id": {
       "$ref": "#/$defs/id"
@@ -504,8 +504,9 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["background", "grid", "unit", "upAxis"],
+      "required": ["backgroundMode", "background", "grid", "unit", "upAxis"],
       "properties": {
+        "backgroundMode": { "enum": ["theme", "custom"] },
         "background": { "$ref": "#/$defs/color" },
         "grid": { "type": "boolean" },
         "unit": { "enum": ["mm", "cm", "m"] },

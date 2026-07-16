@@ -13,11 +13,16 @@ describe("createNewStudioProject", () => {
     });
 
     expect(project.document).toMatchObject({
+      schemaVersion: "1.1.0",
       id: "project-a",
       name: "Assembly Review",
       revision: 0,
       assets: [],
       entities: [],
+      environment: {
+        backgroundMode: "theme",
+        background: "#F4F6F5",
+      },
     });
     expect(project.record).toMatchObject({
       id: "project-a",

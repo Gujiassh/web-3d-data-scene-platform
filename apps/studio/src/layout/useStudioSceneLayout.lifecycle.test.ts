@@ -135,7 +135,7 @@ function Harness({
 
 function scene(revision: number, sourceX: number): SceneDocument {
   return {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     id: "scene",
     name: "Scene",
     revision,
@@ -147,7 +147,13 @@ function scene(revision: number, sourceX: number): SceneDocument {
     ruleSets: [],
     annotations: [],
     views: [],
-    environment: { background: "#FFFFFF", grid: true, unit: "m", upAxis: "Y" },
+    environment: {
+      backgroundMode: "custom",
+      background: "#FFFFFF",
+      grid: true,
+      unit: "m",
+      upAxis: "Y",
+    },
   };
 }
 

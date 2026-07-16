@@ -5,6 +5,7 @@ import {
   FilePlus2,
   FolderOpen,
   Pencil,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
@@ -20,11 +21,13 @@ export interface RecentProjectItem {
 
 interface ProjectMenuProps {
   readonly currentProjectId: string;
+  readonly canConfigureScene: boolean;
   readonly canRename: boolean;
   readonly recent: readonly RecentProjectItem[];
   readonly onClose: () => void;
   readonly onNew: () => void;
   readonly onRename: () => void;
+  readonly onSceneSettings: () => void;
   readonly onOpen: (projectId: string) => void;
   readonly onDelete: (projectId: string) => void;
   readonly onImportArchive: () => void;
@@ -63,6 +66,14 @@ export function ProjectMenu(props: ProjectMenuProps) {
         </button>
         <button data-testid="export-json-command" type="button" onClick={props.onExportJson}>
           <Download size={15} /> {t.projectMenu.exportJson}
+        </button>
+        <button
+          aria-label={t.projectMenu.sceneSettings}
+          disabled={!props.canConfigureScene}
+          type="button"
+          onClick={props.onSceneSettings}
+        >
+          <Settings2 size={15} /> {t.projectMenu.sceneSettings}
         </button>
       </div>
       <div className="recent-projects">

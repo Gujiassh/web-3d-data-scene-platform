@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { parseSceneDocument, type SceneDocument } from "@web3d/document";
-import { BufferGeometry } from "three";
+import { BufferGeometry, Color } from "three";
 import type * as ThreeModule from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +13,10 @@ import { SelectionOverlay } from "./selection-overlay";
 const runtime = vi.hoisted(() => ({
   canvases: [] as ReturnType<typeof fakeCanvas>[],
   dispose: vi.fn(),
+  frames: [] as FrameRequestCallback[],
   generationDisposals: [] as Array<ReturnType<typeof vi.fn>>,
   reportError: vi.fn(),
+  scenes: [] as Array<{ background: unknown }>,
 }));
 
 vi.mock("three", async (importOriginal) => {
@@ -36,7 +38,14 @@ vi.mock("three", async (importOriginal) => {
     setSize(): void {}
   }
 
-  return { ...actual, WebGLRenderer: FakeWebGLRenderer };
+  class FakeScene extends actual.Scene {
+    constructor() {
+      super();
+      runtime.scenes.push(this);
+    }
+  }
+
+  return { ...actual, Scene: FakeScene, WebGLRenderer: FakeWebGLRenderer };
 });
 
 vi.mock("three/addons/controls/OrbitControls.js", async () => {
@@ -82,8 +91,10 @@ describe("SceneViewer lifecycle", () => {
   beforeEach(() => {
     runtime.canvases.length = 0;
     runtime.dispose.mockClear();
+    runtime.frames.length = 0;
     runtime.generationDisposals.length = 0;
     runtime.reportError.mockClear();
+    runtime.scenes.length = 0;
     vi.stubGlobal(
       "ResizeObserver",
       class FakeResizeObserver {
@@ -91,7 +102,10 @@ describe("SceneViewer lifecycle", () => {
         observe(): void {}
       },
     );
-    vi.stubGlobal("requestAnimationFrame", () => 1);
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      runtime.frames.push(callback);
+      return runtime.frames.length;
+    });
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
     vi.stubGlobal("reportError", runtime.reportError);
   });
@@ -106,6 +120,124 @@ describe("SceneViewer lifecycle", () => {
     viewer.setCanvasLabel("Factory operations scene");
     expect(canvas.attributes["aria-label"]).toBe("Factory operations scene");
     expect(viewer.getSnapshot()).toEqual(snapshot);
+    await viewer.dispose();
+  });
+
+  it("resolves theme and preview backgrounds without restarting viewer resources", async () => {
+    const { asset, scene } = await fixture();
+    const active = adapter("theme-background");
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const canvas = runtime.canvases.at(-1);
+    await viewer.load(withBackground(scene, "theme", "#102030"));
+    flushFrames();
+
+    expect(sceneBackground()).toBe("#102030");
+    expect(active.start).toHaveBeenCalledOnce();
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(1);
+    const generationDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+
+    viewer.setThemeBackground("#336699");
+    expect(sceneBackground()).toBe("#336699");
+    expect(runtime.frames).toHaveLength(1);
+    flushFrames();
+
+    viewer.setBackgroundPreview("#AABBCC");
+    expect(sceneBackground()).toBe("#AABBCC");
+    flushFrames();
+    viewer.setThemeBackground("#445566");
+    expect(sceneBackground()).toBe("#AABBCC");
+    expect(runtime.frames).toHaveLength(0);
+    viewer.setBackgroundPreview(null);
+    expect(sceneBackground()).toBe("#445566");
+    flushFrames();
+    viewer.setThemeBackground(null);
+    expect(sceneBackground()).toBe("#102030");
+    flushFrames();
+    viewer.setThemeBackground("#445566");
+    expect(sceneBackground()).toBe("#445566");
+    flushFrames();
+
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(active.start).toHaveBeenCalledOnce();
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(1);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      generationDisposals,
+    );
+
+    await viewer.load(withBackground(scene, "custom", "#123456", 2));
+    flushFrames();
+    const customGenerationDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+    const customAdapterStarts = active.start.mock.calls.length;
+    viewer.setThemeBackground("#778899");
+    expect(sceneBackground()).toBe("#123456");
+    expect(runtime.frames).toHaveLength(0);
+    viewer.setBackgroundPreview("#ABCDEF");
+    expect(sceneBackground()).toBe("#ABCDEF");
+    flushFrames();
+    viewer.setBackgroundPreview(null);
+    expect(sceneBackground()).toBe("#123456");
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      customGenerationDisposals,
+    );
+    expect(active.start).toHaveBeenCalledTimes(customAdapterStarts);
+    await viewer.dispose();
+  });
+
+  it("rejects invalid transient colors without changing effective or stored state", async () => {
+    const { asset, scene } = await fixture();
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(withBackground(scene, "theme", "#102030"));
+    flushFrames();
+
+    viewer.setThemeBackground("#336699");
+    flushFrames();
+    expect(() => viewer.setThemeBackground("rgb(1, 2, 3)")).toThrow(TypeError);
+    expect(sceneBackground()).toBe("#336699");
+    expect(runtime.frames).toHaveLength(0);
+
+    viewer.setBackgroundPreview("#AABBCC");
+    flushFrames();
+    expect(() => viewer.setBackgroundPreview("#bad")).toThrow(TypeError);
+    expect(sceneBackground()).toBe("#AABBCC");
+    expect(runtime.frames).toHaveLength(0);
+    viewer.setBackgroundPreview(null);
+    expect(sceneBackground()).toBe("#336699");
+    await viewer.dispose();
+  });
+
+  it("keeps the latest theme and preview inputs across an asynchronous load", async () => {
+    const { asset, scene } = await fixture();
+    let resolveAsset: ((value: Blob) => void) | undefined;
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: {
+        resolve: () =>
+          new Promise<Blob>((resolve) => {
+            resolveAsset = resolve;
+          }),
+      },
+    });
+
+    const loading = viewer.load(withBackground(scene, "theme", "#102030"));
+    viewer.setThemeBackground("#445566");
+    viewer.setBackgroundPreview("#AABBCC");
+    await vi.waitFor(() => expect(resolveAsset).toBeTypeOf("function"));
+    resolveAsset?.(new Blob([asset]));
+    await loading;
+
+    expect(sceneBackground()).toBe("#AABBCC");
+    viewer.setBackgroundPreview(null);
+    expect(sceneBackground()).toBe("#445566");
     await viewer.dispose();
   });
 
@@ -478,6 +610,29 @@ function invalidHash(scene: SceneDocument, revision: number): SceneDocument {
     assets: scene.assets.map((asset) => ({ ...asset, sha256: hash })),
     targets: scene.targets.map((target) => ({ ...target, assetHash: hash })),
   };
+}
+
+function withBackground(
+  scene: SceneDocument,
+  backgroundMode: "theme" | "custom",
+  background: string,
+  revision = scene.revision,
+): SceneDocument {
+  return {
+    ...scene,
+    revision,
+    environment: { ...scene.environment, background, backgroundMode },
+  };
+}
+
+function sceneBackground(): string {
+  const background = runtime.scenes.at(-1)?.background;
+  if (!(background instanceof Color)) throw new Error("Scene color background is missing.");
+  return `#${background.getHexString().toUpperCase()}`;
+}
+
+function flushFrames(): void {
+  while (runtime.frames.length > 0) runtime.frames.shift()?.(performance.now());
 }
 
 function adapter(name: string, stop = () => Promise.resolve()) {

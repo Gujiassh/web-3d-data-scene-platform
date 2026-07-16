@@ -178,6 +178,7 @@ export interface SceneView {
 }
 
 export interface SceneEnvironment {
+  readonly backgroundMode: "theme" | "custom";
   readonly background: string;
   readonly grid: boolean;
   readonly unit: "mm" | "cm" | "m";
@@ -185,7 +186,7 @@ export interface SceneEnvironment {
 }
 
 export interface SceneDocument {
-  readonly schemaVersion: "1.0.0";
+  readonly schemaVersion: "1.1.0";
   readonly id: string;
   readonly name: string;
   readonly revision: number;
