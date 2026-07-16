@@ -1,7 +1,14 @@
 import { readFile } from "node:fs/promises";
 
-import { parseSceneDocument, type SceneDocument } from "@web3d/document";
-import { BufferGeometry, Color } from "three";
+import { parseSceneDocument, type SceneDocument, type SceneLighting } from "@web3d/document";
+import {
+  BufferGeometry,
+  Color,
+  DirectionalLight,
+  GridHelper,
+  HemisphereLight,
+  type Scene,
+} from "three";
 import type * as ThreeModule from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +23,7 @@ const runtime = vi.hoisted(() => ({
   frames: [] as FrameRequestCallback[],
   generationDisposals: [] as Array<ReturnType<typeof vi.fn>>,
   reportError: vi.fn(),
-  scenes: [] as Array<{ background: unknown }>,
+  scenes: [] as Scene[],
 }));
 
 vi.mock("three", async (importOriginal) => {
@@ -213,6 +220,107 @@ describe("SceneViewer lifecycle", () => {
     expect(runtime.frames).toHaveLength(0);
     viewer.setBackgroundPreview(null);
     expect(sceneBackground()).toBe("#336699");
+    await viewer.dispose();
+  });
+
+  it("reconciles authored and preview lighting without restarting viewer resources", async () => {
+    const { asset, scene } = await fixture();
+    const active = adapter("lighting-preview");
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const canvas = runtime.canvases.at(-1);
+    await viewer.load(scene);
+    flushFrames();
+    const originalGenerationDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+    const fill = sceneFill();
+    const key = sceneKey();
+    const preview = lighting("#DDE7E3", "#3D4743", 0.9, "#FFF1D6", 3, [-4, 8, 2]);
+
+    viewer.setLightingPreview(preview);
+    expect(sceneFill()).toBe(fill);
+    expect(sceneKey()).toBe(key);
+    expect(fill.color.getHexString()).toBe("dde7e3");
+    expect(key.intensity).toBe(3);
+    flushFrames();
+
+    const component = 1 / Math.sqrt(3);
+    const nextAuthored = lighting("#FFFFFF", "#84918B", 2, "#FFF4E5", 1.2, [
+      component,
+      component,
+      component,
+    ]);
+    await viewer.load(withLighting(scene, nextAuthored, 2));
+    flushFrames();
+    expect(fill.color.getHexString()).toBe("dde7e3");
+    viewer.setLightingPreview(null);
+    expect(fill.groundColor.getHexString()).toBe("84918b");
+    expect(key.color.getHexString()).toBe("fff4e5");
+
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(active.start).toHaveBeenCalledTimes(2);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(2);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      originalGenerationDisposals.map((count, index) => count + (index === 0 ? 1 : 0)).concat(0),
+    );
+    await viewer.dispose();
+  });
+
+  it("reconciles grid preview in place and keeps it across authored loads", async () => {
+    const { asset, scene } = await fixture();
+    const active = adapter("grid-preview");
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const canvas = runtime.canvases.at(-1);
+    await viewer.load(withGrid(scene, false));
+    flushFrames();
+    expect(sceneGrid()).toBeNull();
+    const generationDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+
+    viewer.setGridPreview(true);
+    const previewGrid = sceneGrid();
+    expect(previewGrid).toBeInstanceOf(GridHelper);
+    flushFrames();
+    viewer.setGridPreview(true);
+    expect(sceneGrid()).toBe(previewGrid);
+    expect(runtime.frames).toHaveLength(0);
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(active.start).toHaveBeenCalledOnce();
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(1);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      generationDisposals,
+    );
+
+    await viewer.load(withGrid(scene, true, 2));
+    flushFrames();
+    expect(sceneGrid()).toBe(previewGrid);
+    viewer.setGridPreview(null);
+    expect(sceneGrid()).toBe(previewGrid);
+    expect(runtime.frames).toHaveLength(0);
+
+    viewer.setGridPreview(false);
+    expect(sceneGrid()).toBeNull();
+    flushFrames();
+    await viewer.load(withGrid(scene, true, 3));
+    flushFrames();
+    expect(sceneGrid()).toBeNull();
+    viewer.setGridPreview(null);
+    expect(sceneGrid()).toBeInstanceOf(GridHelper);
+
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(active.start).toHaveBeenCalledTimes(3);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(3);
     await viewer.dispose();
   });
 
@@ -623,6 +731,57 @@ function withBackground(
     revision,
     environment: { ...scene.environment, background, backgroundMode },
   };
+}
+
+function withLighting(
+  scene: SceneDocument,
+  lighting: SceneLighting,
+  revision = scene.revision,
+): SceneDocument {
+  return {
+    ...scene,
+    revision,
+    environment: { ...scene.environment, lighting },
+  };
+}
+
+function withGrid(scene: SceneDocument, grid: boolean, revision = scene.revision): SceneDocument {
+  return {
+    ...scene,
+    revision,
+    environment: { ...scene.environment, grid },
+  };
+}
+
+function lighting(
+  skyColor: string,
+  groundColor: string,
+  fillIntensity: number,
+  keyColor: string,
+  keyIntensity: number,
+  directionToLight: [number, number, number],
+): SceneLighting {
+  return {
+    fill: { skyColor, groundColor, intensity: fillIntensity },
+    key: { color: keyColor, intensity: keyIntensity, directionToLight },
+  };
+}
+
+function sceneFill(): HemisphereLight {
+  const fill = runtime.scenes.at(-1)?.children.find((object) => object instanceof HemisphereLight);
+  if (!(fill instanceof HemisphereLight)) throw new Error("Scene fill light is missing.");
+  return fill;
+}
+
+function sceneKey(): DirectionalLight {
+  const key = runtime.scenes.at(-1)?.children.find((object) => object instanceof DirectionalLight);
+  if (!(key instanceof DirectionalLight)) throw new Error("Scene key light is missing.");
+  return key;
+}
+
+function sceneGrid(): GridHelper | null {
+  const grid = runtime.scenes.at(-1)?.children.find((object) => object instanceof GridHelper);
+  return grid instanceof GridHelper ? grid : null;
 }
 
 function sceneBackground(): string {

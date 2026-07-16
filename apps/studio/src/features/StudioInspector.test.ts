@@ -96,7 +96,7 @@ describe("StudioInspector", () => {
 
 function scene(): SceneDocument {
   return {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id: "scene",
     name: "Scene",
     revision: 1,
@@ -114,6 +114,18 @@ function scene(): SceneDocument {
       grid: true,
       unit: "m",
       upAxis: "Y",
+      lighting: standardLighting(),
+    },
+  };
+}
+
+function standardLighting() {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324] as const,
     },
   };
 }

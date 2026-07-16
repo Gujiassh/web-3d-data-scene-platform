@@ -1,5 +1,6 @@
 import validateSchema from "./generated/scene-document.validator.js";
 import validateSchema1_0 from "./generated/scene-document-1.0.validator.js";
+import validateSchema1_1 from "./generated/scene-document-1.1.validator.js";
 import {
   sortDiagnostics,
   type DocumentDiagnostic,
@@ -10,6 +11,8 @@ import type { SceneDocument } from "./types.js";
 export type SceneDocument1_0ValidationResult =
   | { readonly ok: true; readonly value: unknown; readonly diagnostics: readonly [] }
   | { readonly ok: false; readonly diagnostics: readonly DocumentDiagnostic[] };
+
+export type SceneDocument1_1ValidationResult = SceneDocument1_0ValidationResult;
 
 export function validateSceneDocumentStructure(value: unknown): DocumentValidationResult {
   if (validateSchema(value)) {
@@ -30,6 +33,19 @@ export function validateSceneDocument1_0Structure(
   return {
     ok: false,
     diagnostics: sortDiagnostics((validateSchema1_0.errors ?? []).map(toDiagnostic)),
+  };
+}
+
+export function validateSceneDocument1_1Structure(
+  value: unknown,
+): SceneDocument1_1ValidationResult {
+  if (validateSchema1_1(value)) {
+    return { ok: true, value, diagnostics: [] };
+  }
+
+  return {
+    ok: false,
+    diagnostics: sortDiagnostics((validateSchema1_1.errors ?? []).map(toDiagnostic)),
   };
 }
 

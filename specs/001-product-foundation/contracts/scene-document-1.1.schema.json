@@ -21,7 +21,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.2.0"
+      "const": "1.1.0"
     },
     "id": {
       "$ref": "#/$defs/id"
@@ -104,10 +104,6 @@
     "color": {
       "type": "string",
       "pattern": "^#[A-Fa-f0-9]{6}$"
-    },
-    "environmentColor": {
-      "type": "string",
-      "pattern": "^#[A-F0-9]{6}$"
     },
     "vec3": {
       "type": "array",
@@ -508,43 +504,13 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["backgroundMode", "background", "grid", "unit", "upAxis", "lighting"],
+      "required": ["backgroundMode", "background", "grid", "unit", "upAxis"],
       "properties": {
         "backgroundMode": { "enum": ["theme", "custom"] },
-        "background": { "$ref": "#/$defs/environmentColor" },
+        "background": { "$ref": "#/$defs/color" },
         "grid": { "type": "boolean" },
         "unit": { "enum": ["mm", "cm", "m"] },
-        "upAxis": { "const": "Y" },
-        "lighting": { "$ref": "#/$defs/lighting" }
-      }
-    },
-    "lighting": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["fill", "key"],
-      "properties": {
-        "fill": { "$ref": "#/$defs/lightingFill" },
-        "key": { "$ref": "#/$defs/lightingKey" }
-      }
-    },
-    "lightingFill": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["skyColor", "groundColor", "intensity"],
-      "properties": {
-        "skyColor": { "$ref": "#/$defs/environmentColor" },
-        "groundColor": { "$ref": "#/$defs/environmentColor" },
-        "intensity": { "type": "number", "minimum": 0, "maximum": 5 }
-      }
-    },
-    "lightingKey": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["color", "intensity", "directionToLight"],
-      "properties": {
-        "color": { "$ref": "#/$defs/environmentColor" },
-        "intensity": { "type": "number", "minimum": 0, "maximum": 5 },
-        "directionToLight": { "$ref": "#/$defs/vec3" }
+        "upAxis": { "const": "Y" }
       }
     }
   }

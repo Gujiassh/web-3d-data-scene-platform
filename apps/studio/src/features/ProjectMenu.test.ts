@@ -10,6 +10,8 @@ describe("ProjectMenu", () => {
     const html = renderMenu(false);
 
     expect(html).toContain('aria-label="Scene settings"');
+    expect(html.match(/aria-label="Scene settings"/g)).toHaveLength(1);
+    expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toMatch(/<button[^>]*aria-label="Scene settings"[^>]*disabled/);
   });
 

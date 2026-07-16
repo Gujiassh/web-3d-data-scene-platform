@@ -186,8 +186,12 @@ test.describe("Theme and scene naming", () => {
     const revision = await page.getByTestId("document-revision").getAttribute("data-revision");
     const before = await activeStoredDocument(page);
     expect(before).toMatchObject({
-      schemaVersion: "1.1.0",
-      environment: { backgroundMode: "theme", background: "#F4F6F5" },
+      schemaVersion: "1.2.0",
+      environment: {
+        backgroundMode: "theme",
+        background: "#F4F6F5",
+        lighting: standardLighting(),
+      },
     });
     await expectNoPageOverflow(page);
     await page.screenshot({ path: artifact("studio-dark-1440x900.png"), fullPage: true });
@@ -216,11 +220,7 @@ test.describe("Theme and scene naming", () => {
 
     await dialog.getByText("Custom color", { exact: true }).click();
     const colorInput = dialog.getByLabel("Background color", { exact: true });
-    await colorInput.fill("#123");
-    await expect(colorInput).toHaveAttribute("aria-invalid", "true");
-    await expect(dialog.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
-    await colorInput.fill("#336699");
-    await expect(colorInput).toHaveAttribute("aria-invalid", "false");
+    await setColorInput(colorInput, "#336699");
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
     await expect(page.getByTestId("document-revision")).toHaveAttribute(
       "data-revision",
@@ -236,7 +236,7 @@ test.describe("Theme and scene naming", () => {
     await page.getByRole("button", { name: "Scene settings", exact: true }).click();
     const applyDialog = page.getByRole("dialog", { name: "Scene settings" });
     await applyDialog.getByText("Custom color", { exact: true }).click();
-    await applyDialog.getByLabel("Background color", { exact: true }).fill("#336699");
+    await setColorInput(applyDialog.getByLabel("Background color", { exact: true }), "#336699");
     await applyDialog.getByRole("button", { name: "Apply", exact: true }).click();
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(applyDialog).toBeHidden();
@@ -248,7 +248,7 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.1.0",
+        schemaVersion: "1.2.0",
         revision: 3,
         environment: { backgroundMode: "custom", background: "#336699" },
       });
@@ -286,7 +286,7 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.1.0",
+        schemaVersion: "1.2.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
 
@@ -297,7 +297,7 @@ test.describe("Theme and scene naming", () => {
     const jsonPath = test.info().outputPath("scene-background.scene.json");
     await jsonDownload.saveAs(jsonPath);
     expect(JSON.parse(await readFile(jsonPath, "utf8"))).toMatchObject({
-      schemaVersion: "1.1.0",
+      schemaVersion: "1.2.0",
       environment: { backgroundMode: "custom", background: "#336699" },
     });
     await rememberCanvas(page, reloadedCanvas);
@@ -317,13 +317,13 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.1.0",
+        schemaVersion: "1.2.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("rewrites every stored 1.0.0 project to persisted 1.1.0 data", async ({ page }) => {
+  test("rewrites mixed stored 1.0 and 1.1 projects to persisted 1.2 data", async ({ page }) => {
     await useEnglish(page, studioLocaleKey);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(studioUrl);
@@ -353,11 +353,13 @@ test.describe("Theme and scene naming", () => {
       expect(withoutDocumentJson(record)).toEqual(withoutDocumentJson(legacy!));
       const before = JSON.parse(legacy!.documentJson) as LegacySceneDocument;
       const after = JSON.parse(record.documentJson) as CurrentSceneDocument;
-      expect(after.schemaVersion).toBe("1.1.0");
+      expect(after.schemaVersion).toBe("1.2.0");
       expect(after.revision).toBe(before.revision);
       expect(after.environment).toEqual({
         ...before.environment,
-        backgroundMode: "custom",
+        backgroundMode:
+          before.schemaVersion === "1.0.0" ? "custom" : before.environment.backgroundMode,
+        lighting: standardLighting(),
       });
     }
   });
@@ -370,6 +372,28 @@ async function useEnglish(page: Page, key: string): Promise<void> {
 async function openProjectMenu(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Open project menu" }).click();
   await expect(page.getByRole("region", { name: "Project menu" })).toBeVisible();
+}
+
+async function setColorInput(input: Locator, value: string): Promise<void> {
+  await input.evaluate((element, next) => {
+    const control = element as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter === undefined) throw new Error("Color input setter is unavailable.");
+    setter.call(control, next);
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
+function standardLighting() {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
+  } as const;
 }
 
 async function expectCurrentRecentName(page: Page, name: string): Promise<void> {
@@ -529,21 +553,23 @@ interface StoredProject {
 }
 
 interface LegacySceneDocument {
-  readonly schemaVersion: "1.0.0";
+  readonly schemaVersion: "1.0.0" | "1.1.0";
   readonly revision: number;
   readonly environment: {
     readonly background: string;
     readonly grid: boolean;
     readonly unit: "m";
     readonly upAxis: "Y";
+    readonly backgroundMode?: "theme" | "custom";
   };
 }
 
 interface CurrentSceneDocument {
-  readonly schemaVersion: "1.1.0";
+  readonly schemaVersion: "1.2.0";
   readonly revision: number;
   readonly environment: LegacySceneDocument["environment"] & {
     readonly backgroundMode: "theme" | "custom";
+    readonly lighting: ReturnType<typeof standardLighting>;
   };
 }
 
@@ -577,8 +603,22 @@ async function seedLegacyProjects(page: Page): Promise<readonly StoredProject[]>
       request.onerror = () => reject(request.error ?? new Error("Failed to seed IndexedDB."));
     });
     const records = [
-      legacyProject("legacy-project-a", "Legacy Light", "#F4F6F5", 4, "2026-07-01T00:00:00.000Z"),
-      legacyProject("legacy-project-b", "Legacy Dark", "#151B19", 9, "2026-07-02T00:00:00.000Z"),
+      legacyProject(
+        "legacy-project-a",
+        "Legacy 1.0",
+        "#F4F6F5",
+        4,
+        "2026-07-01T00:00:00.000Z",
+        "1.0.0",
+      ),
+      legacyProject(
+        "legacy-project-b",
+        "Legacy 1.1",
+        "#151B19",
+        9,
+        "2026-07-02T00:00:00.000Z",
+        "1.1.0",
+      ),
     ];
     try {
       await new Promise<void>((resolve, reject) => {
@@ -615,6 +655,7 @@ async function seedLegacyProjects(page: Page): Promise<readonly StoredProject[]>
       background: string,
       revision: number,
       timestamp: string,
+      schemaVersion: "1.0.0" | "1.1.0",
     ): StoredProject {
       return {
         id,
@@ -625,7 +666,7 @@ async function seedLegacyProjects(page: Page): Promise<readonly StoredProject[]>
         lastSavedRevision: revision,
         lastExportedRevision: null,
         documentJson: JSON.stringify({
-          schemaVersion: "1.0.0",
+          schemaVersion,
           id,
           name,
           revision,
@@ -637,7 +678,13 @@ async function seedLegacyProjects(page: Page): Promise<readonly StoredProject[]>
           ruleSets: [],
           annotations: [],
           views: [],
-          environment: { background, grid: true, unit: "m", upAxis: "Y" },
+          environment: {
+            background,
+            ...(schemaVersion === "1.1.0" ? { backgroundMode: "theme" } : {}),
+            grid: true,
+            unit: "m",
+            upAxis: "Y",
+          },
         }),
       };
     }

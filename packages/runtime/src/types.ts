@@ -1,4 +1,4 @@
-import type { Transform, Vec3 } from "@web3d/document";
+import type { SceneLighting, Transform, Vec3 } from "@web3d/document";
 
 import type { SceneAsset, SceneDocument } from "./document-contract";
 
@@ -48,6 +48,7 @@ export type DiagnosticCode =
   | "ASSET_MEDIA_TYPE_UNSUPPORTED"
   | "ASSET_MULTISCENE_UNSUPPORTED"
   | "ASSET_NODE_MISSING"
+  | "ASSET_PUNCTUAL_LIGHTS_REMOVED"
   | "DATASOURCE_CONNECTION_FAILED"
   | "DATASOURCE_PATCH_INVALID"
   | "DATASOURCE_PATCH_OUT_OF_ORDER"
@@ -241,6 +242,8 @@ export interface SceneViewer {
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
   setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
@@ -257,6 +260,8 @@ export interface AuthoringSceneViewer {
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
   setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
   selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;

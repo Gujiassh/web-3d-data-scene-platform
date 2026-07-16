@@ -28,24 +28,28 @@ describe("archive codec", () => {
 
   it("exports only current documents and writes the requested scene schema version", () => {
     const current = loadLocalFixture();
-    const legacy = legacyDocument(current);
+    const legacy = legacyDocument(current, "1.1.0");
 
     expect(() => exportCanonicalSceneJson(legacy as unknown as SceneDocument)).toThrow();
     const manifest = buildArchiveManifest({
       createdAt,
       sceneBytes: new Uint8Array([1]),
       sceneSha256: "a".repeat(64),
-      sceneSchemaVersion: "1.1.0",
+      sceneSchemaVersion: "1.2.0",
       assets: [],
     });
     expect(manifest.archiveVersion).toBe("1.0.0");
-    expect(manifest.sceneSchemaVersion).toBe("1.1.0");
+    expect(manifest.sceneSchemaVersion).toBe("1.2.0");
 
     const imported = importCanonicalSceneJson(new TextEncoder().encode(JSON.stringify(legacy)));
     expect(imported).toMatchObject({
-      schemaVersion: "1.1.0",
+      schemaVersion: "1.2.0",
       revision: current.revision,
-      environment: { backgroundMode: "custom", background: current.environment.background },
+      environment: {
+        backgroundMode: current.environment.backgroundMode,
+        background: current.environment.background,
+        lighting: current.environment.lighting,
+      },
     });
   });
 
@@ -66,6 +70,11 @@ describe("archive codec", () => {
     const zip = unzipSync(first);
     const sceneJson = new TextDecoder().decode(zip["scene.json"]!);
     expect(sceneJson).toContain(`"uri": "assets/${document.assets[0]!.sha256}.glb"`);
+    expect(JSON.parse(sceneJson)).toMatchObject({ schemaVersion: "1.2.0" });
+    expect(JSON.parse(new TextDecoder().decode(zip["manifest.json"]!))).toMatchObject({
+      archiveVersion: "1.0.0",
+      sceneSchemaVersion: "1.2.0",
+    });
   });
 
   it("deduplicates shared asset payloads while preserving every SceneAsset record", async () => {
@@ -166,38 +175,45 @@ describe("archive codec", () => {
     await expect(importSceneArchive(zipFromFiles(files))).rejects.toThrow(/does not match/);
   });
 
-  it("imports a 1.0 archive as a current custom-background document", async () => {
-    const zip = await exportFixtureArchive();
-    const files = unzipSync(zip);
-    const current = importCanonicalSceneJson(files["scene.json"]!);
-    const legacy = legacyDocument(current);
-    files["scene.json"] = new TextEncoder().encode(JSON.stringify(legacy));
-    const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]!)) as {
-      sceneSchemaVersion: string;
-      files: Array<Record<string, unknown>>;
-    };
-    manifest.sceneSchemaVersion = "1.0.0";
-    manifest.files = await Promise.all(
-      manifest.files.map(async (file) =>
-        file["path"] === "scene.json"
-          ? {
-              ...file,
-              byteLength: files["scene.json"]!.byteLength,
-              sha256: await sha256Hex(files["scene.json"]!),
-            }
-          : file,
-      ),
-    );
-    files["manifest.json"] = new TextEncoder().encode(JSON.stringify(manifest));
+  it.each(["1.0.0", "1.1.0"] as const)(
+    "imports a %s archive as a current 1.2 document",
+    async (legacyVersion) => {
+      const zip = await exportFixtureArchive();
+      const files = unzipSync(zip);
+      const current = importCanonicalSceneJson(files["scene.json"]!);
+      const legacy = legacyDocument(current, legacyVersion);
+      files["scene.json"] = new TextEncoder().encode(JSON.stringify(legacy));
+      const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]!)) as {
+        sceneSchemaVersion: string;
+        files: Array<Record<string, unknown>>;
+      };
+      manifest.sceneSchemaVersion = legacyVersion;
+      manifest.files = await Promise.all(
+        manifest.files.map(async (file) =>
+          file["path"] === "scene.json"
+            ? {
+                ...file,
+                byteLength: files["scene.json"]!.byteLength,
+                sha256: await sha256Hex(files["scene.json"]!),
+              }
+            : file,
+        ),
+      );
+      files["manifest.json"] = new TextEncoder().encode(JSON.stringify(manifest));
 
-    const imported = await importSceneArchive(zipFromFiles(files));
-    expect(imported.manifest.sceneSchemaVersion).toBe("1.0.0");
-    expect(imported.document).toMatchObject({
-      schemaVersion: "1.1.0",
-      revision: current.revision,
-      environment: { backgroundMode: "custom", background: current.environment.background },
-    });
-  });
+      const imported = await importSceneArchive(zipFromFiles(files));
+      expect(imported.manifest.sceneSchemaVersion).toBe(legacyVersion);
+      expect(imported.document).toMatchObject({
+        schemaVersion: "1.2.0",
+        revision: current.revision,
+        environment: {
+          backgroundMode: legacyVersion === "1.0.0" ? "custom" : current.environment.backgroundMode,
+          background: current.environment.background,
+          lighting: current.environment.lighting,
+        },
+      });
+    },
+  );
 
   it("rejects unsafe asset paths from the manifest", async () => {
     const zip = await exportFixtureArchive();
@@ -284,10 +300,14 @@ function loadLocalFixture(): SceneDocument {
   };
 }
 
-function legacyDocument(document: SceneDocument): Record<string, unknown> {
+function legacyDocument(
+  document: SceneDocument,
+  version: "1.0.0" | "1.1.0",
+): Record<string, unknown> {
   const environment = { ...document.environment } as Record<string, unknown>;
-  delete environment["backgroundMode"];
-  return { ...document, schemaVersion: "1.0.0", environment };
+  delete environment["lighting"];
+  if (version === "1.0.0") delete environment["backgroundMode"];
+  return { ...document, schemaVersion: version, environment };
 }
 
 async function loadFixtureWithAsset(): Promise<{

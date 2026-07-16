@@ -112,24 +112,60 @@ commit once, bypass with Alt and retain only the local preference.
 **Independent test**: Valid 1.0/1.1 projects migrate and render the current baseline; mixed invalid records
 roll back; appearance preview/apply/cancel/undo round-trips as current 1.2 without Viewer recreation.
 
-- [ ] T025 [P] [US4] Freeze 1.1 schema/validator and add 1.2 lighting schema/types in `specs/001-product-foundation/contracts/` and `packages/document/src/`
-- [ ] T026 [US4] Implement chained semantic-first migration and current validation tests in `packages/document/src/`
-- [ ] T027 [US4] Implement atomic scene-environment command and tests in `packages/document/src/commands/`
-- [ ] T028 [US4] Implement all-record IndexedDB rewrite/rollback and archive current-only tests in `apps/studio/src/project/` and `apps/shared/src/`
-- [ ] T029 [P] [US4] Extract in-place lighting controller and tests in `packages/runtime/src/viewer/scene-lighting-controller.ts`
-- [ ] T030 [US4] Reconcile authored/preview lighting through stable Runtime/React APIs in `packages/runtime/src/` and `packages/react/src/`
-- [ ] T031 [P] [US4] Detect/exclude imported punctual lights and test diagnostics in `packages/runtime/src/assets/` and import inspection modules
-- [ ] T032 [US4] Build flat Appearance/Lighting settings tabs and presets in `apps/studio/src/scene-settings/`
-- [ ] T033 [US4] Integrate one apply/cancel/preview command lifecycle in `apps/studio/src/App.tsx`
-- [ ] T034 [US4] Add migration, JSON/ZIP/IndexedDB, first-frame and real-WebGL appearance evidence in `tests/e2e/scene-appearance.spec.ts`
-- [ ] T035 [US4] Complete 006A.3 Critical reviews, original-worker rework and checkpoint in `specs/006a-studio-usability-lighting/tasks.md`
+- [x] T025 [P] [US4] Freeze 1.1 schema/validator and add 1.2 lighting schema/types in `specs/001-product-foundation/contracts/` and `packages/document/src/`
+- [x] T026 [US4] Implement chained semantic-first migration and current validation tests in `packages/document/src/`
+- [x] T027 [US4] Implement atomic scene-environment command and tests in `packages/document/src/commands/`
+- [x] T028 [US4] Implement all-record IndexedDB rewrite/rollback and archive current-only tests in `apps/studio/src/project/` and `packages/document/src/archive/`
+- [x] T029 [P] [US4] Extract in-place lighting controller and tests in `packages/runtime/src/viewer/scene-lighting-controller.ts`
+- [x] T030 [US4] Reconcile authored/preview lighting through stable Runtime/React APIs in `packages/runtime/src/` and `packages/react/src/`
+- [x] T031 [P] [US4] Detect/exclude imported punctual lights and test diagnostics in `packages/runtime/src/assets/` and import inspection modules
+- [x] T032 [US4] Build flat Appearance/Lighting settings tabs and presets in `apps/studio/src/scene-settings/`
+- [x] T033 [US4] Integrate one apply/cancel/preview command lifecycle in `apps/studio/src/App.tsx`
+- [x] T034 [US4] Add migration, JSON/ZIP/IndexedDB, first-frame and real-WebGL appearance evidence in `tests/e2e/scene-appearance.spec.ts`
+- [x] T035 [US4] Complete 006A.3 Critical reviews, original-worker rework and checkpoint in `specs/006a-studio-usability-lighting/tasks.md`
+
+### 006A.3 implementation checkpoint
+
+- Contract/migration: current 1.2 requires canonical concrete fill/key lighting; frozen 1.0/1.1 payloads validate
+  under their declared semantics before chained migration and final current validation. Mixed IndexedDB records
+  rewrite changed-only in one version-1 readwrite transaction; invalid/read/write failure rolls back all eight-key
+  records. JSON/ZIP accept legacy but output only 1.2; archive container remains 1.0.
+- Command/UI: one complete `set-scene-environment` command owns background, grid and lighting, one revision and one
+  Undo step. Flat bilingual tabs materialize concrete presets and directions; no preset ID persists. Strict
+  command validation rejects non-canonical/stale/invalid snapshots rather than normalizing them.
+- Runtime: one reusable fill/key rig, authored/transient grid split, and React controlled inputs reconcile in place.
+  Grid resources dispose on hide; light rig disposes on Viewer teardown. Imported glTF punctual lights are counted,
+  reported and removed from the actual Three tree.
+- Preview lifecycle: draft changes update background/grid/lighting together. Apply holds the same concrete transient
+  values until matching ready revision, while Cancel clears immediately. No preview path reloads a temporary source
+  or recreates Viewer/Canvas/generation/adapters.
+- Browser evidence: real 006 Layout GLB changes pixels under Contrast; background/grid preview, Apply revision 1->2,
+  Undo/Redo 3/4, stable Canvas identity and concrete JSON/ZIP/IndexedDB 1.2 all pass. Theme/naming and mixed 1.0/1.1
+  migration regression pass 3/3.
+- Review rework: first Critical review High found command normalization accepting invalid after and weakening exact
+  stale-before; Medium found archive raw/parsed version wording. Original Document worker reproduced the High as a
+  red test, implemented strict validation/exact comparison, clarified raw manifest matching, and passed 5 files /
+  81 focused tests plus validator smoke/typecheck/lint/format/diff. Final cross-layer review remains T035.
 
 ## Phase 7: Full Acceptance
 
-- [ ] T036 Update `docs/ssot/` and all 006A acceptance/task evidence
-- [ ] T037 Run unit, typecheck, lint, build, i18n, design, topology, format and full Playwright gates
-- [ ] T038 Run reverse Critical review for migration/save/runtime lifecycle and close all findings
-- [ ] T039 Commit the accepted feature with a coherent Chinese commit and push `main`
+- [x] T036 Update `docs/ssot/` and all 006A acceptance/task evidence
+- [x] T037 Run unit, typecheck, lint, build, i18n, design, topology, format and full Playwright gates
+- [x] T038 Run reverse Critical review for migration/save/runtime lifecycle and close all findings
+- [x] T039 Commit the accepted feature with a coherent Chinese commit and push `main`
+
+### 006A.3 final acceptance
+
+- Full unit: 80 files / 429 tests passed. Root, E2E and all five workspace TypeScript projects passed after
+  sequential validator generation. ESLint, production build (1919 modules), i18n, design, topology, Prettier and
+  `git diff --check` passed.
+- Full Chromium/WebGL: 24/24 passed with four workers. An initial eight-worker run had one pre-business M2 Canvas
+  size-poll timeout under local WebGL/CPU contention; its failure screenshot already showed a complete canvas, the
+  isolated flow passed 1/1, and the complete lower-contention matrix passed without code or timeout changes.
+- Reverse Critical review mapped partial migration to frozen-schema/mixed-record rollback evidence, Apply flashback
+  to held-preview/React lifecycle evidence, double lighting to single-rig plus real GLTF/GLB Light-tree removal, and
+  preset leakage to schema plus JSON/ZIP/IndexedDB scans. After strict-command and documentation rework, independent
+  re-review returned PASS with no remaining finding.
 
 ## Dependencies
 

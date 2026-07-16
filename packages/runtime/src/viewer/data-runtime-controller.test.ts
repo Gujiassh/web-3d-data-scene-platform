@@ -138,7 +138,7 @@ function viewerEvent(event: Extract<ViewerEvent, { type: "alarm" | "connection-c
 
 function document(): SceneDocument {
   return {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id: "scene-1",
     name: "Scene",
     revision: 0,
@@ -213,6 +213,7 @@ function document(): SceneDocument {
       grid: false,
       unit: "m",
       upAxis: "Y",
+      lighting: standardLighting(),
     },
   };
 }
@@ -222,8 +223,20 @@ function generation(target: RuntimeTarget): RuntimeGeneration {
     root: new Group(),
     entities: new Map(),
     targets: new Map([["target-1", target]]),
+    diagnostics: [],
     entityForObject: vi.fn(),
     targetForObject: vi.fn(),
     dispose: vi.fn(),
+  };
+}
+
+function standardLighting(): SceneDocument["environment"]["lighting"] {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
   };
 }

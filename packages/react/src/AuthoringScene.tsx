@@ -20,6 +20,7 @@ import {
   type EntitySpatialSnapshot,
   type SceneSource,
 } from "@web3d/runtime";
+import type { SceneLighting } from "@web3d/document";
 
 import { reconcileAuthoringSceneRuntime } from "./authoring-runtime-reconciliation";
 import {
@@ -48,6 +49,8 @@ export interface AuthoringSceneHandle {
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
 }
@@ -65,6 +68,8 @@ export interface AuthoringSceneProps {
   readonly dataRuntimeEnabled?: boolean;
   readonly themeBackground?: string | null;
   readonly backgroundPreview?: string | null;
+  readonly gridPreview?: boolean | null;
+  readonly lightingPreview?: SceneLighting | null;
   readonly selectedEntityIds?: readonly string[];
   readonly primaryEntityId?: string | null;
   readonly transformSettings?: AuthoringTransformSettings;
@@ -146,6 +151,14 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     useEffect(() => {
       viewerRef.current?.setBackgroundPreview(props.backgroundPreview ?? null);
     }, [props.backgroundPreview]);
+
+    useEffect(() => {
+      viewerRef.current?.setGridPreview(props.gridPreview ?? null);
+    }, [props.gridPreview]);
+
+    useEffect(() => {
+      viewerRef.current?.setLightingPreview(props.lightingPreview ?? null);
+    }, [props.lightingPreview]);
 
     useEffect(() => {
       const viewer = viewerRef.current;
@@ -241,6 +254,12 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         setBackgroundPreview(color) {
           requiredViewer(viewerRef).setBackgroundPreview(color);
+        },
+        setGridPreview(visible) {
+          requiredViewer(viewerRef).setGridPreview(visible);
+        },
+        setLightingPreview(lighting) {
+          requiredViewer(viewerRef).setLightingPreview(lighting);
         },
         setView(viewId) {
           return requiredViewer(viewerRef).setView(viewId);

@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { validateSceneDocument, type RenameDocumentCommand, type SceneDocument } from "../index.js";
+import {
+  validateSceneDocument,
+  type RenameDocumentCommand,
+  type SceneDocument,
+  type SceneEnvironment,
+} from "../index.js";
 import type { Annotation, AssetEntity, Binding, GroupEntity, SceneTarget } from "../types.js";
 import { executeDocumentCommand } from "./document-command.js";
 import {
@@ -84,6 +89,120 @@ describe("document commands", () => {
       ),
     ).toThrow();
     expect(history.document).toEqual(original);
+    expect(history.undoStack).toEqual([]);
+    expect(history.redoStack).toEqual([]);
+  });
+
+  it("sets a canonical complete scene environment atomically with undo/redo", () => {
+    const original = loadFixture();
+    const after = changedEnvironment(original.environment);
+    const command: DocumentCommand = {
+      type: "set-scene-environment",
+      before: original.environment,
+      after,
+    };
+    const applied = executeHistoryCommand(createDocumentHistory(original), command);
+
+    expect(applied.document.environment).toEqual(after);
+    expect(applied.document.environment).not.toBe(after);
+    expect(applied.document.environment.lighting).not.toBe(after.lighting);
+    expect(applied.document.environment.lighting.key.directionToLight).not.toBe(
+      after.lighting.key.directionToLight,
+    );
+    expect(applied.document.revision).toBe(original.revision + 1);
+    expect(applied.undoStack).toHaveLength(1);
+    expect(applied.document.entities).toBe(original.entities);
+    expect(applied.document.bindings).toBe(original.bindings);
+
+    const undone = undoHistoryCommand(applied);
+    expect(undone.document.environment).toEqual(original.environment);
+    const noop = executeHistoryCommand(undone, {
+      type: "set-scene-environment",
+      before: undone.document.environment,
+      after: undone.document.environment,
+    });
+    expect(noop).toBe(undone);
+    expect(noop.redoStack).toHaveLength(1);
+
+    const redone = redoHistoryCommand(noop);
+    expect(redone.document.environment).toEqual(applied.document.environment);
+    expect(redone.document.revision).toBe(original.revision + 3);
+    expect(redone.redoStack).toEqual([]);
+  });
+
+  it("rejects stale and invalid scene environments without changing history", () => {
+    const original = loadFixture();
+    const history = createDocumentHistory(original);
+    const execute = (before: SceneEnvironment, after: SceneEnvironment) =>
+      executeHistoryCommand(history, { type: "set-scene-environment", before, after });
+
+    expect(() =>
+      execute({ ...original.environment, grid: !original.environment.grid }, original.environment),
+    ).toThrow(/before snapshot/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        lighting: {
+          ...original.environment.lighting,
+          fill: { ...original.environment.lighting.fill, intensity: 6 },
+        },
+      }),
+    ).toThrow(/intensity/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        lighting: {
+          ...original.environment.lighting,
+          key: { ...original.environment.lighting.key, directionToLight: [0, 0, 0] },
+        },
+      }),
+    ).toThrow(/directionToLight/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        background: "red",
+      }),
+    ).toThrow(/background/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        background: "#aabbcc",
+      }),
+    ).toThrow(/background/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        lighting: {
+          ...original.environment.lighting,
+          key: { ...original.environment.lighting.key, directionToLight: [5, 10, 7] },
+        },
+      }),
+    ).toThrow(/directionToLight/);
+    expect(() =>
+      execute(
+        { ...original.environment, background: original.environment.background.toLowerCase() },
+        original.environment,
+      ),
+    ).toThrow(/background/);
+    expect(() =>
+      execute(
+        {
+          ...original.environment,
+          lighting: {
+            ...original.environment.lighting,
+            key: { ...original.environment.lighting.key, directionToLight: [5, 10, 7] },
+          },
+        },
+        original.environment,
+      ),
+    ).toThrow(/directionToLight/);
+    expect(() =>
+      execute(original.environment, {
+        ...original.environment,
+        unexpected: true,
+      } as SceneEnvironment),
+    ).toThrow(/exactly/);
+    expect(history.document).toBe(original);
     expect(history.undoStack).toEqual([]);
     expect(history.redoStack).toEqual([]);
   });
@@ -548,6 +667,23 @@ function backgroundCommand(
   after: { mode: "theme" | "custom"; color: string },
 ): DocumentCommand {
   return { type: "set-scene-background", before, after };
+}
+
+function changedEnvironment(environment: SceneEnvironment): SceneEnvironment {
+  return {
+    ...environment,
+    backgroundMode: "custom",
+    background: "#AABBCC",
+    grid: false,
+    lighting: {
+      fill: { skyColor: "#DDEEFF", groundColor: "#112233", intensity: 0.9 },
+      key: {
+        color: "#FFF1D6",
+        intensity: 3,
+        directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+      },
+    },
+  };
 }
 
 function loadFixture(): SceneDocument {

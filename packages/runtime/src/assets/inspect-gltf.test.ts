@@ -73,6 +73,17 @@ describe("inspectGltf", () => {
     });
   });
 
+  it.each([
+    ["glTF", "punctual-lights.gltf", () => gltfJsonBytes(punctualLightsGltf())],
+    ["GLB", "punctual-lights.glb", () => glbBytes(punctualLightsGltf())],
+  ])("reports imported punctual light counts and types for %s", async (_, name, bytes) => {
+    const summary = await inspectGltf(name, bytes());
+
+    expect(summary.warnings).toContain(
+      "3 imported punctual lights (1 directional, 1 point, 1 spot) will be removed from the runtime scene so only the authored scene lighting rig is active.",
+    );
+  });
+
   it("rejects a glTF with external resource URIs", async () => {
     const bytes = gltfJsonBytes({
       asset: { version: "2.0" },
@@ -230,6 +241,38 @@ function selfContainedTriangleGltf(): Record<string, unknown> {
       },
     ],
   };
+}
+
+function punctualLightsGltf(): Record<string, unknown> {
+  return {
+    asset: { version: "2.0" },
+    extensionsUsed: ["KHR_lights_punctual"],
+    extensions: {
+      KHR_lights_punctual: {
+        lights: [{ type: "directional" }, { type: "point" }, { type: "spot" }],
+      },
+    },
+    scenes: [{ nodes: [0, 1, 2] }],
+    scene: 0,
+    nodes: [0, 1, 2].map((light) => ({
+      extensions: { KHR_lights_punctual: { light } },
+    })),
+  };
+}
+
+function glbBytes(value: unknown): ArrayBuffer {
+  const encoded = new TextEncoder().encode(JSON.stringify(value));
+  const jsonLength = Math.ceil(encoded.byteLength / 4) * 4;
+  const bytes = new Uint8Array(12 + 8 + jsonLength);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x46546c67, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, bytes.byteLength, true);
+  view.setUint32(12, jsonLength, true);
+  view.setUint32(16, 0x4e4f534a, true);
+  bytes.fill(0x20, 20);
+  bytes.set(encoded, 20);
+  return bytes.buffer;
 }
 
 function fakeGltf(input: {

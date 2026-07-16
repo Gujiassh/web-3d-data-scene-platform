@@ -162,7 +162,10 @@ those files. `EntityInspector` remains a composition surface.
 - fake-indexeddb tests prove all-valid rewrite and mixed-invalid full rollback with exact record snapshots.
 - Runtime tests prove migrated first-frame parity, in-place preview/apply/cancel/undo and one fill/key pair.
 - Archive/JSON/E2E payload tests prove current-only output, field preservation and no transient leakage.
-- Real-WebGL screenshot/pixel checks cover all presets, directions, themes, Edit/Run and Viewer identity.
+- Real-WebGL screenshot/pixel checks cover Standard authored first frame, Contrast live preview, background/grid
+  draft, Apply/Undo/Redo and Viewer identity in Edit. Pure/UI tests cover every preset and direction option;
+  existing theme E2E covers light/dark background resolution, while Run remains unchanged because Scene settings
+  is authoring-only and disabled there.
 
 ## Delivery And Review
 

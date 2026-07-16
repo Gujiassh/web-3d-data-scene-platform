@@ -193,7 +193,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     transform: transform([1, 0, 0]),
   };
   const document: SceneDocument = {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id: "spatial-document",
     name: "Spatial document",
     revision: 7,
@@ -218,6 +218,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
       grid: false,
       unit: "m",
       upAxis: "Y",
+      lighting: standardLighting(),
     },
   };
 
@@ -248,9 +249,21 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
       root,
       entities,
       targets: new Map(),
+      diagnostics: [],
       entityForObject: vi.fn(),
       targetForObject: vi.fn(),
       dispose: vi.fn(() => root.clear()),
+    },
+  };
+}
+
+function standardLighting(): SceneDocument["environment"]["lighting"] {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
     },
   };
 }

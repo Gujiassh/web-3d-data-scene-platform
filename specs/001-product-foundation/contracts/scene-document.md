@@ -2,7 +2,8 @@
 
 > Status: MVP v1 design
 > Machine-readable schema: `scene-document.schema.json`
-> Current version: `1.1.0`; immutable legacy schema: `scene-document-1.0.schema.json`
+> Current version: `1.2.0`; immutable legacy schemas: `scene-document-1.0.schema.json` and
+> `scene-document-1.1.schema.json`
 
 ## Purpose
 
@@ -46,6 +47,10 @@ Object3D or InstancedMesh instance IDs.
 presentation color and keeps `environment.background` as the dormant custom color/fallback. Custom
 mode always renders `environment.background`.
 
+`environment.lighting` stores one concrete hemisphere fill and directional key rig. Environment colors
+are canonical uppercase `#RRGGBB`, intensities are finite values in `[0, 5]`, and `directionToLight` is a finite
+unit vector within `1e-6`. Preset names and editor previews are not persisted.
+
 ## Persistence Rules
 
 - Arrays do not imply business priority unless a field explicitly says so.
@@ -53,8 +58,9 @@ mode always renders `environment.background`.
 - The serializer sorts top-level arrays by ID before hashing/export to produce deterministic output.
 - Unknown fields are rejected in MVP rather than silently ignored.
 - `schemaVersion` uses semantic versioning. Major changes require explicit migration or rejection.
-- Valid 1.0.0 documents migrate deterministically to 1.1.0/custom before current business use; persisted
-  stores and imports write current data rather than carrying a frontend-only compatibility view.
+- Valid 1.0.0 documents migrate deterministically through 1.1.0/custom; valid 1.1.0 documents add the
+  approved Standard concrete lighting values. Both paths finish as validated 1.2.0 documents without
+  changing revision or other authored fields. Persisted stores and exports write only current data.
 - Runtime values are never written back by Viewer.
 
 ## Asset Replacement

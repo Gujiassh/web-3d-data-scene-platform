@@ -82,7 +82,7 @@ SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主
 
 ## 006A：编辑易用性与场景灯光
 
-> 状态：Approved for implementation on 2026-07-16；产品规格见
+> 状态：006A.1/006A.2/006A.3 accepted；产品规格见
 > `../006a-studio-usability-lighting/spec.md`。用户已批准 `SceneDocument 1.1.0 -> 1.2.0`、
 > `environment.lighting` 和真实 IndexedDB 数据迁移。
 

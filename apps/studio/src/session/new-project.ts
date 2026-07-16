@@ -29,7 +29,7 @@ export function createNewStudioProject(input: NewProjectInput): StudioProjectSna
 
 function createEmptyDocument(id: string, name: string): SceneDocument {
   const candidate: SceneDocument = {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id,
     name,
     revision: 0,
@@ -47,6 +47,18 @@ function createEmptyDocument(id: string, name: string): SceneDocument {
       grid: true,
       unit: "m",
       upAxis: "Y",
+      lighting: {
+        fill: {
+          skyColor: "#FFFFFF",
+          groundColor: "#65706A",
+          intensity: 1.8,
+        },
+        key: {
+          color: "#FFFFFF",
+          intensity: 2.2,
+          directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+        },
+      },
     },
   };
   const validation = validateSceneDocument(candidate);

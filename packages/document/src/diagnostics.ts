@@ -20,7 +20,8 @@ export type DocumentDiagnosticCode =
   | "BINDING_WRITE_CONFLICT"
   | "BINDING_WRITES_MISMATCH"
   | "RULE_LABEL_TOKEN_INVALID"
-  | "ANNOTATION_TARGET_NOT_FOUND";
+  | "ANNOTATION_TARGET_NOT_FOUND"
+  | "LIGHTING_DIRECTION_NOT_UNIT";
 
 export interface DocumentDiagnostic {
   readonly code: DocumentDiagnosticCode;

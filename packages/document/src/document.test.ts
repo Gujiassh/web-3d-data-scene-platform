@@ -24,29 +24,55 @@ describe("SceneDocument", () => {
     const result = parseSceneDocument(readFileSync(fixtureUrl, "utf8"));
 
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.id).toBe("factory-demo");
+    if (result.ok) {
+      expect(result.value.id).toBe("factory-demo");
+      expect(result.value.schemaVersion).toBe("1.2.0");
+    }
   });
 
   it("validates the generated M0 factory fixture", () => {
-    const legacy = JSON.parse(readFileSync(m0FixtureUrl, "utf8")) as Record<string, unknown>;
-    legacy["schemaVersion"] = "1.0.0";
-    delete (legacy["environment"] as Record<string, unknown>)["backgroundMode"];
-    const result = parseSceneDocument(JSON.stringify(legacy));
+    const generated = JSON.parse(readFileSync(m0FixtureUrl, "utf8")) as Record<string, unknown>;
+    const result = validateSceneDocument(generated);
 
     expect(result.ok).toBe(true);
-    expect(validateSceneDocument(legacy).ok).toBe(false);
     if (result.ok) {
-      expect(result.value).toEqual({
-        ...legacy,
-        schemaVersion: "1.1.0",
-        environment: {
-          ...(legacy["environment"] as Record<string, unknown>),
-          backgroundMode: "custom",
-        },
-      });
+      expect(result.value.schemaVersion).toBe("1.2.0");
+      expect(result.value.environment.lighting).toEqual(standardLighting());
       expect(result.value.targets.map((target) => target.id)).toEqual(["press-01", "conveyor-01"]);
     }
   });
+
+  it("migrates a valid 1.1 document to 1.2 without changing revision or authored fields", () => {
+    const current = loadFixture();
+    const legacy = loadLegacy1_1Fixture();
+    const result = parseSceneDocument(JSON.stringify(legacy));
+
+    expect(validateSceneDocument(legacy).ok).toBe(false);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toEqual({
+      ...legacy,
+      schemaVersion: "1.2.0",
+      environment: {
+        ...(legacy["environment"] as Record<string, unknown>),
+        lighting: standardLighting(),
+      },
+    });
+    expect(result.value.revision).toBe(current["revision"]);
+  });
+
+  it.each(["1.0.0", "1.1.0"] as const)(
+    "canonicalizes legacy %s environment colors during migration",
+    (version) => {
+      const legacy = version === "1.0.0" ? loadLegacyFixture() : loadLegacy1_1Fixture();
+      (legacy["environment"] as Record<string, unknown>)["background"] = "#a0b1c2";
+
+      const result = parseSceneDocument(JSON.stringify(legacy));
+
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.value.environment.background).toBe("#A0B1C2");
+    },
+  );
 
   it("validates legacy semantics before migration", () => {
     const validateLegacy = (
@@ -56,6 +82,13 @@ describe("SceneDocument", () => {
     ).validateSceneDocument1_0;
     expect(validateLegacy).toBeTypeOf("function");
     if (validateLegacy === undefined) return;
+
+    const validateLegacy1_1 = (
+      validationModule as typeof validationModule & {
+        readonly validateSceneDocument1_1?: (value: unknown) => DiagnosticResult;
+      }
+    ).validateSceneDocument1_1;
+    expect(validateLegacy1_1).toBeTypeOf("function");
 
     const cycle = loadLegacyFixture();
     records(cycle["entities"])[0]!["parentId"] = "press-01";
@@ -75,6 +108,35 @@ describe("SceneDocument", () => {
     expect(codes(parseSceneDocument(JSON.stringify(invalidThreshold)))).toContain(
       "DATA_SOURCE_THRESHOLD_ORDER",
     );
+
+    const legacy1_1Cycle = loadLegacy1_1Fixture();
+    records(legacy1_1Cycle["entities"])[0]!["parentId"] = "press-01";
+    expect(codes(validateLegacy1_1!(legacy1_1Cycle))).toContain("ENTITY_CYCLE");
+    expect(codes(parseSceneDocument(JSON.stringify(legacy1_1Cycle)))).toContain("ENTITY_CYCLE");
+  });
+
+  it("validates complete lighting structure and unit-vector semantics", () => {
+    const missing = loadFixture();
+    delete (missing["environment"] as Record<string, unknown>)["lighting"];
+    expect(paths(validateSceneDocument(missing))).toContain("/environment/lighting");
+
+    const invalidColor = loadFixture();
+    lightingFill(invalidColor)["skyColor"] = "white";
+    expect(codes(validateSceneDocument(invalidColor))).toContain("SCHEMA_VALIDATION_FAILED");
+
+    const nonCanonicalColor = loadFixture();
+    lightingFill(nonCanonicalColor)["skyColor"] = "#ffffff";
+    expect(codes(validateSceneDocument(nonCanonicalColor))).toContain("SCHEMA_VALIDATION_FAILED");
+
+    const invalidIntensity = loadFixture();
+    lightingFill(invalidIntensity)["intensity"] = 5.01;
+    expect(codes(validateSceneDocument(invalidIntensity))).toContain("SCHEMA_VALIDATION_FAILED");
+
+    const invalidDirection = loadFixture();
+    lightingKey(invalidDirection)["directionToLight"] = [1, 1, 1];
+    const result = validateSceneDocument(invalidDirection);
+    expect(codes(result)).toContain("LIGHTING_DIRECTION_NOT_UNIT");
+    expect(paths(result)).toContain("/environment/lighting/key/directionToLight");
   });
 
   it("returns stable diagnostics for malformed structure", () => {
@@ -200,7 +262,7 @@ function loadFixture(): Record<string, unknown> {
 }
 
 function loadLegacyFixture(): Record<string, unknown> {
-  const legacy = loadFixture();
+  const legacy = loadLegacy1_1Fixture();
   legacy["schemaVersion"] = "1.0.0";
   const environment = legacy["environment"];
   if (environment === null || typeof environment !== "object" || Array.isArray(environment)) {
@@ -208,6 +270,42 @@ function loadLegacyFixture(): Record<string, unknown> {
   }
   delete (environment as Record<string, unknown>)["backgroundMode"];
   return legacy;
+}
+
+function loadLegacy1_1Fixture(): Record<string, unknown> {
+  const legacy = loadFixture();
+  legacy["schemaVersion"] = "1.1.0";
+  const environment = legacy["environment"];
+  if (environment === null || typeof environment !== "object" || Array.isArray(environment)) {
+    throw new TypeError("Expected fixture environment.");
+  }
+  delete (environment as Record<string, unknown>)["lighting"];
+  return legacy;
+}
+
+function standardLighting(): Record<string, unknown> {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
+  };
+}
+
+function lightingFill(document: Record<string, unknown>): Record<string, unknown> {
+  return lightingPart(document, "fill");
+}
+
+function lightingKey(document: Record<string, unknown>): Record<string, unknown> {
+  return lightingPart(document, "key");
+}
+
+function lightingPart(document: Record<string, unknown>, part: "fill" | "key") {
+  const environment = document["environment"] as Record<string, unknown>;
+  const lighting = environment["lighting"] as Record<string, unknown>;
+  return lighting[part] as Record<string, unknown>;
 }
 
 function records(value: unknown): Record<string, unknown>[] {

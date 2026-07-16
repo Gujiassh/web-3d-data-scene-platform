@@ -183,10 +183,24 @@ export interface SceneEnvironment {
   readonly grid: boolean;
   readonly unit: "mm" | "cm" | "m";
   readonly upAxis: "Y";
+  readonly lighting: SceneLighting;
+}
+
+export interface SceneLighting {
+  readonly fill: {
+    readonly skyColor: string;
+    readonly groundColor: string;
+    readonly intensity: number;
+  };
+  readonly key: {
+    readonly color: string;
+    readonly intensity: number;
+    readonly directionToLight: Vec3;
+  };
 }
 
 export interface SceneDocument {
-  readonly schemaVersion: "1.1.0";
+  readonly schemaVersion: "1.2.0";
   readonly id: string;
   readonly name: string;
   readonly revision: number;

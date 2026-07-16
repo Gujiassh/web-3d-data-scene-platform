@@ -12,7 +12,7 @@ import {
 } from "./index";
 
 const source = {
-  schemaVersion: "1.1.0",
+  schemaVersion: "1.2.0",
   id: "scene-1",
   name: "Scene",
   revision: 0,
@@ -30,6 +30,14 @@ const source = {
     grid: false,
     unit: "m",
     upAxis: "Y",
+    lighting: {
+      fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+      key: {
+        color: "#FFFFFF",
+        intensity: 2.2,
+        directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+      },
+    },
   },
 } as const;
 
@@ -69,6 +77,8 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneHandle["selectEntities"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setThemeBackground"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setBackgroundPreview"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setGridPreview"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setLightingPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setTransformSettings"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setSmartAlignEnabled"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["isTransformDragging"]>().toBeFunction();
@@ -82,9 +92,15 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneProps>().not.toHaveProperty("onSelectionSetChange");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("themeBackground");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("backgroundPreview");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("gridPreview");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("lightingPreview");
     expectTypeOf<SceneViewerHandle["setThemeBackground"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setBackgroundPreview"]>().toBeFunction();
+    expectTypeOf<SceneViewerHandle["setGridPreview"]>().toBeFunction();
+    expectTypeOf<SceneViewerHandle["setLightingPreview"]>().toBeFunction();
     expectTypeOf<SceneViewerProps>().toHaveProperty("themeBackground");
     expectTypeOf<SceneViewerProps>().toHaveProperty("backgroundPreview");
+    expectTypeOf<SceneViewerProps>().toHaveProperty("gridPreview");
+    expectTypeOf<SceneViewerProps>().toHaveProperty("lightingPreview");
   });
 });

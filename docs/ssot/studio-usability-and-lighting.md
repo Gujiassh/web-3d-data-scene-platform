@@ -1,6 +1,6 @@
 # Studio Usability And Lighting
 
-> 状态：006A.1/006A.2 accepted；006A.3 planned
+> 状态：006A.1/006A.2/006A.3 accepted
 > 用户批准：2026-07-16，包含 `SceneDocument 1.1.0 -> 1.2.0` 和真实 IndexedDB 数据迁移
 
 ## 产品边界
@@ -166,6 +166,71 @@ Studio preference/orchestration 位于独立 `apps/studio/src/smart-align/` hook
 006A.3 将 current SceneDocument 升级到 1.2.0，required `environment.lighting` 保存具体 fill/key 参数，不保存
 preset 名称。旧 1.0/1.1 先按冻结合同完整验证，再迁移并复验 1.2；IndexedDB 全记录在一个 readwrite
 transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、DB version/store 和 archive container 不变。
+
+## 006A.3 当前事实
+
+### SceneDocument 1.2 与真实迁移
+
+- Current contract 是 `SceneDocument 1.2.0`，required `environment.lighting` 只保存一组 concrete
+  hemisphere fill 和 directional key；颜色必须是 canonical uppercase `#RRGGBB`，强度在 `[0,5]`，
+  `directionToLight` 是误差不超过 `1e-6` 的单位向量。Standard 方向使用
+  `normalize([5,10,7]) = [0.37904902178945177,0.7580980435789035,0.5306686305052324]`。
+- 冻结 1.0/1.1 schema 和 standalone validator 不改。parse 先按 payload 声明版本执行旧结构与旧语义
+  验证，再逐步 `1.0 -> 1.1 -> 1.2` 或 `1.1 -> 1.2`，最后按 current 复验；revision 和已有 authored
+  fields 不变。旧合法 lowercase hex 只在迁移边界 canonicalize，current command 不替调用方修复输入。
+- IndexedDB 仍使用 version 1 和原三 store。初始化在单个 `projects` readwrite transaction 中扫描所有
+  记录，只 put JSON bytes 真正变化的 1.0/1.1 record；任一 invalid record 或 put 失败会回滚全部记录。
+  ProjectRecord 的八个持久字段、metadata 时间与 save semantics 不变，同一失败 database promise 被复用。
+- JSON/ZIP import 接受 1.0/1.1/1.2，业务结果与重新持久化只产出 1.2；archive container 仍是 1.0，
+  manifest 的 `sceneSchemaVersion` 核对迁移前 raw `scene.json` 声明版本。preset、direction option ID 和
+  preview 状态不进入 JSON、ZIP 或 IndexedDB。
+
+### 原子命令与设置工作流
+
+- Scene settings 是唯一 Studio 入口，使用扁平 Appearance/Lighting tabs。Appearance 编辑主题跟随、
+  custom color 和 grid；Lighting 提供 Standard/Soft/Contrast concrete preset、fill/key brightness、
+  Standard 加八方位方向和 advanced sky/ground/key colors。Custom 只由 exact concrete value 派生。
+- Apply 只发一个 `set-scene-environment` command，包含完整 before/after environment，形成一个 revision
+  和一个 Undo step。命令先严格验证 exact keys、canonical color、intensity 和 unit direction，再用原始
+  before 做逐字段精确 stale comparison；lowercase、比例方向、extra key 或 invalid after 原子拒绝。
+- Dialog draft 与 preview 都是 transient。Cancel 立即清背景/网格/灯光 preview；changed Apply 关闭
+  dialog 后仍保留完整 preview，直到 matching project/document 的 Viewer ready revision
+  `>= outcome.revision` 才一起释放，防止 source reconcile 期间背景、网格或灯光短暂回跳。
+- 旧的 background-only Studio dialog/preview 实现已移除；主题背景映射、project-document identity、
+  complete environment draft 和 held-preview 都由 `apps/studio/src/scene-settings/` 单一模块负责。
+
+### Runtime 原位 reconciliation 与资源控制
+
+- Runtime 用一个 `SceneLightingController` 终身持有一盏 `HemisphereLight`、一盏 `DirectionalLight` 和其
+  origin target。authored/preview 以 preview 优先在原 Three objects 上改 color/intensity/direction；
+  clear 恢复最新 authored，dispose 移除完整 rig，不重建 Canvas、Viewer、generation、controls 或 adapters。
+- Grid 同样分离 `authoredGrid` 与 transient override。有效可见状态未变时复用同一 `GridHelper`；关闭时
+  remove 并 dispose geometry/material。背景、网格和灯光均由 Runtime/React 稳定受控 API 原位更新，
+  preview 不构造临时 source，也不产生额外 ready event。
+- glTF/GLB inspection 会报告 `KHR_lights_punctual` 产生的 directional/point/spot 数量；真实加载后遍历
+  Three object tree，将所有 imported `Light` 从 parent 移除，并发出
+  `ASSET_PUNCTUAL_LIGHTS_REMOVED` diagnostic，保证场景中只有 authored fill/key rig 生效。
+
+### 006A.3 已有证据
+
+- Focused integration：Document 3 files / 51 tests、Runtime/React/App 9 files / 52 tests、Studio current
+  fixture 回归 8 files / 38 tests、Scene settings 4 files / 14 tests 通过；React、Studio 和 E2E TypeScript
+  通过。
+- Chromium/WebGL：专用 `scene-appearance.spec.ts` 1/1 通过。真实 006 Layout GLB 的 Contrast preview
+  产生像素差，背景和 grid 同 draft 更新；Apply 只从 revision 1 到 2，Undo/Redo 到 3/4；Canvas identity
+  始终不变，JSON/ZIP/IndexedDB 都是 concrete 1.2 且无 `preset`。既有 theme/naming/mixed migration 3/3
+  同批通过。
+- 第一轮 Critical review 发现 command 会 normalize invalid after/stale before，以及 archive 文档把 raw
+  legacy version 写成 parsed version。原 Document worker 先复现 lowercase after 被错误接受的红测，再
+  改为 strict validate + exact compare，并明确 manifest raw-version 语义；返工后 Document focused
+  5 files / 81 tests、validator smoke、typecheck、lint、Prettier 和 diff check 通过。
+- Final gates：80 files / 429 unit tests、root/E2E/5 workspace TypeScript、ESLint、production build
+  1919 modules、i18n、product design、single-Studio topology、Prettier 和 diff check 通过。最终
+  Chromium/WebGL 以 4 workers 完成 24/24；8-worker 首跑唯一 M2 Canvas 尺寸 poll 超时发生在业务步骤前，
+  截图显示 Canvas 已完成渲染，单条 1/1 和 4-worker full matrix 均通过，判定为本机并发 WebGL/CPU 竞争。
+- Final Critical review：Document exact command、migration/save、Runtime single rig、React/App held-preview、
+  imported-light removal、preset/transient leakage、fixtures/E2E 和 SSoT 逐项复审。关闭 spec normalization
+  旧表述、plan 证据过报和 T028 ownership 三项文档 finding 后，independent reviewer 返回 PASS。
 
 ## 验证
 

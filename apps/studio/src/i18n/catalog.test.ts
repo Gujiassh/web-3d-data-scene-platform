@@ -51,4 +51,19 @@ describe("Studio catalog", () => {
     expect(english.toolbar.smartAlign).toBe("Smart Align");
     expect(chinese.toolbar.smartAlign).toBe("智能对齐");
   });
+
+  it("keeps Scene settings tabs, presets and directions symmetric", () => {
+    expect(Object.keys(english.sceneSettings.presets)).toEqual(
+      Object.keys(chinese.sceneSettings.presets),
+    );
+    expect(Object.keys(english.sceneSettings.directions)).toEqual(
+      Object.keys(chinese.sceneSettings.directions),
+    );
+    expect(english.sceneSettings.currentPreset(english.sceneSettings.presets.custom)).toBe(
+      "Current preset: Custom",
+    );
+    expect(chinese.sceneSettings.currentPreset(chinese.sceneSettings.presets.custom)).toBe(
+      "当前预设：自定义",
+    );
+  });
 });

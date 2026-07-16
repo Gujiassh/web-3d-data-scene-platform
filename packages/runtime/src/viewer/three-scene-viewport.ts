@@ -1,10 +1,8 @@
-import { validateSceneDocument, type SceneDocument } from "@web3d/document";
+import { validateSceneDocument, type SceneDocument, type SceneLighting } from "@web3d/document";
 import {
   Box3,
   Color,
-  DirectionalLight,
   GridHelper,
-  HemisphereLight,
   PerspectiveCamera,
   Scene,
   Vector3,
@@ -56,6 +54,7 @@ import {
   type RuntimeTarget,
 } from "./runtime-generation";
 import { SelectionOverlay } from "./selection-overlay";
+import { SceneLightingController } from "./scene-lighting-controller";
 
 export interface AuthoringViewportOptions {
   readonly enabled: true;
@@ -95,6 +94,7 @@ class ThreeSceneViewport {
   readonly #picker = new ObjectPicker<string>();
   readonly #renderSlot = new AnimationFrameSlot();
   readonly #selectionOverlay: SelectionOverlay;
+  readonly #lighting: SceneLightingController;
   readonly #assetResolver;
   readonly #adapterRuntime: ViewerAdapterRuntime;
   readonly #dataRuntime: ViewerDataRuntimeController;
@@ -112,6 +112,8 @@ class ThreeSceneViewport {
   #lifecycle: ViewerLifecycle = "created";
   #selectedTargetId: string | null = null;
   #entitySelection: EntitySelection = EMPTY_ENTITY_SELECTION;
+  #authoredGrid: boolean | null = null;
+  #gridPreview: boolean | null = null;
   #grid: GridHelper | null = null;
   #loadBarrier: Promise<void> = Promise.resolve();
   #loadController: AbortController | null = null;
@@ -155,10 +157,7 @@ class ThreeSceneViewport {
     this.#controls.target.set(0, 0.75, 0);
     this.#controls.addEventListener("change", this.#requestRender);
 
-    const hemisphere = new HemisphereLight(0xffffff, 0x65706a, 1.8);
-    const key = new DirectionalLight(0xffffff, 2.2);
-    key.position.set(5, 10, 7);
-    this.#scene.add(hemisphere, key);
+    this.#lighting = new SceneLightingController(this.#scene, this.#requestRender);
     this.#scene.background = new Color("#F4F6F5");
 
     this.#selectionOverlay = new SelectionOverlay(this.#scene);
@@ -336,6 +335,8 @@ class ThreeSceneViewport {
     }
     previous?.dispose();
 
+    next.diagnostics.forEach((value) => this.#recordDiagnostic(value));
+
     this.#dataRuntime.attach(source, next);
     this.#selectedTargetId = null;
     this.#entitySelection = nextSelection;
@@ -391,6 +392,17 @@ class ThreeSceneViewport {
     const next = parseSceneBackground(color);
     this.#backgroundPreview = next;
     this.#applyResolvedBackground();
+  }
+
+  setLightingPreview(lighting: SceneLighting | null): void {
+    this.#ensureActive();
+    this.#lighting.setPreview(lighting);
+  }
+
+  setGridPreview(visible: boolean | null): void {
+    this.#ensureActive();
+    this.#gridPreview = visible;
+    this.#applyResolvedGrid();
   }
 
   selectTarget(targetId: string | null): void {
@@ -558,6 +570,7 @@ class ThreeSceneViewport {
     this.#controls.dispose();
     this.#transformAuthoring?.dispose();
     this.#selectionOverlay.dispose();
+    this.#lighting.dispose();
     this.#disposeGrid();
     this.#generation?.dispose();
     this.#generation = null;
@@ -686,11 +699,22 @@ class ThreeSceneViewport {
 
   #applyEnvironment(document: SceneDocument): void {
     this.#applyResolvedBackground();
-    this.#disposeGrid();
-    if (document.environment.grid) {
-      this.#grid = new GridHelper(20, 40, 0x9ba7a1, 0xd6dcda);
-      this.#scene.add(this.#grid);
+    this.#lighting.setAuthored(document.environment.lighting);
+    this.#authoredGrid = document.environment.grid;
+    this.#applyResolvedGrid();
+  }
+
+  #applyResolvedGrid(): void {
+    const visible = this.#gridPreview ?? this.#authoredGrid;
+    if (visible === null || visible === (this.#grid !== null)) return;
+    if (!visible) {
+      this.#disposeGrid();
+      this.#requestRender();
+      return;
     }
+    this.#grid = new GridHelper(20, 40, 0x9ba7a1, 0xd6dcda);
+    this.#scene.add(this.#grid);
+    this.#requestRender();
   }
 
   #applyResolvedBackground(): void {

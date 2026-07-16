@@ -4,7 +4,7 @@ import { Color, Group, Mesh, type Material, type Object3D } from "three";
 import { loadGltfAsset } from "../assets/asset-loader";
 import { disposeObject3D, isolateTargetMaterials } from "../assets/dispose-object";
 import { diagnostic, diagnosticError } from "../diagnostics";
-import type { AssetResolver } from "../types";
+import type { AssetResolver, Diagnostic } from "../types";
 
 export interface RuntimeTarget {
   readonly object: Object3D;
@@ -26,6 +26,7 @@ export interface RuntimeGeneration {
   readonly root: Group;
   readonly entities: ReadonlyMap<string, RuntimeEntity>;
   readonly targets: ReadonlyMap<string, RuntimeTarget>;
+  readonly diagnostics: readonly Diagnostic[];
   entityForObject(object: Object3D): string | undefined;
   targetForObject(object: Object3D): string | undefined;
   dispose(): void;
@@ -43,6 +44,7 @@ export async function buildRuntimeGeneration(
   const entityObjects = new Map<string, Object3D>();
   const objectEntities = new WeakMap<Object3D, string>();
   const originalMaterials = new Set<Material>();
+  const diagnostics: Diagnostic[] = [];
   let disposed = false;
 
   try {
@@ -51,7 +53,14 @@ export async function buildRuntimeGeneration(
       const object =
         entity.type === "group"
           ? createGroupEntity(entity)
-          : await createAssetEntity(entity, document, resolver, signal, originalMaterials);
+          : await createAssetEntity(
+              entity,
+              document,
+              resolver,
+              signal,
+              originalMaterials,
+              diagnostics,
+            );
       runtimeEntities.set(entity.id, { entity, object });
       entityObjects.set(entity.id, object);
       if (entity.type === "asset") assetNodes.set(entity.id, objectNodes(object));
@@ -141,6 +150,7 @@ export async function buildRuntimeGeneration(
       root,
       entities: runtimeEntities,
       targets: targetObjects,
+      diagnostics: Object.freeze([...diagnostics]),
       entityForObject(object) {
         let current: Object3D | null = object;
         while (current !== null) {
@@ -191,6 +201,7 @@ async function createAssetEntity(
   resolver: AssetResolver,
   signal: AbortSignal,
   originalMaterials: Set<Material>,
+  diagnostics: Diagnostic[],
 ): Promise<Object3D> {
   const asset = document.assets.find((candidate) => candidate.id === entity.assetId);
   if (asset === undefined) {
@@ -205,6 +216,7 @@ async function createAssetEntity(
     );
   }
   const loaded = await loadGltfAsset(asset, resolver, signal);
+  diagnostics.push(...loaded.diagnostics);
   collectMaterials(loaded.root, originalMaterials);
   applyEntity(loaded.root, entity);
   return Object.assign(loaded.root, {

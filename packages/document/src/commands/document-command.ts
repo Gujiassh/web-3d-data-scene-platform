@@ -5,6 +5,8 @@ import type {
   SceneAsset,
   SceneDocument,
   SceneEntity,
+  SceneEnvironment,
+  SceneLighting,
   SceneTarget,
   Transform,
 } from "../types.js";
@@ -13,6 +15,7 @@ import type {
   ImportAssetInstanceCommand,
   SceneBackgroundSettings,
   SetSceneBackgroundCommand,
+  SetSceneEnvironmentCommand,
 } from "./types.js";
 import { applyDataBindingDocumentCommand } from "./data-binding-command.js";
 import { applyLayoutDocumentCommand } from "./layout-command.js";
@@ -40,6 +43,8 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
     }
     case "set-scene-background":
       return applySceneBackgroundCommand(document, command);
+    case "set-scene-environment":
+      return applySceneEnvironmentCommand(document, command);
     case "rename-entity":
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({
@@ -83,6 +88,7 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
 }
 
 const COLOR_PATTERN = /^#[A-Fa-f0-9]{6}$/u;
+const CANONICAL_COLOR_PATTERN = /^#[A-F0-9]{6}$/u;
 
 function applySceneBackgroundCommand(
   document: SceneDocument,
@@ -121,6 +127,119 @@ function sceneBackgroundSettingsEqual(
   right: SceneBackgroundSettings,
 ): boolean {
   return left.mode === right.mode && left.color === right.color;
+}
+
+function applySceneEnvironmentCommand(
+  document: SceneDocument,
+  command: SetSceneEnvironmentCommand,
+): SceneDocument {
+  assertSceneEnvironment(command.before, "Scene environment before snapshot");
+  assertSceneEnvironment(command.after, "Scene environment after snapshot");
+  if (!sceneEnvironmentsEqual(document.environment, command.before)) {
+    throw new Error("Scene environment before snapshot does not match the document environment.");
+  }
+  if (sceneEnvironmentsEqual(command.before, command.after)) return document;
+  return reviseDocument(document, { environment: cloneSceneEnvironment(command.after) });
+}
+
+function assertSceneEnvironment(value: SceneEnvironment, label: string): void {
+  assertRecordWithKeys(value, label, [
+    "backgroundMode",
+    "background",
+    "grid",
+    "unit",
+    "upAxis",
+    "lighting",
+  ]);
+  if (value.backgroundMode !== "theme" && value.backgroundMode !== "custom") {
+    throw new Error(`${label} backgroundMode must be theme or custom.`);
+  }
+  if (typeof value.background !== "string" || !CANONICAL_COLOR_PATTERN.test(value.background)) {
+    throw new Error(`${label} background must be a canonical #RRGGBB color.`);
+  }
+  if (typeof value.grid !== "boolean") throw new Error(`${label} grid must be boolean.`);
+  if (value.unit !== "mm" && value.unit !== "cm" && value.unit !== "m") {
+    throw new Error(`${label} unit must be mm, cm or m.`);
+  }
+  if (value.upAxis !== "Y") throw new Error(`${label} upAxis must be Y.`);
+  assertSceneLighting(value.lighting, `${label} lighting`);
+}
+
+function assertSceneLighting(value: SceneLighting, label: string): void {
+  assertRecordWithKeys(value, label, ["fill", "key"]);
+  assertRecordWithKeys(value.fill, `${label} fill`, ["skyColor", "groundColor", "intensity"]);
+  assertRecordWithKeys(value.key, `${label} key`, ["color", "intensity", "directionToLight"]);
+  assertCanonicalColor(value.fill.skyColor, `${label} fill skyColor`);
+  assertCanonicalColor(value.fill.groundColor, `${label} fill groundColor`);
+  assertIntensity(value.fill.intensity, `${label} fill intensity`);
+  assertCanonicalColor(value.key.color, `${label} key color`);
+  assertIntensity(value.key.intensity, `${label} key intensity`);
+  const direction = value.key.directionToLight;
+  if (
+    !Array.isArray(direction) ||
+    direction.length !== 3 ||
+    direction.some((component) => !Number.isFinite(component))
+  ) {
+    throw new Error(`${label} key directionToLight must contain three finite numbers.`);
+  }
+  const length = Math.hypot(...direction);
+  if (!Number.isFinite(length) || Math.abs(length - 1) > 1e-6) {
+    throw new Error(`${label} key directionToLight must be a finite unit vector within 1e-6.`);
+  }
+}
+
+function assertCanonicalColor(value: string, label: string): void {
+  if (typeof value !== "string" || !CANONICAL_COLOR_PATTERN.test(value)) {
+    throw new Error(`${label} must be a canonical #RRGGBB color.`);
+  }
+}
+
+function assertIntensity(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 5) {
+    throw new Error(`${label} must be a finite number between 0 and 5.`);
+  }
+}
+
+function assertRecordWithKeys(value: unknown, label: string, keys: readonly string[]): void {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    throw new Error(`${label} must contain exactly ${expected.join(", ")}.`);
+  }
+}
+
+function sceneEnvironmentsEqual(left: SceneEnvironment, right: SceneEnvironment): boolean {
+  return (
+    left.backgroundMode === right.backgroundMode &&
+    left.background === right.background &&
+    left.grid === right.grid &&
+    left.unit === right.unit &&
+    left.upAxis === right.upAxis &&
+    left.lighting.fill.skyColor === right.lighting.fill.skyColor &&
+    left.lighting.fill.groundColor === right.lighting.fill.groundColor &&
+    left.lighting.fill.intensity === right.lighting.fill.intensity &&
+    left.lighting.key.color === right.lighting.key.color &&
+    left.lighting.key.intensity === right.lighting.key.intensity &&
+    left.lighting.key.directionToLight.every(
+      (value, index) => value === right.lighting.key.directionToLight[index],
+    )
+  );
+}
+
+function cloneSceneEnvironment(environment: SceneEnvironment): SceneEnvironment {
+  return {
+    ...environment,
+    lighting: {
+      fill: { ...environment.lighting.fill },
+      key: {
+        ...environment.lighting.key,
+        directionToLight: [...environment.lighting.key.directionToLight],
+      },
+    },
+  };
 }
 
 function applyTransformCommand(

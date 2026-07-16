@@ -6,6 +6,7 @@ import type {
   SceneAsset,
   SceneDocument,
   SceneEntity,
+  SceneEnvironment,
   SceneTarget,
   Transform,
 } from "../types.js";
@@ -24,6 +25,12 @@ export interface SetSceneBackgroundCommand {
   readonly type: "set-scene-background";
   readonly before: SceneBackgroundSettings;
   readonly after: SceneBackgroundSettings;
+}
+
+export interface SetSceneEnvironmentCommand {
+  readonly type: "set-scene-environment";
+  readonly before: SceneEnvironment;
+  readonly after: SceneEnvironment;
 }
 
 export interface RenameEntityCommand {
@@ -164,6 +171,7 @@ export type LayoutDocumentCommand =
 export type DocumentCommand =
   | RenameDocumentCommand
   | SetSceneBackgroundCommand
+  | SetSceneEnvironmentCommand
   | RenameEntityCommand
   | SetEntityVisibilityCommand
   | SetEntityLockCommand

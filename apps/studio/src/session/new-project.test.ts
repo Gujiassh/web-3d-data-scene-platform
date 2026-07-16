@@ -13,7 +13,7 @@ describe("createNewStudioProject", () => {
     });
 
     expect(project.document).toMatchObject({
-      schemaVersion: "1.1.0",
+      schemaVersion: "1.2.0",
       id: "project-a",
       name: "Assembly Review",
       revision: 0,
@@ -22,6 +22,18 @@ describe("createNewStudioProject", () => {
       environment: {
         backgroundMode: "theme",
         background: "#F4F6F5",
+        lighting: {
+          fill: {
+            skyColor: "#FFFFFF",
+            groundColor: "#65706A",
+            intensity: 1.8,
+          },
+          key: {
+            color: "#FFFFFF",
+            intensity: 2.2,
+            directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+          },
+        },
       },
     });
     expect(project.record).toMatchObject({

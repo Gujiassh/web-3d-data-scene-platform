@@ -8,6 +8,7 @@ import type {
   SceneEntity,
   SceneTarget,
   SceneView,
+  Vec3,
 } from "./types.js";
 
 export interface SceneDocumentSemanticsInput {
@@ -20,6 +21,13 @@ export interface SceneDocumentSemanticsInput {
   readonly ruleSets: readonly RuleSet[];
   readonly annotations: readonly Annotation[];
   readonly views: readonly SceneView[];
+  readonly environment?: {
+    readonly lighting?: {
+      readonly key?: {
+        readonly directionToLight?: Vec3;
+      };
+    };
+  };
 }
 
 interface LocatedId {
@@ -148,6 +156,18 @@ export function validateSceneDocumentSemantics(
       });
     }
   });
+
+  const direction = document.environment?.lighting?.key?.directionToLight;
+  if (direction !== undefined) {
+    const length = Math.hypot(...direction);
+    if (!Number.isFinite(length) || Math.abs(length - 1) > 1e-6) {
+      diagnostics.push({
+        code: "LIGHTING_DIRECTION_NOT_UNIT",
+        path: "/environment/lighting/key/directionToLight",
+        message: "Lighting directionToLight must be a finite unit vector within 1e-6.",
+      });
+    }
+  }
 
   return sortDiagnostics(diagnostics);
 }

@@ -1,3 +1,20 @@
+import type { SceneLighting } from "./types.js";
+
+export const STANDARD_SCENE_LIGHTING: SceneLighting = Object.freeze({
+  fill: Object.freeze({
+    skyColor: "#FFFFFF",
+    groundColor: "#65706A",
+    intensity: 1.8,
+  }),
+  key: Object.freeze({
+    color: "#FFFFFF",
+    intensity: 2.2,
+    directionToLight: Object.freeze([
+      0.37904902178945177, 0.7580980435789035, 0.5306686305052324,
+    ] as const),
+  }),
+});
+
 export function migrateSceneDocument1_0(value: unknown): unknown {
   const document = requireRecord(value, "Legacy SceneDocument");
   const environment = requireRecord(document["environment"], "Legacy scene environment");
@@ -9,6 +26,37 @@ export function migrateSceneDocument1_0(value: unknown): unknown {
       backgroundMode: "custom",
     },
   };
+}
+
+export function migrateSceneDocument1_1(value: unknown): unknown {
+  const document = requireRecord(value, "Legacy SceneDocument");
+  const environment = requireRecord(document["environment"], "Legacy scene environment");
+  return {
+    ...document,
+    schemaVersion: "1.2.0",
+    environment: {
+      ...environment,
+      background: canonicalLegacyColor(environment["background"], "Legacy scene background"),
+      lighting: cloneStandardLighting(),
+    },
+  };
+}
+
+function cloneStandardLighting(): SceneLighting {
+  return {
+    fill: { ...STANDARD_SCENE_LIGHTING.fill },
+    key: {
+      ...STANDARD_SCENE_LIGHTING.key,
+      directionToLight: [...STANDARD_SCENE_LIGHTING.key.directionToLight],
+    },
+  };
+}
+
+function canonicalLegacyColor(value: unknown, label: string): string {
+  if (typeof value !== "string" || !/^#[A-Fa-f0-9]{6}$/u.test(value)) {
+    throw new TypeError(`${label} must be a six-digit hex color.`);
+  }
+  return value.toUpperCase();
 }
 
 function requireRecord(value: unknown, label: string): Readonly<Record<string, unknown>> {

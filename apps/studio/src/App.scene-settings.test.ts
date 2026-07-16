@@ -26,6 +26,8 @@ const harness = vi.hoisted(() => ({
   authoringReady: undefined as ((event: TestReadyEvent) => void) | undefined,
   authoringSceneMounts: 0,
   authoringSceneRenders: [] as Array<string | null | undefined>,
+  gridRenders: [] as Array<boolean | null | undefined>,
+  lightingRenders: [] as Array<unknown>,
   smartAlignRenders: [] as Array<boolean | undefined>,
   viewerCalls: [] as string[],
   workspace: {
@@ -41,7 +43,7 @@ const harness = vi.hoisted(() => ({
         lastExportedRevision: null,
       },
       document: {
-        schemaVersion: "1.1.0" as const,
+        schemaVersion: "1.2.0" as const,
         id: "scene-a",
         name: "Project A",
         revision: 1,
@@ -59,6 +61,16 @@ const harness = vi.hoisted(() => ({
           grid: true,
           unit: "m" as const,
           upAxis: "Y" as const,
+          lighting: {
+            fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+            key: {
+              color: "#FFFFFF",
+              intensity: 2.2,
+              directionToLight: [
+                0.37904902178945177, 0.7580980435789035, 0.5306686305052324,
+              ] as const,
+            },
+          },
         },
       },
       assets: [],
@@ -78,7 +90,10 @@ const harness = vi.hoisted(() => ({
     dirty: false,
     exportOutdated: false,
     canEdit: true,
-    execute: vi.fn((): TestCommandOutcome => ({ status: "unchanged", revision: 1 })),
+    execute: vi.fn<(_command: unknown) => TestCommandOutcome>(() => ({
+      status: "unchanged",
+      revision: 1,
+    })),
     undo: vi.fn(),
     redo: vi.fn(),
     save: vi.fn(async () => undefined),
@@ -108,6 +123,8 @@ vi.mock("@web3d/react", async () => {
     AuthoringScene: React.forwardRef(function MockAuthoringScene(
       props: {
         readonly backgroundPreview?: string | null;
+        readonly gridPreview?: boolean | null;
+        readonly lightingPreview?: unknown;
         readonly smartAlignEnabled?: boolean;
         readonly onReady?: (event: TestReadyEvent) => void;
       },
@@ -127,6 +144,8 @@ vi.mock("@web3d/react", async () => {
           setDataRuntimeEnabled: vi.fn(async () => undefined),
           setThemeBackground: vi.fn(),
           setBackgroundPreview: vi.fn(),
+          setGridPreview: vi.fn(),
+          setLightingPreview: vi.fn(),
           setView: vi.fn(async () => undefined),
           getSnapshot: vi.fn(),
         }),
@@ -138,6 +157,8 @@ vi.mock("@web3d/react", async () => {
       }, []);
       harness.authoringReady = props.onReady;
       harness.authoringSceneRenders.push(props.backgroundPreview);
+      harness.gridRenders.push(props.gridPreview);
+      harness.lightingRenders.push(props.lightingPreview);
       harness.smartAlignRenders.push(props.smartAlignEnabled);
       return React.createElement("div", { "data-authoring-scene": true });
     }),
@@ -235,7 +256,7 @@ vi.mock("./features/ImportDialog", () => ({ ImportDialog: () => null }));
 
 import { App } from "./App";
 
-describe("App scene background preview", () => {
+describe("App scene settings preview", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -246,6 +267,8 @@ describe("App scene background preview", () => {
     harness.authoringReady = undefined;
     harness.authoringSceneMounts = 0;
     harness.authoringSceneRenders.length = 0;
+    harness.gridRenders.length = 0;
+    harness.lightingRenders.length = 0;
     harness.smartAlignRenders.length = 0;
     harness.viewerCalls.length = 0;
     harness.workspace.execute.mockReset();
@@ -295,22 +318,54 @@ describe("App scene background preview", () => {
     );
   });
 
-  it("releases an applied preview when a newer ready revision supersedes its source load", () => {
+  it("applies one concrete environment command and holds every preview until ready", () => {
     renderApp();
     openSceneSettings();
-    act(() => input("Custom color").click());
+    checkInput(input("Custom color"), true);
     changeInput(input("Background color"), "#336699");
+    checkInput(inputByText("Show grid"), false);
+    act(() => tab("Lighting").click());
+    act(() => buttonByVisibleName("Contrast").click());
     harness.workspace.execute.mockReturnValueOnce({ status: "changed", revision: 2 });
 
-    act(() => button("Apply").click());
+    act(() =>
+      container
+        .querySelector<HTMLFormElement>("form")!
+        .dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true })),
+    );
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+    expect(harness.gridRenders.at(-1)).toBe(false);
+    expect(harness.lightingRenders.at(-1)).toMatchObject({
+      fill: { skyColor: "#DDE7E3", groundColor: "#3D4743", intensity: 0.9 },
+      key: { color: "#FFF1D6", intensity: 3 },
+    });
+    expect(harness.workspace.execute).toHaveBeenCalledWith({
+      type: "set-scene-environment",
+      before: harness.workspace.project.document.environment,
+      after: {
+        ...harness.workspace.project.document.environment,
+        backgroundMode: "custom",
+        background: "#336699",
+        grid: false,
+        lighting: expect.objectContaining({
+          fill: expect.objectContaining({ intensity: 0.9 }),
+          key: expect.objectContaining({ intensity: 3 }),
+        }),
+      },
+    });
+    const executedCommand: unknown = harness.workspace.execute.mock.calls[0]?.[0];
+    expect(executedCommand).not.toHaveProperty("preset");
 
     act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 1 }));
     expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+    expect(harness.gridRenders.at(-1)).toBe(false);
+    expect(harness.lightingRenders.at(-1)).not.toBeNull();
 
     act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 3 }));
     expect(harness.authoringSceneRenders.at(-1)).toBeNull();
+    expect(harness.gridRenders.at(-1)).toBeNull();
+    expect(harness.lightingRenders.at(-1)).toBeNull();
   });
 
   it("synchronously selects the runtime tool before entering Run without recreating the Viewer", () => {
@@ -365,6 +420,21 @@ describe("App scene background preview", () => {
     return container.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
   }
 
+  function inputByText(label: string): HTMLInputElement {
+    const candidate = [...container.querySelectorAll<HTMLLabelElement>("label")].find(
+      (element) => element.textContent?.trim() === label,
+    );
+    return candidate?.querySelector("input") as HTMLInputElement;
+  }
+
+  function tab(name: string): HTMLButtonElement {
+    const candidate = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (element) => element.textContent?.trim() === name,
+    );
+    if (candidate === undefined) throw new Error(`Tab '${name}' was not found.`);
+    return candidate;
+  }
+
   function button(label: string): HTMLButtonElement {
     return container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   }
@@ -385,6 +455,15 @@ describe("App scene background preview", () => {
     act(() => {
       setter.call(element, value);
       element.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+
+  function checkInput(element: HTMLInputElement, checked: boolean): void {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "checked")?.set;
+    if (setter === undefined) throw new Error("HTMLInputElement checked setter is unavailable.");
+    act(() => {
+      setter.call(element, !checked);
+      element.click();
     });
   }
 });

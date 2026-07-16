@@ -1,0 +1,231 @@
+.scene-settings-dialog {
+  width: min(520px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.scene-settings-dialog > header {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scene-settings-dialog h2 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.scene-settings-dialog form {
+  display: grid;
+  gap: 10px;
+  padding: 16px 14px 12px;
+}
+
+.scene-settings-dialog fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scene-settings-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.scene-settings-dialog-v2 {
+  width: min(520px, calc(100vw - 40px));
+}
+
+.scene-settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.scene-settings-tabs button {
+  min-height: 36px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.scene-settings-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.scene-settings-dialog-v2 form {
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+}
+
+.scene-settings-dialog-v2 [role="tabpanel"] {
+  display: grid;
+  gap: 14px;
+}
+
+.scene-settings-dialog-v2 [role="tabpanel"][hidden] {
+  display: none;
+}
+
+.scene-settings-dialog-v2 legend,
+.scene-settings-field > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.scene-setting-segments,
+.scene-lighting-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+}
+
+.scene-setting-segments label {
+  position: relative;
+}
+
+.scene-setting-segments input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scene-setting-segments span,
+.scene-lighting-presets button {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.scene-setting-segments input:checked + span,
+.scene-lighting-presets button[aria-pressed="true"] {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+}
+
+.scene-setting-segments input:focus-visible + span,
+.scene-lighting-presets button:focus-visible,
+.scene-settings-tabs button:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: 1px;
+}
+
+.scene-lighting-presets {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scene-preset-status {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+.scene-settings-field {
+  min-width: 0;
+}
+
+.scene-color-control input {
+  width: 64px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.scene-color-control input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.scene-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.scene-range-control {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(160px, 2fr) 34px;
+  align-items: center;
+  gap: 10px;
+}
+
+.scene-range-control > span {
+  margin: 0;
+}
+
+.scene-range-control output {
+  color: var(--ink);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  text-align: right;
+}
+
+.scene-settings-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.scene-settings-advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.scene-settings-advanced summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.scene-settings-advanced > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}

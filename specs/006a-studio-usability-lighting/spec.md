@@ -299,8 +299,10 @@ interface SceneLighting {
 
 Contract rules:
 
-- Colors are authored `#RRGGBB`; intensities are finite in `[0, 5]`; `directionToLight` is a finite unit
-  vector within `1e-6` length tolerance. Authored commands and migrations normalize before validation.
+- Colors are authored as canonical uppercase `#RRGGBB`; intensities are finite in `[0, 5]`;
+  `directionToLight` is a finite unit vector within `1e-6` length tolerance. Legacy migration and controlled
+  Studio inputs may canonicalize at their own boundary. Document commands strictly validate exact canonical
+  before/after snapshots and never repair or normalize caller input.
 - Current hard-coded lighting migrates to fill `#FFFFFF/#65706A` intensity `1.8`, key `#FFFFFF`
   intensity `2.2` and `directionToLight = normalize([5, 10, 7])`. Runtime places its directional source on
   this ray and targets the scene origin, preserving the current light direction without persisting an

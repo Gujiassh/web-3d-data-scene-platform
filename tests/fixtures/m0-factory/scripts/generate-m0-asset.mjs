@@ -139,7 +139,7 @@ const manifest = {
 };
 
 const sceneDocument = {
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.2.0",
   id: "m0-factory-cell",
   name: "M0 Factory Cell",
   revision: 1,
@@ -260,10 +260,23 @@ const sceneDocument = {
     },
   ],
   environment: {
+    backgroundMode: "custom",
     background: "#F4F6F5",
     grid: true,
     unit: "m",
     upAxis: "Y",
+    lighting: {
+      fill: {
+        skyColor: "#FFFFFF",
+        groundColor: "#65706A",
+        intensity: 1.8,
+      },
+      key: {
+        color: "#FFFFFF",
+        intensity: 2.2,
+        directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+      },
+    },
   },
 };
 

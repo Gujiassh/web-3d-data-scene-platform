@@ -5,12 +5,15 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SceneSource } from "@web3d/runtime";
+import type { SceneLighting } from "@web3d/document";
 
 interface FakeViewer {
   readonly canvas: HTMLCanvasElement;
   readonly dispose: ReturnType<typeof vi.fn>;
   readonly load: ReturnType<typeof vi.fn>;
   readonly setBackgroundPreview: ReturnType<typeof vi.fn>;
+  readonly setGridPreview: ReturnType<typeof vi.fn>;
+  readonly setLightingPreview: ReturnType<typeof vi.fn>;
   readonly setThemeBackground: ReturnType<typeof vi.fn>;
 }
 
@@ -44,6 +47,8 @@ vi.mock("@web3d/runtime", () => {
       selectTarget: vi.fn(),
       setAdapter: vi.fn(() => Promise.resolve()),
       setBackgroundPreview: vi.fn(),
+      setGridPreview: vi.fn(),
+      setLightingPreview: vi.fn(),
       setCanvasLabel: vi.fn(),
       setDataRuntimeEnabled: vi.fn(() => Promise.resolve()),
       setThemeBackground: vi.fn(),
@@ -71,7 +76,7 @@ vi.mock("@web3d/runtime", () => {
 import { AuthoringScene } from "./AuthoringScene";
 import { SceneViewer } from "./SceneViewer";
 
-describe("React scene background lifecycle", () => {
+describe("React scene environment lifecycle", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -103,6 +108,8 @@ describe("React scene background lifecycle", () => {
             source: sourceA,
             themeBackground: "#112233",
             backgroundPreview: null,
+            gridPreview: null,
+            lightingPreview: null,
           }),
         ),
       );
@@ -114,6 +121,8 @@ describe("React scene background lifecycle", () => {
     const canvas = viewer.canvas;
     expect(viewer.setThemeBackground).toHaveBeenLastCalledWith("#112233");
     expect(viewer.setBackgroundPreview).toHaveBeenLastCalledWith(null);
+    expect(viewer.setGridPreview).toHaveBeenLastCalledWith(null);
+    expect(viewer.setLightingPreview).toHaveBeenLastCalledWith(null);
 
     await act(async () => {
       root.render(
@@ -124,6 +133,8 @@ describe("React scene background lifecycle", () => {
             source: sourceB,
             themeBackground: "#445566",
             backgroundPreview: "#AABBCC",
+            gridPreview: true,
+            lightingPreview: previewLighting(),
           }),
         ),
       );
@@ -136,6 +147,8 @@ describe("React scene background lifecycle", () => {
     expect(viewer.load).toHaveBeenLastCalledWith(sourceB);
     expect(viewer.setThemeBackground).toHaveBeenLastCalledWith("#445566");
     expect(viewer.setBackgroundPreview).toHaveBeenLastCalledWith("#AABBCC");
+    expect(viewer.setGridPreview).toHaveBeenLastCalledWith(true);
+    expect(viewer.setLightingPreview).toHaveBeenLastCalledWith(previewLighting());
   });
 
   it("keeps the latest controlled background inputs when source loads settle out of order", async () => {
@@ -152,6 +165,8 @@ describe("React scene background lifecycle", () => {
           source: sourceA,
           themeBackground: "#112233",
           backgroundPreview: "#223344",
+          gridPreview: false,
+          lightingPreview: authoredLighting(),
         }),
       );
       await Promise.resolve();
@@ -165,6 +180,8 @@ describe("React scene background lifecycle", () => {
           source: sourceB,
           themeBackground: "#445566",
           backgroundPreview: "#AABBCC",
+          gridPreview: true,
+          lightingPreview: previewLighting(),
         }),
       );
       await Promise.resolve();
@@ -179,6 +196,8 @@ describe("React scene background lifecycle", () => {
     expect(container.querySelector("canvas")).toBe(canvas);
     expect(viewer.setThemeBackground).toHaveBeenLastCalledWith("#445566");
     expect(viewer.setBackgroundPreview).toHaveBeenLastCalledWith("#AABBCC");
+    expect(viewer.setGridPreview).toHaveBeenLastCalledWith(true);
+    expect(viewer.setLightingPreview).toHaveBeenLastCalledWith(previewLighting());
   });
 
   it("reconciles readonly theme state independently from source loading", async () => {
@@ -197,6 +216,8 @@ describe("React scene background lifecycle", () => {
           source: sourceB,
           themeBackground: "#445566",
           backgroundPreview: "#AABBCC",
+          gridPreview: true,
+          lightingPreview: previewLighting(),
         }),
       );
       await Promise.resolve();
@@ -207,12 +228,14 @@ describe("React scene background lifecycle", () => {
     expect(viewer.load).toHaveBeenLastCalledWith(sourceB);
     expect(viewer.setThemeBackground).toHaveBeenLastCalledWith("#445566");
     expect(viewer.setBackgroundPreview).toHaveBeenLastCalledWith("#AABBCC");
+    expect(viewer.setGridPreview).toHaveBeenLastCalledWith(true);
+    expect(viewer.setLightingPreview).toHaveBeenLastCalledWith(previewLighting());
   });
 });
 
 function scene(id: string): SceneSource {
   return {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id,
     name: id,
     revision: 0,
@@ -230,6 +253,29 @@ function scene(id: string): SceneSource {
       grid: false,
       unit: "m",
       upAxis: "Y",
+      lighting: authoredLighting(),
+    },
+  };
+}
+
+function authoredLighting(): SceneLighting {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
+  };
+}
+
+function previewLighting(): SceneLighting {
+  return {
+    fill: { skyColor: "#DDE7E3", groundColor: "#3D4743", intensity: 0.9 },
+    key: {
+      color: "#FFF1D6",
+      intensity: 3,
+      directionToLight: [0, 0.7071067811865475, -0.7071067811865476],
     },
   };
 }

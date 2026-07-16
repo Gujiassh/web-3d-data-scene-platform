@@ -17,6 +17,7 @@ import {
   type ViewerEvent,
   type ViewerSnapshot,
 } from "@web3d/runtime";
+import type { SceneLighting } from "@web3d/document";
 
 type ReadyEvent = Extract<ViewerEvent, { type: "ready" }>;
 type SelectionEvent = Extract<ViewerEvent, { type: "selection-change" }>;
@@ -27,6 +28,8 @@ export interface SceneViewerHandle {
   focusTarget(targetId: string): Promise<void>;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
   setView(viewId: string): Promise<void>;
   getSnapshot(): ViewerSnapshot;
 }
@@ -42,6 +45,8 @@ export interface SceneViewerProps {
   readonly reducedMotion?: boolean;
   readonly themeBackground?: string | null;
   readonly backgroundPreview?: string | null;
+  readonly gridPreview?: boolean | null;
+  readonly lightingPreview?: SceneLighting | null;
   readonly onReady?: (event: ReadyEvent) => void;
   readonly onSelectionChange?: (event: SelectionEvent) => void;
   readonly onAlarm?: (event: AlarmEvent) => void;
@@ -102,6 +107,14 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
     }, [props.backgroundPreview]);
 
     useEffect(() => {
+      viewerRef.current?.setGridPreview(props.gridPreview ?? null);
+    }, [props.gridPreview]);
+
+    useEffect(() => {
+      viewerRef.current?.setLightingPreview(props.lightingPreview ?? null);
+    }, [props.lightingPreview]);
+
+    useEffect(() => {
       const viewer = viewerRef.current;
       if (viewer === null) return;
       reconcileAdapters(viewer, adaptersRef.current, props.adapters ?? {});
@@ -122,6 +135,12 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
         },
         setBackgroundPreview(color) {
           requiredViewer(viewerRef).setBackgroundPreview(color);
+        },
+        setGridPreview(visible) {
+          requiredViewer(viewerRef).setGridPreview(visible);
+        },
+        setLightingPreview(lighting) {
+          requiredViewer(viewerRef).setLightingPreview(lighting);
         },
         setView(viewId) {
           return requiredViewer(viewerRef).setView(viewId);

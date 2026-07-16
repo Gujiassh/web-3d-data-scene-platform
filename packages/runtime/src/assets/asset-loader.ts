@@ -3,13 +3,18 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { Group, type Object3D } from "three";
 
 import { disposeObject3D } from "./dispose-object";
+import {
+  describeImportedPunctualLights,
+  removeImportedPunctualLights,
+} from "./imported-punctual-lights";
 import { diagnostic, diagnosticError } from "../diagnostics";
-import type { AssetResolver } from "../types";
+import type { AssetResolver, Diagnostic } from "../types";
 
 export interface LoadedGltfAsset {
   readonly gltf: GLTF;
   readonly root: Object3D;
   readonly nodesByIndex: ReadonlyMap<number, Object3D>;
+  readonly diagnostics: readonly Diagnostic[];
 }
 
 export const defaultAssetResolver: AssetResolver = {
@@ -98,7 +103,21 @@ export async function loadGltfAsset(
       if (nodeIndex !== undefined) nodesByIndex.set(nodeIndex, object);
     });
 
-    return { gltf, root: gltf.scene, nodesByIndex };
+    const punctualLights = removeImportedPunctualLights(gltf.scene);
+    const diagnostics =
+      punctualLights.total === 0
+        ? []
+        : [
+            diagnostic(
+              "ASSET_PUNCTUAL_LIGHTS_REMOVED",
+              "asset",
+              "warning",
+              `${describeImportedPunctualLights(punctualLights)} were removed from the runtime scene so only the authored scene lighting rig is active.`,
+              { assetId: asset.id },
+            ),
+          ];
+
+    return { gltf, root: gltf.scene, nodesByIndex, diagnostics };
   } catch (error) {
     const cleanupRoot = new Group();
     gltf.scenes.forEach((scene) => cleanupRoot.add(scene));

@@ -32,6 +32,7 @@ export type {
   RenameEntityCommand,
   SceneBackgroundSettings,
   SetSceneBackgroundCommand,
+  SetSceneEnvironmentCommand,
   SetEntityLockCommand,
   SetEntityVisibilityCommand,
   SetTargetBusinessIdCommand,

@@ -69,6 +69,7 @@ export function ProjectMenu(props: ProjectMenuProps) {
         </button>
         <button
           aria-label={t.projectMenu.sceneSettings}
+          aria-haspopup="dialog"
           disabled={!props.canConfigureScene}
           type="button"
           onClick={props.onSceneSettings}

@@ -3,6 +3,10 @@ import { Group, Mesh } from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 
 import { disposeObject3D } from "./dispose-object";
+import {
+  describeImportedPunctualLights,
+  inspectImportedPunctualLights,
+} from "./imported-punctual-lights";
 import { sha256Hex } from "./asset-loader";
 
 export const MAX_GLTF_INSPECTION_BYTES = 50 * 1024 * 1024;
@@ -52,7 +56,7 @@ export async function inspectGltf(
     assertSingleScene(gltf);
 
     const stats = collectStats(gltf);
-    const warnings = collectWarnings(bytes.byteLength);
+    const warnings = collectWarnings(bytes.byteLength, gltf);
     return freezeSummary({
       name,
       mediaType,
@@ -179,11 +183,18 @@ function triangleCount(mesh: Mesh): number {
   return Math.floor(positions.count / 3);
 }
 
-function collectWarnings(byteLength: number): readonly string[] {
+function collectWarnings(byteLength: number, gltf: GLTF): readonly string[] {
+  const warnings: string[] = [];
   if (byteLength >= NEAR_LIMIT_WARNING_BYTES) {
-    return Object.freeze(["Model is close to the 50 MiB import limit."]);
+    warnings.push("Model is close to the 50 MiB import limit.");
   }
-  return Object.freeze([]);
+  const punctualLights = inspectImportedPunctualLights(gltf.scene);
+  if (punctualLights.total > 0) {
+    warnings.push(
+      `${describeImportedPunctualLights(punctualLights)} will be removed from the runtime scene so only the authored scene lighting rig is active.`,
+    );
+  }
+  return Object.freeze(warnings);
 }
 
 function freezeSummary(summary: GltfInspectionSummary): GltfInspectionSummary {

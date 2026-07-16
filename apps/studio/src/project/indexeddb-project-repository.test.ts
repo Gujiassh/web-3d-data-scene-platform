@@ -38,11 +38,11 @@ describe("createIndexedDbProjectRepository", () => {
     vi.restoreAllMocks();
   });
 
-  it("rewrites every stored 1.0.0 project atomically before normal repository use", async () => {
+  it("rewrites stored 1.0 and 1.1 projects to 1.2 while leaving current bytes untouched", async () => {
     const dbName = createDbName();
     const original = [
-      legacyStoredProject("legacy-a", "Legacy A", "2026-07-10T08:00:00.000Z", 4),
-      legacyStoredProject("legacy-b", "Legacy B", "2026-07-11T09:30:00.000Z", 9),
+      legacyStoredProject("legacy-1-0", "Legacy 1.0", "2026-07-10T08:00:00.000Z", 4),
+      legacy1_1StoredProject("legacy-1-1", "Legacy 1.1", "2026-07-11T09:30:00.000Z", 9),
       currentStoredProject(
         legacyStoredProject("current", "Current", "2026-07-12T10:45:00.000Z", 12),
       ),
@@ -63,7 +63,7 @@ describe("createIndexedDbProjectRepository", () => {
     const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
     await expect(repository.listRecent()).resolves.toHaveLength(3);
     await repository.close();
-    expect(rewrittenIds.sort()).toEqual(["legacy-a", "legacy-b"]);
+    expect(rewrittenIds.sort()).toEqual(["legacy-1-0", "legacy-1-1"]);
     putSpy.mockRestore();
 
     const migrated = await readStoredProjects(dbName);
@@ -76,13 +76,24 @@ describe("createIndexedDbProjectRepository", () => {
       const beforeDocument = storedDocument(before);
       const afterDocument = storedDocument(after);
       expect(afterDocument).toMatchObject({
-        schemaVersion: "1.1.0",
+        schemaVersion: "1.2.0",
         revision: beforeDocument.revision,
         environment: {
           background: beforeDocument.environment.background,
-          backgroundMode: "custom",
+          backgroundMode:
+            beforeDocument.schemaVersion === "1.0.0"
+              ? "custom"
+              : beforeDocument.environment.backgroundMode,
+          lighting: {
+            fill: standardLighting().fill,
+            key: { color: "#FFFFFF", intensity: 2.2 },
+          },
         },
       });
+      const direction = afterDocument.environment.lighting?.key.directionToLight;
+      expect(direction?.[0]).toBeCloseTo(0.37904902178945177, 15);
+      expect(direction?.[1]).toBeCloseTo(0.7580980435789035, 15);
+      expect(direction?.[2]).toBeCloseTo(0.5306686305052324, 15);
     }
   });
 
@@ -104,7 +115,7 @@ describe("createIndexedDbProjectRepository", () => {
         this.name === "projects" &&
         isStoredProject(value) &&
         value.id === "legacy-b" &&
-        storedDocument(value).schemaVersion === "1.1.0"
+        storedDocument(value).schemaVersion === "1.2.0"
       ) {
         throw new DOMException("migration write failed", "QuotaExceededError");
       }
@@ -125,9 +136,7 @@ describe("createIndexedDbProjectRepository", () => {
     const original = [
       legacyStoredProject("a-valid-legacy", "Valid legacy", "2026-07-10T08:00:00.000Z", 4),
       structurallyInvalidStoredProject(
-        currentStoredProject(
-          legacyStoredProject("b-invalid", "Invalid", "2026-07-11T09:30:00.000Z", 9),
-        ),
+        legacy1_1StoredProject("b-invalid", "Invalid", "2026-07-11T09:30:00.000Z", 9),
       ),
       currentStoredProject(
         legacyStoredProject("c-valid-current", "Valid current", "2026-07-12T10:45:00.000Z", 12),
@@ -449,7 +458,9 @@ function loadFixtureDocument(
   revision: number,
   injectForbiddenFields = false,
 ): SceneDocument {
-  const document = JSON.parse(readFileSync(FIXTURE_PATH, "utf8")) as SceneDocument;
+  const parsed = parseSceneDocument(readFileSync(FIXTURE_PATH, "utf8"));
+  if (!parsed.ok) throw new Error("Fixture SceneDocument could not be migrated.");
+  const document = parsed.value;
   const patched: SceneDocument = {
     ...document,
     id: projectId,
@@ -491,6 +502,10 @@ interface StoredDocumentShape {
   readonly environment: {
     readonly background: string;
     readonly backgroundMode?: string;
+    readonly lighting?: {
+      readonly fill: ReturnType<typeof standardLighting>["fill"];
+      readonly key: ReturnType<typeof standardLighting>["key"];
+    };
   };
 }
 
@@ -506,6 +521,7 @@ function legacyStoredProject(
   };
   const legacyEnvironment = { ...document.environment };
   delete legacyEnvironment["backgroundMode"];
+  delete legacyEnvironment["lighting"];
   return {
     ...createRecord(id, name, timestamp, revision),
     documentJson: JSON.stringify({
@@ -531,6 +547,37 @@ function currentStoredProject(record: StoredProject): StoredProject {
   const parsed = parseSceneDocument(record.documentJson);
   if (!parsed.ok) throw new Error("Legacy test project could not be migrated.");
   return { ...record, documentJson: serializeProjectDocument(parsed.value) };
+}
+
+function legacy1_1StoredProject(
+  id: string,
+  name: string,
+  timestamp: string,
+  revision: number,
+): StoredProject {
+  const legacy = legacyStoredProject(id, name, timestamp, revision);
+  const document = JSON.parse(legacy.documentJson) as Record<string, unknown> & {
+    readonly environment: Record<string, unknown>;
+  };
+  return {
+    ...legacy,
+    documentJson: JSON.stringify({
+      ...document,
+      schemaVersion: "1.1.0",
+      environment: { ...document.environment, backgroundMode: "custom" },
+    }),
+  };
+}
+
+function standardLighting() {
+  return {
+    fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+    key: {
+      color: "#FFFFFF",
+      intensity: 2.2,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
+  } as const;
 }
 
 function structurallyInvalidStoredProject(record: StoredProject): StoredProject {
