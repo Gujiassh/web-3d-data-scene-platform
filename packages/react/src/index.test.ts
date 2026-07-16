@@ -70,6 +70,7 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneHandle["setThemeBackground"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setBackgroundPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setTransformSettings"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["isTransformDragging"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["getEntitySpatialSnapshots"]>().toBeFunction();
     expectTypeOf<
       ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]

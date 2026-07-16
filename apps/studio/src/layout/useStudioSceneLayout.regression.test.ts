@@ -73,10 +73,11 @@ describe("useStudioSceneLayout regressions", () => {
     const scaleX = inputByLabel(container, "Scale X");
     changeInput(scaleX, "0");
     blurInput(scaleX);
+    expect(scaleX.value).toBe("0");
     expect(scaleX.getAttribute("aria-invalid")).toBe("true");
     expect(execute).not.toHaveBeenCalled();
     expect(container.querySelector("[data-revision]")?.textContent).toBe("1");
-    expect(layout.error).toBe("invalid-transform");
+    expect(layout.error).toBeNull();
 
     const before = sourceEntity(scene(1)).transform;
     const invalidTransforms: Transform[] = [
@@ -280,16 +281,14 @@ function InspectorHarness({
     "div",
     null,
     createElement(EntityInspector, {
+      authoritativeRevision: document.revision,
+      canReset: layout.resetCapability.enabled,
       entity: source,
       editable: true,
       onRename: () => undefined,
+      onReset: layout.resetSelection,
       onTransformChange(entityId, after) {
-        layout.handleTransformCommit({
-          type: "transform-commit",
-          entityId,
-          before: source.transform,
-          after,
-        });
+        return layout.commitEntityTransform(entityId, after);
       },
     }),
     createElement("output", { "data-revision": true }, String(document.revision)),

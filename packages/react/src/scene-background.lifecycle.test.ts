@@ -32,6 +32,7 @@ vi.mock("@web3d/runtime", () => {
       }),
       getDiagnostics: vi.fn(() => []),
       getEntitySpatialSnapshots: vi.fn(() => []),
+      isTransformDragging: vi.fn(() => false),
       getSnapshot: vi.fn(() => ({ lifecycle: "created" })),
       getTool: vi.fn(() => "select"),
       load: vi.fn(

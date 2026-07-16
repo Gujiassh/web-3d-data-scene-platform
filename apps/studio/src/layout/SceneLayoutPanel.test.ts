@@ -83,6 +83,7 @@ function layoutModel(): StudioSceneLayout {
   const disabled = { enabled: false, reason: "selection-required" } as const;
   return {
     editable: true,
+    primaryTransformEditable: false,
     documentEntities: [
       {
         id: "entity-a",
@@ -126,6 +127,7 @@ function layoutModel(): StudioSceneLayout {
       duplicate: disabled,
       anchorSnap: disabled,
     },
+    resetCapability: { enabled: false, reason: "selection-required" },
     feedback: {
       activity: "idle",
       pivotKind: "entity-origin",
@@ -153,6 +155,8 @@ function layoutModel(): StudioSceneLayout {
     distributeSelection: () => undefined,
     duplicateSelection: () => undefined,
     snapToAnchor: () => undefined,
+    resetSelection: () => ({ status: "unavailable" }),
+    commitEntityTransform: () => ({ status: "unavailable" }),
     selectFromTree: () => undefined,
     handleSelectionChange: () => undefined,
     handleReady: () => undefined,

@@ -301,6 +301,90 @@ describe("document commands", () => {
     );
   });
 
+  it("enforces finite normalized positive single transforms before mutation", () => {
+    const document = loadFixture();
+    const entity = entityById(document, "press-01");
+    const invalidAfter = [
+      {
+        ...entity.transform,
+        position: [Number.NaN, 0, 0] as const,
+      },
+      {
+        ...entity.transform,
+        rotation: [0, 0, 0, 2] as const,
+      },
+      {
+        ...entity.transform,
+        scale: [1, 0, 1] as const,
+      },
+    ];
+
+    for (const after of invalidAfter) {
+      expect(() =>
+        executeDocumentCommand(document, {
+          type: "transform-entity",
+          entityId: entity.id,
+          before: entity.transform,
+          after,
+        }),
+      ).toThrow();
+      expect(document.revision).toBe(loadFixture().revision);
+      expect(entityById(document, entity.id).transform).toEqual(entity.transform);
+    }
+  });
+
+  it("rejects invalid and stale single-transform before snapshots without changing history", () => {
+    const document = loadFixture();
+    const entity = entityById(document, "press-01");
+    const commands: readonly DocumentCommand[] = [
+      {
+        type: "transform-entity",
+        entityId: entity.id,
+        before: { ...entity.transform, position: [99, 0, 0] },
+        after: { ...entity.transform, position: [5, 0, 0] },
+      },
+      {
+        type: "transform-entity",
+        entityId: entity.id,
+        before: { ...entity.transform, scale: [0, 1, 1] },
+        after: { ...entity.transform, position: [5, 0, 0] },
+      },
+    ];
+
+    for (const command of commands) {
+      const history = createDocumentHistory(document);
+      const beforeHistory = structuredClone(history);
+      expect(() => executeHistoryCommand(history, command)).toThrow();
+      expect(history).toEqual(beforeHistory);
+      expect(history.document).toBe(document);
+      expect(history.undoStack).toHaveLength(0);
+      expect(history.redoStack).toHaveLength(0);
+    }
+  });
+
+  it("keeps exact single-transform no-ops out of history without clearing redo", () => {
+    const document = loadFixture();
+    const changed = executeHistoryCommand(createDocumentHistory(document), {
+      type: "rename-entity",
+      entityId: "press-01",
+      name: "Changed",
+    });
+    const undone = undoHistoryCommand(changed);
+    const entity = entityById(undone.document, "press-01");
+    const noop = executeHistoryCommand(undone, {
+      type: "transform-entity",
+      entityId: entity.id,
+      before: entity.transform,
+      after: entity.transform,
+    });
+
+    expect(noop).toBe(undone);
+    expect(noop.redoStack).toHaveLength(1);
+    expect(
+      redoHistoryCommand(noop).document.entities.find((item) => item.id === entity.id)?.name,
+    ).toBe("Changed");
+  });
+
   it("imports an asset instance as one validated revision", () => {
     const document = loadFixture();
     const next = executeDocumentCommand(document, {

@@ -523,6 +523,27 @@ describe("createAuthoringSceneViewer", () => {
     await hidden.dispose();
   });
 
+  it("uses hierarchy visibility but only local lock state for transform attachment", async () => {
+    const { asset, scene } = await fixture();
+    const hiddenParent = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await hiddenParent.load(withParentState(scene, { visible: false, locked: false }));
+    hiddenParent.setTool("translate");
+    hiddenParent.selectEntity("factory-cell");
+    expect(requiredControls().object).toBeUndefined();
+    await hiddenParent.dispose();
+
+    const lockedParent = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await lockedParent.load(withParentState(scene, { visible: true, locked: true }));
+    lockedParent.setTool("translate");
+    lockedParent.selectEntity("factory-cell");
+    expect(requiredControls().object?.name).toBe("factory-cell");
+    await lockedParent.dispose();
+  });
+
   it("reconciles validated transform settings without recreating controls or listeners", async () => {
     const viewer = createAuthoringSceneViewer(fakeContainer());
     const controls = requiredControls();
@@ -587,7 +608,7 @@ describe("createAuthoringSceneViewer", () => {
     await viewer.dispose();
   });
 
-  it("reverts an in-progress preview when the transform tool changes", async () => {
+  it("detaches and reverts an in-progress preview when the tool returns to select", async () => {
     const { asset, scene } = await fixture();
     const events: AuthoringViewerEvent[] = [];
     const viewer = createAuthoringSceneViewer(fakeContainer(), {
@@ -598,17 +619,44 @@ describe("createAuthoringSceneViewer", () => {
     viewer.selectEntity("factory-cell");
     viewer.setTool("translate");
     const controls = requiredControls();
+    expect(viewer.isTransformDragging()).toBe(false);
     controls.emit("mouseDown", { mode: "translate" });
+    expect(viewer.isTransformDragging()).toBe(true);
     if (controls.object === undefined) throw new Error("TransformControls did not attach.");
-    controls.object.position.x = 4;
-    controls.object.updateMatrixWorld(true);
+    const draggedObject = controls.object;
+    draggedObject.position.x = 4;
+    draggedObject.updateMatrixWorld(true);
     controls.emit("objectChange");
 
-    viewer.setTool("rotate");
+    viewer.setTool("select");
 
-    expect(controls.object?.position.x).toBe(0);
+    expect(viewer.isTransformDragging()).toBe(false);
+    expect(draggedObject.position.x).toBe(0);
+    expect(controls.object).toBeUndefined();
     expect(events.filter((event) => event.type === "transform-preview")).toHaveLength(1);
     expect(events.filter((event) => event.type === "transform-commit")).toHaveLength(0);
+    await viewer.dispose();
+  });
+
+  it("exposes transform drag state without adding authoring events", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(scene);
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    const eventsBeforeDrag = events.length;
+
+    controls.emit("mouseDown", { mode: "translate" });
+    expect(viewer.isTransformDragging()).toBe(true);
+    expect(events).toHaveLength(eventsBeforeDrag);
+    controls.emit("mouseUp", { mode: "translate" });
+    expect(viewer.isTransformDragging()).toBe(false);
+    expect(events).toHaveLength(eventsBeforeDrag);
     await viewer.dispose();
   });
 
@@ -941,6 +989,34 @@ function lockEntity(
         ? ({ ...entity, ...patch } as SceneDocument["entities"][number])
         : entity,
     ),
+  };
+}
+
+function withParentState(
+  scene: SceneDocument,
+  state: { readonly visible: boolean; readonly locked: boolean },
+): SceneDocument {
+  return {
+    ...scene,
+    entities: [
+      {
+        id: "fixture-parent",
+        type: "group",
+        parentId: null,
+        name: "Fixture parent",
+        visible: state.visible,
+        locked: state.locked,
+        transform: {
+          position: [0, 0, 0],
+          rotation: [0, 0, 0, 1],
+          scale: [1, 1, 1],
+        },
+        metadata: {},
+      },
+      ...scene.entities.map((entity) =>
+        entity.id === "factory-cell" ? { ...entity, parentId: "fixture-parent" } : entity,
+      ),
+    ],
   };
 }
 

@@ -40,6 +40,7 @@ export interface AuthoringSceneHandle {
   focusEntity(entityId: string): Promise<void>;
   setTool(tool: AuthoringTool): void;
   getTool(): AuthoringTool;
+  isTransformDragging(): boolean;
   setTransformSettings(settings: AuthoringTransformSettings): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
@@ -211,6 +212,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         getTool() {
           return requiredViewer(viewerRef).getTool();
+        },
+        isTransformDragging() {
+          return requiredViewer(viewerRef).isTransformDragging();
         },
         setTransformSettings(settings) {
           requiredViewer(viewerRef).setTransformSettings(settings);

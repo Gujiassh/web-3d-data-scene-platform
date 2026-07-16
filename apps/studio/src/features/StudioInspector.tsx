@@ -10,6 +10,7 @@ import { useStudioI18n } from "../i18n/I18nProvider";
 import { SceneLayoutPanel } from "../layout/SceneLayoutPanel";
 import type { StudioSceneLayout } from "../layout/useStudioSceneLayout";
 import type { StudioCommandOutcome } from "../workspace/command-outcome";
+import type { TransformResetComponent } from "../transform/transform-reset";
 import { EntityInspector } from "./EntityInspector";
 import { inspectorAuthoringStateKey } from "./inspector-authoring-state";
 import { inspectorTabForKey, type InspectorTab } from "./inspector-tabs";
@@ -27,7 +28,8 @@ interface StudioInspectorProps {
   readonly layout: StudioSceneLayout;
   readonly onFocusTarget: (targetId: string) => void;
   readonly onRename: (entityId: string, name: string) => void;
-  readonly onTransformChange: (entityId: string, transform: Transform) => void;
+  readonly onTransformChange: (entityId: string, transform: Transform) => StudioCommandOutcome;
+  readonly onReset: (component: TransformResetComponent) => StudioCommandOutcome;
 }
 
 export function StudioInspector(props: StudioInspectorProps) {
@@ -88,9 +90,12 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
             role="tabpanel"
           >
             <EntityInspector
-              editable={props.editable}
+              authoritativeRevision={props.document.revision}
+              canReset={props.layout.resetCapability.enabled}
+              editable={props.layout.primaryTransformEditable}
               entity={props.entity}
               onRename={props.onRename}
+              onReset={props.onReset}
               onTransformChange={props.onTransformChange}
             />
             <SceneLayoutPanel layout={props.layout} />

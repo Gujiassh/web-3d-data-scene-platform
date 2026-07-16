@@ -80,6 +80,31 @@ SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主
 - 不通过名称、遍历顺序或 first-available 推断层级/Target 含义。
 - 1280x720 和 1440x900 的主要布局流程无溢出或控件遮挡。
 
+## 006A：编辑易用性与场景灯光
+
+> 状态：Approved for implementation on 2026-07-16；产品规格见
+> `../006a-studio-usability-lighting/spec.md`。用户已批准 `SceneDocument 1.1.0 -> 1.2.0`、
+> `environment.lighting` 和真实 IndexedDB 数据迁移。
+
+### 所有权
+
+006A 是已验收 006 的后续子阶段，负责现有编辑能力的可发现性、变换回正、拖拽智能对齐和场景级
+外观设置。它不占用 007 热点与交互编号，不把 Studio 扩展成建模器，也不引入任意灯光实体。
+
+### 交付
+
+- 006A.1：先统一变换命令不变量，在工具 tooltip 和双语 Help 中公开快捷键，并交付角度输入和回正。
+- 006A.2：交付可关闭、可临时绕过且带 world-bounds 边缘/中心参考线的确定性智能对齐。
+- 006A.3：在 Scene settings 中统一背景、既有网格开关和一组易用的场景级 fill/key 灯光。
+- 灯光值随场景、JSON 和 ZIP 持久化；编辑器快捷键、snap 偏好和 preview 继续留在本地表现层。
+
+### 退出门禁
+
+- 新用户无需外部文档即可在两分钟内完成工具切换、一次智能对齐、旋转回正和 Undo。
+- reset/snap/environment 的 accepted/no-op/rejected 命令、revision、history 和 autosave 语义有直接证据。
+- 旧项目迁移后的首帧灯光与当前固定 Runtime 灯光一致，IndexedDB/JSON/ZIP 只产出 current schema。
+- 1280x720 与 1440x900 的中英文、明暗主题 Help/Scene settings/Canvas 无重叠和裁切。
+
 ## 007：热点与交互
 
 ### 所有权
@@ -146,6 +171,7 @@ SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主
 | M1   | FR-001 至 FR-005、FR-010 的 Studio 编辑与往返基础           |
 | 005  | FR-006 至 FR-009、FR-012 至 FR-013；单 Studio 数据运行闭环  |
 | 006  | FR-003、FR-004、FR-101；布局和层级扩展                      |
+| 006A | 006 后续编辑易用性、智能对齐和场景外观                      |
 | 007  | FR-102、FR-103；热点、标注和声明式交互                      |
 | 008  | FR-011、FR-106；发布产物和嵌入证明                          |
 | 009  | NFR-001 至 NFR-009；性能、可用性和开源门禁                  |
@@ -154,6 +180,7 @@ SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主
 
 - 005 未通过前不扩展高级布局、node/surface hotspot 或任意 action。
 - 006 未通过前不让热点 authoring 绕过稳定 Target/transform 边界。
+- 006A 未通过前不继续 007 热点实现，避免在不可发现的编辑基础上叠加新 authoring 流程。
 - 007 未通过前不把临时 Studio 内部状态包装成发布合同。
 - 008 未通过前不宣称 15 分钟嵌入、跨框架发布或静态部署已经完成。
 - 009 未通过前不宣称产品满足性能、外部可用性或生产发布门槛。

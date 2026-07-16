@@ -260,22 +260,36 @@ describe("layout document commands", () => {
     expect(noop).toBe(history);
   });
 
-  it("applies explicit multi-entity transforms once and preserves no-op history", () => {
+  it("applies explicit multi-entity transforms once with exact Undo and Redo", () => {
     const original = loadFixture();
     const root = entity(original, "factory-root");
     const press = entity(original, "press-01");
-    const next = executeDocumentCommand(original, {
+    const command = {
       type: "transform-entities",
       changes: [
         { entityId: root.id, before: root.transform, after: transform([3, 0, 0]) },
         { entityId: press.id, before: press.transform, after: transform([5, 0, -1]) },
       ],
-    });
+    } as const;
+    const applied = executeHistoryCommand(createDocumentHistory(original), command);
+    const next = applied.document;
 
     expect(next.revision).toBe(original.revision + 1);
+    expect(applied.undoStack).toHaveLength(1);
+    expect(applied.redoStack).toHaveLength(0);
     expect(entity(next, root.id).transform.position).toEqual([3, 0, 0]);
     expect(entity(next, press.id).transform.position).toEqual([5, 0, -1]);
     expectPersistentCollectionsUnchanged(next, original);
+
+    const undone = undoHistoryCommand(applied);
+    expect({ ...undone.document, revision: original.revision }).toEqual(original);
+    expect(undone.undoStack).toHaveLength(0);
+    expect(undone.redoStack).toHaveLength(1);
+    const redone = redoHistoryCommand(undone);
+    expect({ ...redone.document, revision: next.revision }).toEqual(next);
+    expect(redone.document.revision).toBe(original.revision + 3);
+    expect(redone.undoStack).toHaveLength(1);
+    expect(redone.redoStack).toHaveLength(0);
 
     const history = createDocumentHistory(original);
     expect(
@@ -344,7 +358,57 @@ describe("layout document commands", () => {
           },
         ],
       }),
-    ).toThrow("finite transform values");
+    ).toThrow("position values must be finite");
+
+    expect(() =>
+      executeDocumentCommand(original, {
+        type: "transform-entities",
+        changes: [
+          {
+            entityId: press.id,
+            before: press.transform,
+            after: { ...press.transform, rotation: [0, 0, 0, 2] },
+          },
+        ],
+      }),
+    ).toThrow("normalized non-zero quaternion");
+  });
+
+  it("rejects a stale or invalid second batch item before mutating the first", () => {
+    const original = loadFixture();
+    const root = entity(original, "factory-root");
+    const press = entity(original, "press-01");
+    const invalidSecondItems = [
+      {
+        entityId: press.id,
+        before: transform([99, 0, 0]),
+        after: transform([8, 0, 0]),
+      },
+      {
+        entityId: press.id,
+        before: press.transform,
+        after: { ...press.transform, scale: [1, 0, 1] as const },
+      },
+    ] as const;
+
+    for (const second of invalidSecondItems) {
+      const history = createDocumentHistory(original);
+      const beforeHistory = structuredClone(history);
+      expect(() =>
+        executeHistoryCommand(history, {
+          type: "transform-entities",
+          changes: [
+            { entityId: root.id, before: root.transform, after: transform([9, 0, 0]) },
+            second,
+          ],
+        }),
+      ).toThrow();
+      expect(history).toEqual(beforeHistory);
+      expect(history.document).toBe(original);
+      expect(entity(history.document, root.id).transform).toEqual(root.transform);
+      expect(history.undoStack).toHaveLength(0);
+      expect(history.redoStack).toHaveLength(0);
+    }
   });
 
   it("rejects non-positive scale in every layout transform before snapshot and mutation", () => {
@@ -776,7 +840,7 @@ describe("layout document commands", () => {
           after: placement("factory-root", transform([Number.POSITIVE_INFINITY, 0, 0])),
         },
       }),
-    ).toThrow("finite transform values");
+    ).toThrow("position values must be finite");
     expectHistoryRejects(
       original,
       {

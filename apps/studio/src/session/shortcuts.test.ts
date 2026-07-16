@@ -1,87 +1,99 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  canExecuteStudioShortcut,
-  resolveExecutableStudioShortcut,
-  resolveStudioShortcut,
-  type ShortcutInput,
-  type StudioShortcut,
-} from "./shortcuts";
+import { STUDIO_COMMANDS, studioCommandShortcut } from "./shortcut-registry";
+import { resolveStudioShortcut, type ShortcutInput, type StudioShortcutContext } from "./shortcuts";
 
-const base: ShortcutInput = {
+const input: ShortcutInput = {
   key: "",
   metaKey: false,
   ctrlKey: false,
   shiftKey: false,
   altKey: false,
 };
+const context: StudioShortcutContext = {
+  platform: "other",
+  canEdit: true,
+  canResetSelection: true,
+  hasSelection: true,
+  modalOpen: false,
+  transformDragging: false,
+};
+
+describe("Studio shortcut registry", () => {
+  it("uses unique command ids and platform labels", () => {
+    expect(new Set(STUDIO_COMMANDS.map((command) => command.id)).size).toBe(STUDIO_COMMANDS.length);
+    expect(studioCommandShortcut("history.undo", "mac")).toBe("Cmd+Z");
+    expect(studioCommandShortcut("history.undo", "other")).toBe("Ctrl+Z");
+    expect(studioCommandShortcut("reset.rotation", "mac")).toBe("Option+R");
+    expect(studioCommandShortcut("help.open", "other")).toBe("?");
+  });
+});
 
 describe("resolveStudioShortcut", () => {
-  it("maps authoring tools and selection commands", () => {
-    expect(resolveStudioShortcut({ ...base, key: "w" })).toEqual({
-      type: "tool",
-      tool: "translate",
-    });
-    expect(resolveStudioShortcut({ ...base, key: "E" })).toEqual({
-      type: "tool",
-      tool: "rotate",
-    });
-    expect(resolveStudioShortcut({ ...base, key: "Delete" })).toEqual({ type: "delete" });
-    expect(resolveStudioShortcut({ ...base, key: "Escape" })).toEqual({ type: "clear" });
+  it("resolves tools, reset, history and platform aliases", () => {
+    expect(resolveStudioShortcut({ ...input, key: "W" }, context)).toBe("tool.translate");
+    expect(resolveStudioShortcut({ ...input, key: "r", altKey: true }, context)).toBe(
+      "reset.rotation",
+    );
+    expect(resolveStudioShortcut({ ...input, key: "z", ctrlKey: true }, context)).toBe(
+      "history.undo",
+    );
+    expect(
+      resolveStudioShortcut({ ...input, key: "z", ctrlKey: true, shiftKey: true }, context),
+    ).toBe("history.redo");
+    expect(resolveStudioShortcut({ ...input, key: "y", ctrlKey: true }, context)).toBe(
+      "history.redo",
+    );
+    expect(resolveStudioShortcut({ ...input, key: "Backspace" }, context)).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "Backspace" }, { ...context, platform: "mac" }),
+    ).toBe("selection.delete");
   });
 
-  it("maps platform command shortcuts without treating display labels as semantics", () => {
-    expect(resolveStudioShortcut({ ...base, key: "z", ctrlKey: true })).toEqual({ type: "undo" });
-    expect(resolveStudioShortcut({ ...base, key: "z", metaKey: true, shiftKey: true })).toEqual({
-      type: "redo",
-    });
-    expect(resolveStudioShortcut({ ...base, key: "s", ctrlKey: true })).toEqual({ type: "save" });
-    expect(resolveStudioShortcut({ ...base, key: "d", metaKey: true })).toEqual({
-      type: "duplicate",
-    });
+  it("requires exact modifiers", () => {
+    expect(resolveStudioShortcut({ ...input, key: "w", shiftKey: true }, context)).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "z", ctrlKey: true, altKey: true }, context),
+    ).toBeNull();
+    expect(resolveStudioShortcut({ ...input, key: "z", metaKey: true }, context)).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "z", metaKey: true }, { ...context, platform: "mac" }),
+    ).toBe("history.undo");
+    expect(resolveStudioShortcut({ ...input, key: "?", shiftKey: true }, context)).toBe(
+      "help.open",
+    );
+    expect(resolveStudioShortcut({ ...input, key: "/", shiftKey: true }, context)).toBe(
+      "help.open",
+    );
   });
 
-  it("does not trigger scene commands while editing text or using unsupported modifiers", () => {
-    expect(resolveStudioShortcut({ ...base, key: "w", targetTagName: "input" })).toBeNull();
-    expect(resolveStudioShortcut({ ...base, key: "Delete", targetEditable: true })).toBeNull();
-    expect(resolveStudioShortcut({ ...base, key: "w", altKey: true })).toBeNull();
-  });
-});
-
-describe("canExecuteStudioShortcut", () => {
-  it.each([
-    { type: "undo" },
-    { type: "redo" },
-    { type: "tool", tool: "translate" },
-    { type: "duplicate" },
-    { type: "delete" },
-  ] satisfies readonly StudioShortcut[])(
-    "blocks $type while authoring is unavailable",
-    (shortcut) => {
-      expect(canExecuteStudioShortcut(shortcut, false)).toBe(false);
-      expect(canExecuteStudioShortcut(shortcut, true)).toBe(true);
-    },
-  );
-
-  it.each([
-    { type: "save" },
-    { type: "focus" },
-    { type: "clear" },
-  ] satisfies readonly StudioShortcut[])("keeps $type available in Run", (shortcut) => {
-    expect(canExecuteStudioShortcut(shortcut, false)).toBe(true);
-  });
-});
-
-describe("resolveExecutableStudioShortcut", () => {
-  it("returns no authoring mutation in Run but preserves non-mutating shortcuts", () => {
-    expect(resolveExecutableStudioShortcut({ ...base, key: "z", ctrlKey: true }, false)).toBeNull();
-    expect(resolveExecutableStudioShortcut({ ...base, key: "w" }, false)).toBeNull();
-    expect(resolveExecutableStudioShortcut({ ...base, key: "Delete" }, false)).toBeNull();
-    expect(resolveExecutableStudioShortcut({ ...base, key: "s", ctrlKey: true }, false)).toEqual({
-      type: "save",
-    });
-    expect(resolveExecutableStudioShortcut({ ...base, key: "f" }, false)).toEqual({
-      type: "focus",
-    });
+  it("enforces text, modal, drag, selection and Run gates", () => {
+    expect(
+      resolveStudioShortcut({ ...input, key: "w", targetTagName: "input" }, context),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "w" }, { ...context, modalOpen: true }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "w" }, { ...context, transformDragging: true }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "Delete" }, { ...context, hasSelection: false }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut(
+        { ...input, key: "r", altKey: true },
+        { ...context, canResetSelection: false },
+      ),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "w" }, { ...context, canEdit: false }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "s", ctrlKey: true }, { ...context, canEdit: false }),
+    ).toBe("project.save");
+    expect(
+      resolveStudioShortcut({ ...input, key: "?", shiftKey: true }, { ...context, canEdit: false }),
+    ).toBe("help.open");
   });
 });

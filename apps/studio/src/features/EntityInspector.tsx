@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { Box, Lock, Move3d } from "lucide-react";
 
-import type { SceneEntity, Transform, Vec3 } from "@web3d/document";
+import type { SceneEntity, Transform } from "@web3d/document";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { TransformEditor } from "../transform/TransformEditor";
+import type { TransformResetComponent } from "../transform/transform-reset";
+import type { StudioCommandOutcome } from "../workspace/command-outcome";
 
 interface EntityInspectorProps {
   readonly entity: SceneEntity | null;
+  readonly authoritativeRevision: number;
   readonly editable: boolean;
+  readonly canReset: boolean;
   readonly onRename: (entityId: string, name: string) => void;
-  readonly onTransformChange: (entityId: string, transform: Transform) => void;
+  readonly onReset: (component: TransformResetComponent) => StudioCommandOutcome;
+  readonly onTransformChange: (entityId: string, transform: Transform) => StudioCommandOutcome;
 }
 
 export function EntityInspector(props: EntityInspectorProps) {
@@ -24,7 +30,11 @@ export function EntityInspector(props: EntityInspectorProps) {
   }
 
   return (
-    <EntityInspectorForm {...props} entity={props.entity} key={entityEditorKey(props.entity)} />
+    <EntityInspectorForm
+      {...props}
+      entity={props.entity}
+      key={entityEditorKey(props.entity, props.authoritativeRevision)}
+    />
   );
 }
 
@@ -33,19 +43,12 @@ function EntityInspectorForm(
 ) {
   const { t } = useStudioI18n();
   const [name, setName] = useState(props.entity.name);
-  const [transform, setTransform] = useState(props.entity.transform);
 
   const commitName = (): void => {
     const next = name.trim();
     if (next !== "" && next !== props.entity.name) props.onRename(props.entity.id, next);
     else setName(props.entity.name);
   };
-  const commitTransform = (): void => {
-    if (!sameTransform(transform, props.entity.transform)) {
-      props.onTransformChange(props.entity.id, transform);
-    }
-  };
-
   return (
     <div className="entity-inspector-content">
       <section className="inspector-section">
@@ -80,26 +83,12 @@ function EntityInspectorForm(
         <h2>
           <Move3d size={13} /> {t.inspector.transform}
         </h2>
-        <VectorInput
-          disabled={!props.editable || props.entity.locked}
-          invalid={(value) => !Number.isFinite(value)}
-          label={t.inspector.position}
-          value={transform.position}
-          onBlur={commitTransform}
-          onChange={(value) => setTransform({ ...transform, position: value })}
-        />
-        <VectorInput
-          disabled={!props.editable || props.entity.locked}
-          invalid={(value) => !Number.isFinite(value) || value <= 0}
-          label={t.inspector.scale}
-          value={transform.scale}
-          onBlur={commitTransform}
-          onChange={(value) => setTransform({ ...transform, scale: value })}
-        />
-        <InspectorValue
-          label={t.inspector.rotation}
-          value={formatQuaternion(transform.rotation)}
-          mono
+        <TransformEditor
+          canReset={props.canReset}
+          editable={props.editable && !props.entity.locked && props.entity.visible}
+          transform={props.entity.transform}
+          onCommit={(after) => props.onTransformChange(props.entity.id, after)}
+          onReset={props.onReset}
         />
       </section>
       {props.entity.locked && (
@@ -108,54 +97,6 @@ function EntityInspectorForm(
         </div>
       )}
     </div>
-  );
-}
-
-function VectorInput({
-  disabled,
-  invalid,
-  label,
-  value,
-  onBlur,
-  onChange,
-}: {
-  readonly disabled: boolean;
-  readonly invalid?: (value: number, axisIndex: number) => boolean;
-  readonly label: string;
-  readonly value: Vec3;
-  readonly onBlur: () => void;
-  readonly onChange: (value: Vec3) => void;
-}) {
-  const { t } = useStudioI18n();
-  const axisLabels = [t.inspector.axis.x, t.inspector.axis.y, t.inspector.axis.z] as const;
-
-  return (
-    <fieldset className="vector-field" disabled={disabled}>
-      <legend>{label}</legend>
-      {value.map((number, index) => {
-        const axis = axisLabels[index] ?? t.inspector.axis.x;
-        const isInvalid = invalid?.(number, index) ?? false;
-        return (
-          <label key={index}>
-            <span>{axis}</span>
-            <input
-              aria-invalid={isInvalid}
-              aria-label={t.inspector.vectorAxis(label, axis)}
-              inputMode="decimal"
-              step="0.1"
-              type="number"
-              value={number}
-              onBlur={onBlur}
-              onChange={(event) => {
-                const next = [...value] as [number, number, number];
-                next[index] = Number(event.target.value);
-                onChange(next);
-              }}
-            />
-          </label>
-        );
-      })}
-    </fieldset>
   );
 }
 
@@ -176,20 +117,9 @@ function InspectorValue({
   );
 }
 
-function formatQuaternion(value: readonly number[]): string {
-  return value.map((number) => number.toFixed(3)).join("  ");
-}
-
-function sameTransform(left: Transform, right: Transform): boolean {
-  return (
-    left.position.every((value, index) => value === right.position[index]) &&
-    left.rotation.every((value, index) => value === right.rotation[index]) &&
-    left.scale.every((value, index) => value === right.scale[index])
-  );
-}
-
-function entityEditorKey(entity: SceneEntity): string {
+function entityEditorKey(entity: SceneEntity, authoritativeRevision: number): string {
   return [
+    authoritativeRevision,
     entity.id,
     entity.name,
     ...entity.transform.position,

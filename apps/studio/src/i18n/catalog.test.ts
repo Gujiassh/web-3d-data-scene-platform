@@ -39,4 +39,12 @@ describe("Studio catalog", () => {
     expect(english.layout.localScaleDelta).toBe("Local scale delta");
     expect(chinese.layout.localScaleDelta).toBe("局部缩放变化");
   });
+
+  it("keeps the bilingual shortcut command catalog symmetric", () => {
+    expect(Object.keys(english.shortcutHelp.commands)).toEqual(
+      Object.keys(chinese.shortcutHelp.commands),
+    );
+    expect(english.shortcutHelp.commands["reset.rotation"].label).toBe("Reset rotation");
+    expect(chinese.shortcutHelp.commands["reset.rotation"].label).toBe("重置旋转");
+  });
 });

@@ -454,6 +454,10 @@ class ThreeSceneViewport {
     return this.#transformAuthoring?.getTool() ?? "select";
   }
 
+  isTransformDragging(): boolean {
+    return this.#transformAuthoring?.isDragging() ?? false;
+  }
+
   setTransformSettings(settings: AuthoringTransformSettings): void {
     this.#ensureActive();
     if (this.#transformAuthoring === null) return;

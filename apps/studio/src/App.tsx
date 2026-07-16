@@ -11,11 +11,12 @@ import { SceneNameDialog, type SceneNameDialogMode } from "./features/SceneNameD
 import { SceneTree } from "./features/SceneTree";
 import { StudioToolbar } from "./features/StudioToolbar";
 import { StudioInspector } from "./features/StudioInspector";
+import { ShortcutHelpDialog } from "./help/ShortcutHelpDialog";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
-import { resolveExecutableStudioShortcut } from "./session/shortcuts";
+import { useStudioShortcuts, type StudioShortcutActions } from "./session/useStudioShortcuts";
 import { SceneBackgroundSettingsDialog } from "./scene-background/SceneBackgroundSettingsDialog";
 import {
   createSetSceneBackgroundCommand,
@@ -43,10 +44,12 @@ export function App() {
   const modelInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const archiveInputRef = useRef<HTMLInputElement>(null);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
   const [sceneSettingsKey, setSceneSettingsKey] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [sceneBackgroundPreview, setSceneBackgroundPreview] =
     useState<SceneBackgroundPreviewState | null>(null);
 
@@ -116,6 +119,10 @@ export function App() {
     },
     [projectDocumentKey],
   );
+  const closeHelp = (): void => {
+    setHelpOpen(false);
+    requestAnimationFrame(() => helpButtonRef.current?.focus());
+  };
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -129,44 +136,50 @@ export function App() {
     document.title = title;
   }, [project, t.app.documentTitle]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      const shortcut = resolveExecutableStudioShortcut(
-        {
-          key: event.key,
-          metaKey: event.metaKey,
-          ctrlKey: event.ctrlKey,
-          shiftKey: event.shiftKey,
-          altKey: event.altKey,
-          ...(target === null ? {} : { targetTagName: target.tagName }),
-          ...(target === null ? {} : { targetEditable: target.isContentEditable }),
-        },
-        workspace.canEdit,
-      );
-      if (shortcut === null) return;
-      event.preventDefault();
-      if (shortcut.type === "undo") workspace.undo();
-      if (shortcut.type === "redo") workspace.redo();
-      if (shortcut.type === "save") void workspace.save().catch(() => undefined);
-      if (shortcut.type === "duplicate" && selectedEntityId !== null) {
-        sceneLayout.duplicateSelection();
-      }
-      if (shortcut.type === "delete" && selectedEntityId !== null) {
-        workspace.deleteEntity(selectedEntityId);
-        workspace.selectEntity(null);
-      }
-      if (shortcut.type === "clear") workspace.selectEntity(null);
-      if (shortcut.type === "tool") workspace.setTool(shortcut.tool);
-      if (shortcut.type === "focus" && selectedEntityId !== null) {
-        void viewerRef.current?.focusEntity(selectedEntityId).catch((error: unknown) => {
-          workspace.addDiagnostic(error instanceof Error ? error.message : String(error));
-        });
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [sceneLayout, selectedEntityId, workspace]);
+  const focusSelection = (): void => {
+    if (selectedEntityId === null) return;
+    void viewerRef.current?.focusEntity(selectedEntityId).catch((error: unknown) => {
+      workspace.addDiagnostic(error instanceof Error ? error.message : String(error));
+    });
+  };
+  const deleteSelection = (): void => {
+    if (selectedEntityId === null) return;
+    workspace.deleteEntity(selectedEntityId);
+    workspace.selectEntity(null);
+  };
+  const changeMode = (mode: "edit" | "run"): void => {
+    if (mode === "run") viewerRef.current?.setTool("select");
+    workspace.setMode(mode);
+  };
+  const shortcutActions: StudioShortcutActions = {
+    "tool.select": () => workspace.setTool("select"),
+    "tool.translate": () => workspace.setTool("translate"),
+    "tool.rotate": () => workspace.setTool("rotate"),
+    "tool.scale": () => workspace.setTool("scale"),
+    "reset.position": () => void sceneLayout.resetSelection("position"),
+    "reset.rotation": () => void sceneLayout.resetSelection("rotation"),
+    "reset.scale": () => void sceneLayout.resetSelection("scale"),
+    "history.undo": workspace.undo,
+    "history.redo": workspace.redo,
+    "selection.duplicate": sceneLayout.duplicateSelection,
+    "selection.delete": deleteSelection,
+    "selection.clear": () => workspace.selectEntity(null),
+    "project.save": () => void workspace.save().catch(() => undefined),
+    "view.focus": focusSelection,
+    "help.open": () => setHelpOpen(true),
+  };
+  useStudioShortcuts({
+    actions: shortcutActions,
+    canEdit: workspace.canEdit,
+    canResetSelection: sceneLayout.resetCapability.enabled,
+    hasSelection: selectedEntityId !== null,
+    modalOpen:
+      helpOpen ||
+      workspace.importState !== null ||
+      sceneNameDialogMode !== null ||
+      sceneSettingsOpen,
+    viewerRef,
+  });
 
   if (!desktopViewport) {
     return (
@@ -182,6 +195,7 @@ export function App() {
   return (
     <div className="studio-app">
       <StudioToolbar
+        helpButtonRef={helpButtonRef}
         canEdit={workspace.canEdit}
         canDuplicate={sceneLayout.capabilities.duplicate.enabled}
         canRedo={historyCapabilities.canRedo}
@@ -197,19 +211,18 @@ export function App() {
         projectName={project?.record.name ?? t.app.openingProject}
         save={session?.save ?? { status: "saving", revision: 0 }}
         tool={activeTool}
-        onDelete={() => {
-          if (selectedEntityId !== null) {
-            workspace.deleteEntity(selectedEntityId);
-            workspace.selectEntity(null);
-          }
-        }}
+        onDelete={deleteSelection}
         onDuplicate={() => {
           if (selectedEntityId !== null) sceneLayout.duplicateSelection();
         }}
         onExport={() => void workspace.exportArchive()}
         onImport={openModelPicker}
-        onModeChange={workspace.setMode}
+        onModeChange={changeMode}
         onOpenProjectMenu={() => setProjectMenuOpen((open) => !open)}
+        onOpenHelp={() => {
+          setProjectMenuOpen(false);
+          setHelpOpen(true);
+        }}
         onRedo={workspace.redo}
         onSave={() => void workspace.save().catch(() => undefined)}
         onToolChange={workspace.setTool}
@@ -391,17 +404,8 @@ export function App() {
             onRename={(entityId, name) =>
               workspace.execute({ type: "rename-entity", entityId, name })
             }
-            onTransformChange={(entityId, transform) => {
-              const entity = project?.document.entities.find((item) => item.id === entityId);
-              if (entity !== undefined) {
-                sceneLayout.handleTransformCommit({
-                  type: "transform-commit",
-                  entityId,
-                  before: entity.transform,
-                  after: transform,
-                });
-              }
-            }}
+            onReset={sceneLayout.resetSelection}
+            onTransformChange={sceneLayout.commitEntityTransform}
           />
         )}
 
@@ -483,6 +487,8 @@ export function App() {
           onPreview={handleSceneBackgroundPreview}
         />
       )}
+
+      {helpOpen && <ShortcutHelpDialog onClose={closeHelp} />}
 
       <input
         ref={modelInputRef}

@@ -5,8 +5,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "@web3d/demo-support/theme-provider";
+import type { AuthoringSceneHandle } from "@web3d/react";
 
 import { StudioI18nProvider } from "./i18n/I18nProvider";
+import type { StudioSceneLayout } from "./layout/useStudioSceneLayout";
+import type { AuthoringTool } from "./session/session-state";
 
 type TestCommandOutcome =
   | { readonly status: "changed"; readonly revision: number }
@@ -20,7 +23,9 @@ interface TestReadyEvent {
 
 const harness = vi.hoisted(() => ({
   authoringReady: undefined as ((event: TestReadyEvent) => void) | undefined,
+  authoringSceneMounts: 0,
   authoringSceneRenders: [] as Array<string | null | undefined>,
+  viewerCalls: [] as string[],
   workspace: {
     loading: false,
     project: {
@@ -59,7 +64,7 @@ const harness = vi.hoisted(() => ({
     history: { document: null, undoStack: [], redoStack: [] },
     session: {
       mode: "edit" as const,
-      tool: "select" as const,
+      tool: "select" as AuthoringTool,
       selectedEntityIds: [],
       primaryEntityId: null,
       save: { status: "saved" as const, revision: 1 },
@@ -75,7 +80,7 @@ const harness = vi.hoisted(() => ({
     undo: vi.fn(),
     redo: vi.fn(),
     save: vi.fn(async () => undefined),
-    setMode: vi.fn(),
+    setMode: vi.fn((mode: "edit" | "run") => harness.viewerCalls.push(`mode:${mode}`)),
     setTool: vi.fn(),
     selectEntity: vi.fn(),
     selectEntities: vi.fn(),
@@ -103,9 +108,30 @@ vi.mock("@web3d/react", async () => {
         readonly backgroundPreview?: string | null;
         readonly onReady?: (event: TestReadyEvent) => void;
       },
-      ref,
+      ref: React.ForwardedRef<AuthoringSceneHandle>,
     ) {
-      void ref;
+      const handle = React.useMemo<AuthoringSceneHandle>(
+        () => ({
+          selectEntity: vi.fn(),
+          selectEntities: vi.fn(),
+          focusEntity: vi.fn(async () => undefined),
+          setTool: (tool) => harness.viewerCalls.push(`tool:${tool}`),
+          getTool: () => "select",
+          isTransformDragging: () => false,
+          setTransformSettings: vi.fn(),
+          getEntitySpatialSnapshots: () => [],
+          setDataRuntimeEnabled: vi.fn(async () => undefined),
+          setThemeBackground: vi.fn(),
+          setBackgroundPreview: vi.fn(),
+          setView: vi.fn(async () => undefined),
+          getSnapshot: vi.fn(),
+        }),
+        [],
+      );
+      React.useImperativeHandle(ref, () => handle, [handle]);
+      React.useEffect(() => {
+        harness.authoringSceneMounts += 1;
+      }, []);
       harness.authoringReady = props.onReady;
       harness.authoringSceneRenders.push(props.backgroundPreview);
       return React.createElement("div", { "data-authoring-scene": true });
@@ -126,18 +152,76 @@ vi.mock("./data-binding/useStudioDataBinding", () => ({
   }),
 }));
 
-vi.mock("./layout/useStudioSceneLayout", () => ({
-  useStudioSceneLayout: () => ({
-    capabilities: { duplicate: { enabled: false, reason: null } },
+vi.mock("./layout/useStudioSceneLayout", () => {
+  const disabled = { enabled: false, reason: "selection-required" } as const;
+  const layout = {
+    editable: true,
+    primaryTransformEditable: false,
+    documentEntities: [],
+    selectedEntityIds: [],
+    primaryEntityId: null,
+    activeTool: "select",
     transformSettings: { translationSnap: null, rotationSnapRadians: null, scaleSnap: null },
+    axis: "x",
+    alignAnchor: "center",
+    reparentTargetId: null,
+    duplicateOffsetDraft: ["1", "0", "0"],
+    invalidDuplicateOffsetFields: [],
+    transformSettingsDraft: {
+      translationSnap: "",
+      rotationSnapDegrees: "",
+      scaleSnap: "",
+    },
+    invalidTransformFields: [],
+    sourceAnchor: "center",
+    targetEntityId: null,
+    targetAnchor: "center",
+    capabilities: {
+      group: disabled,
+      reparent: disabled,
+      align: disabled,
+      distribute: disabled,
+      duplicate: disabled,
+      anchorSnap: disabled,
+    },
+    resetCapability: disabled,
+    feedback: {
+      activity: "idle",
+      pivotKind: "entity-origin",
+      pivotWorld: null,
+      activeAxis: "free",
+      deltaPosition: null,
+      deltaRotationRadians: null,
+      deltaScale: null,
+      settings: { translationSnap: null, rotationSnapRadians: null, scaleSnap: null },
+      sourceAnchor: null,
+      targetAnchor: null,
+    },
+    error: null,
+    setAxis: vi.fn(),
+    setAlignAnchor: vi.fn(),
+    setReparentTargetId: vi.fn(),
+    setDuplicateOffsetDraft: vi.fn(),
+    setTransformSettingsDraft: vi.fn(),
+    setSourceAnchor: vi.fn(),
+    setTargetEntityId: vi.fn(),
+    setTargetAnchor: vi.fn(),
+    groupSelection: vi.fn(),
+    reparentSelection: vi.fn(),
+    alignSelection: vi.fn(),
+    distributeSelection: vi.fn(),
     duplicateSelection: vi.fn(),
+    snapToAnchor: vi.fn(),
+    resetSelection: vi.fn(() => ({ status: "unavailable" as const })),
+    commitEntityTransform: vi.fn(() => ({ status: "unavailable" as const })),
     selectFromTree: vi.fn(),
-    handleReady: vi.fn(),
     handleSelectionChange: vi.fn(),
+    handleReady: vi.fn(),
     handleTransformPreview: vi.fn(),
     handleTransformCommit: vi.fn(),
-  }),
-}));
+  } satisfies StudioSceneLayout;
+  return { useStudioSceneLayout: () => layout };
+});
 
 vi.mock("./features/SceneTree", () => ({ SceneTree: () => null }));
 vi.mock("./features/AssetList", () => ({ AssetList: () => null }));
@@ -155,7 +239,9 @@ describe("App scene background preview", () => {
     document.body.append(container);
     root = createRoot(container);
     harness.authoringReady = undefined;
+    harness.authoringSceneMounts = 0;
     harness.authoringSceneRenders.length = 0;
+    harness.viewerCalls.length = 0;
     harness.workspace.execute.mockReset();
     harness.workspace.execute.mockReturnValue({ status: "unchanged", revision: 1 });
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -216,6 +302,18 @@ describe("App scene background preview", () => {
     expect(harness.authoringSceneRenders.at(-1)).toBeNull();
   });
 
+  it("synchronously selects the runtime tool before entering Run without recreating the Viewer", () => {
+    harness.workspace.session.tool = "translate";
+    renderApp();
+    harness.viewerCalls.length = 0;
+
+    act(() => buttonByVisibleName("Run").click());
+
+    expect(harness.viewerCalls).toEqual(["tool:select", "mode:run"]);
+    expect(harness.authoringSceneMounts).toBe(1);
+    harness.workspace.session.tool = "select";
+  });
+
   function renderApp(): void {
     act(() => {
       root.render(
@@ -238,6 +336,16 @@ describe("App scene background preview", () => {
 
   function button(label: string): HTMLButtonElement {
     return container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  }
+
+  function buttonByVisibleName(name: string): HTMLButtonElement {
+    const match = [
+      ...container.querySelectorAll<HTMLButtonElement>('button:not([aria-hidden="true"])'),
+    ]
+      .filter((candidate) => candidate.getAttribute("role") !== "presentation")
+      .find((candidate) => candidate.textContent?.trim() === name);
+    if (match === undefined) throw new Error(`Button with visible name '${name}' was not found.`);
+    return match;
   }
 
   function changeInput(element: HTMLInputElement, value: string): void {

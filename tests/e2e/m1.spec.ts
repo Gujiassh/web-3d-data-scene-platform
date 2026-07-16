@@ -37,7 +37,7 @@ test.describe("M1 Studio browser acceptance", () => {
 
     const positionX = page.getByLabel("Position X");
     await positionX.fill("1.5");
-    await positionX.press("Tab");
+    await positionX.press("Enter");
     await expectRevision(page, 3);
 
     const renamedRow = page.getByRole("treeitem").filter({ hasText: "Factory Cell" }).first();
@@ -51,10 +51,11 @@ test.describe("M1 Studio browser acceptance", () => {
 
     await page.getByRole("button", { name: "Undo" }).click();
     await expectRevision(page, 6);
-    await expect(positionX).toBeEnabled();
+    await expect(positionX).toBeDisabled();
     await page.getByRole("button", { name: "Undo" }).click();
     await expectRevision(page, 7);
     await expect(renamedRow.getByRole("button", { name: "Hide Factory Cell" })).toBeVisible();
+    await expect(positionX).toBeEnabled();
     await page.getByRole("button", { name: "Undo" }).click();
     await expectRevision(page, 8);
     await expect(positionX).toHaveValue("0");
@@ -75,7 +76,7 @@ test.describe("M1 Studio browser acceptance", () => {
     await expectRevision(page, 13);
 
     const selectFrame = await canvas.screenshot();
-    await page.getByRole("button", { name: "Move" }).click();
+    await page.getByRole("button", { name: "Move (W)", exact: true }).click();
     await expect(page.getByTestId("viewport-mode")).toContainText("TRANSLATE");
     await page.waitForTimeout(150);
     const moveFrame = await canvas.screenshot();
@@ -98,20 +99,20 @@ test.describe("M1 Studio browser acceptance", () => {
     await expectRevision(page, 14);
     expect(Number(await positionX.inputValue())).toBeGreaterThan(1.5);
 
-    await page.getByRole("button", { name: "Rotate" }).click();
+    await page.getByRole("button", { name: "Rotate (E)", exact: true }).click();
     await expect(page.getByTestId("viewport-mode")).toContainText("ROTATE");
     await page.waitForTimeout(150);
     const rotateFrame = await canvas.screenshot();
     expect(rotateFrame.equals(moveFrame)).toBe(false);
 
-    await page.getByRole("button", { name: "Scale" }).click();
+    await page.getByRole("button", { name: "Scale (R)", exact: true }).click();
     await expect(page.getByTestId("viewport-mode")).toContainText("SCALE");
     await page.waitForTimeout(150);
     const scaleFrame = await canvas.screenshot();
     expect(scaleFrame.equals(rotateFrame)).toBe(false);
 
     await page.getByRole("button", { name: "Run", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Scale" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Scale (R)", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Duplicate selection" })).toBeDisabled();
     await page.keyboard.press("w");
     await page.keyboard.press("Delete");

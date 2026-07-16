@@ -64,7 +64,8 @@ describe("StudioInspector", () => {
             layout: layoutModel(),
             onFocusTarget,
             onRename: () => undefined,
-            onTransformChange: () => undefined,
+            onReset: () => ({ status: "unavailable" as const }),
+            onTransformChange: () => ({ status: "unavailable" as const }),
           }),
         ),
       );
@@ -121,6 +122,7 @@ function layoutModel(): StudioSceneLayout {
   const disabled = { enabled: false, reason: "run-disabled" } as const;
   return {
     editable: false,
+    primaryTransformEditable: false,
     documentEntities: [],
     selectedEntityIds: [],
     primaryEntityId: null,
@@ -148,6 +150,7 @@ function layoutModel(): StudioSceneLayout {
       duplicate: disabled,
       anchorSnap: disabled,
     },
+    resetCapability: { enabled: false, reason: "run-disabled" },
     feedback: {
       activity: "idle",
       pivotKind: "entity-origin",
@@ -175,6 +178,8 @@ function layoutModel(): StudioSceneLayout {
     distributeSelection: () => undefined,
     duplicateSelection: () => undefined,
     snapToAnchor: () => undefined,
+    resetSelection: () => ({ status: "unavailable" }),
+    commitEntityTransform: () => ({ status: "unavailable" }),
     selectFromTree: () => undefined,
     handleSelectionChange: () => undefined,
     handleReady: () => undefined,

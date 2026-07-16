@@ -155,16 +155,19 @@ describe("StudioSessionState", () => {
     expect(state.selectedEntityIds).not.toBe(previousIds);
   });
 
-  it("prevents authoring commands and tools in Run mode", () => {
-    let state = createStudioSession(1);
-    state = reduceStudioSession(state, { type: "tool-changed", tool: "rotate" });
-    state = reduceStudioSession(state, { type: "mode-changed", mode: "run" });
-    const unchanged = reduceStudioSession(state, { type: "tool-changed", tool: "scale" });
+  it.each(["translate", "rotate", "scale"] as const)(
+    "resets %s to select before preventing authoring commands in Run mode",
+    (tool) => {
+      let state = createStudioSession(1);
+      state = reduceStudioSession(state, { type: "tool-changed", tool });
+      state = reduceStudioSession(state, { type: "mode-changed", mode: "run" });
+      const unchanged = reduceStudioSession(state, { type: "tool-changed", tool: "scale" });
 
-    expect(state.tool).toBe("select");
-    expect(unchanged).toBe(state);
-    expect(() => assertCanEdit(state)).toThrow("disabled in Run mode");
-  });
+      expect(state.tool).toBe("select");
+      expect(unchanged).toBe(state);
+      expect(() => assertCanEdit(state)).toThrow("disabled in Run mode");
+    },
+  );
 
   it("tracks local save and export revisions independently", () => {
     let state = createStudioSession(4, 4);

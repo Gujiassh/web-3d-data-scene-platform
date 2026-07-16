@@ -263,6 +263,7 @@ export interface AuthoringSceneViewer {
   focusEntity(entityId: string, options?: FocusOptions): Promise<void>;
   setTool(tool: AuthoringTool): void;
   getTool(): AuthoringTool;
+  isTransformDragging(): boolean;
   setTransformSettings(settings: AuthoringTransformSettings): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setView(viewId: string): Promise<void>;

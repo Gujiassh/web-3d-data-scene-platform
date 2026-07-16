@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { DocumentCommand, SceneDocument, SceneEntity } from "@web3d/document";
+import type { DocumentCommand, SceneDocument, SceneEntity, Transform } from "@web3d/document";
 import type { AuthoringSceneHandle } from "@web3d/react";
 import type {
   AuthoringTool,
@@ -12,6 +12,14 @@ import { useStudioI18n } from "../i18n/I18nProvider";
 import { createBrowserIdFactory } from "../session/command-builders";
 import type { SelectionOperation } from "../session/session-state";
 import type { StudioCommandOutcome } from "../workspace/command-outcome";
+import {
+  canEditEntityTransform,
+  getTransformResetCapability,
+  planTransformReset,
+  type TransformResetCapability,
+  type TransformResetComponent,
+  TransformResetError,
+} from "../transform/transform-reset";
 import { deriveLayoutCapabilities, type LayoutCapabilities } from "./layout-capabilities";
 import {
   planAlign,
@@ -65,6 +73,7 @@ interface UseStudioSceneLayoutOptions {
 
 export interface StudioSceneLayout {
   readonly editable: boolean;
+  readonly primaryTransformEditable: boolean;
   readonly documentEntities: readonly SceneEntity[];
   readonly selectedEntityIds: readonly string[];
   readonly primaryEntityId: string | null;
@@ -81,6 +90,7 @@ export interface StudioSceneLayout {
   readonly targetEntityId: string | null;
   readonly targetAnchor: BoundsAnchorKind;
   readonly capabilities: LayoutCapabilities;
+  readonly resetCapability: TransformResetCapability;
   readonly feedback: SpatialFeedback;
   readonly error: LayoutFailureCode | null;
   readonly setAxis: (axis: LayoutAxis) => void;
@@ -97,6 +107,8 @@ export interface StudioSceneLayout {
   readonly distributeSelection: () => void;
   readonly duplicateSelection: () => void;
   readonly snapToAnchor: () => void;
+  readonly resetSelection: (component: TransformResetComponent) => StudioCommandOutcome;
+  readonly commitEntityTransform: (entityId: string, after: Transform) => StudioCommandOutcome;
   readonly selectFromTree: (entityId: string, operation: SelectionOperation) => void;
   readonly handleSelectionChange: (event: SelectionChangeEvent) => void;
   readonly handleReady: () => void;
@@ -240,6 +252,24 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
       state.snapshots,
       state.targetEntityId,
     ],
+  );
+  const resetCapability = useMemo(
+    () =>
+      getTransformResetCapability(
+        options.document,
+        options.selectedEntityIds,
+        options.canEdit && options.mode === "edit",
+      ),
+    [options.canEdit, options.document, options.mode, options.selectedEntityIds],
+  );
+  const primaryTransformEditable = useMemo(
+    () =>
+      canEditEntityTransform(
+        options.document,
+        options.primaryEntityId,
+        options.canEdit && options.mode === "edit",
+      ),
+    [options.canEdit, options.document, options.mode, options.primaryEntityId],
   );
 
   const fail = useCallback(
@@ -441,40 +471,38 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
     [updateState],
   );
 
-  const handleTransformCommit = useCallback(
-    (event: TransformCommitEvent) => {
+  const commitTransform = useCallback(
+    (entityId: string, before: Transform, after: Transform): StudioCommandOutcome => {
       const current = optionsRef.current;
-      if (!current.canEdit || current.mode !== "edit") return;
-      if (!isFinitePositiveScaleTransform(event.after)) {
+      if (!current.canEdit || current.mode !== "edit") return { status: "unavailable" };
+      if (!isFinitePositiveScaleTransform(after)) {
         fail("invalid-transform");
-        return;
+        return { status: "rejected", message: t.layout.reasons["invalid-transform"] };
       }
       const outcome = current.execute({
         type: "transform-entity",
-        entityId: event.entityId,
-        before: event.before,
-        after: event.after,
+        entityId,
+        before,
+        after,
       });
+      if (outcome.status === "unchanged") {
+        updateState((value) => ({ ...value, error: null }));
+        return outcome;
+      }
       if (outcome.status !== "changed") {
-        fail(
-          outcome.status === "unchanged"
-            ? "unchanged"
-            : outcome.status === "unavailable"
-              ? "command-unavailable"
-              : "command-rejected",
-        );
-        return;
+        fail(outcome.status === "unavailable" ? "command-unavailable" : "command-rejected");
+        return outcome;
       }
       const snapshot = stateRef.current.snapshots.find(
-        (candidate) => candidate.entityId === event.entityId,
+        (candidate) => candidate.entityId === entityId,
       );
       const nextFeedback =
         snapshot === undefined
           ? clearedSpatialFeedback(stateRef.current.transformSettings)
           : transformSpatialFeedback(
               current.activeTool,
-              event.before,
-              event.after,
+              before,
+              after,
               stateRef.current.feedback,
               stateRef.current.transformSettings,
               snapshot,
@@ -486,12 +514,68 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
         error: null,
       }));
       requestAnimationFrame(() => refreshSnapshots());
+      return outcome;
     },
-    [fail, refreshSnapshots, updateState],
+    [fail, refreshSnapshots, t.layout.reasons, updateState],
+  );
+
+  const commitEntityTransform = useCallback(
+    (entityId: string, after: Transform): StudioCommandOutcome => {
+      const entity = optionsRef.current.document?.entities.find(
+        (candidate) => candidate.id === entityId,
+      );
+      return entity === undefined
+        ? { status: "unavailable" }
+        : commitTransform(entityId, entity.transform, after);
+    },
+    [commitTransform],
+  );
+
+  const handleTransformCommit = useCallback(
+    (event: TransformCommitEvent) => {
+      commitTransform(event.entityId, event.before, event.after);
+    },
+    [commitTransform],
+  );
+
+  const resetSelection = useCallback(
+    (component: TransformResetComponent): StudioCommandOutcome => {
+      const current = optionsRef.current;
+      if (!current.canEdit || current.mode !== "edit" || current.document === null) {
+        return { status: "unavailable" };
+      }
+      let command: ReturnType<typeof planTransformReset>;
+      try {
+        command = planTransformReset(current.document, current.selectedEntityIds, component);
+      } catch (error) {
+        const code = error instanceof TransformResetError ? error.code : "invalid-transform";
+        fail(code);
+        return { status: "rejected", message: t.layout.reasons[code] };
+      }
+      const outcome = current.execute(command);
+      if (outcome.status === "unchanged") {
+        updateState((value) => ({ ...value, error: null }));
+        return outcome;
+      }
+      if (outcome.status !== "changed") {
+        fail(outcome.status === "unavailable" ? "command-unavailable" : "command-rejected");
+        return outcome;
+      }
+      updateState((value) => ({
+        ...value,
+        documentRevision: outcome.revision,
+        feedback: clearedSpatialFeedback(value.transformSettings),
+        error: null,
+      }));
+      requestAnimationFrame(() => refreshSnapshots());
+      return outcome;
+    },
+    [fail, refreshSnapshots, t.layout.reasons, updateState],
   );
 
   return {
     editable: options.canEdit && options.mode === "edit",
+    primaryTransformEditable,
     documentEntities: options.document?.entities ?? [],
     selectedEntityIds: options.selectedEntityIds,
     primaryEntityId: options.primaryEntityId,
@@ -511,6 +595,7 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
     targetEntityId: state.targetEntityId,
     targetAnchor: state.targetAnchor,
     capabilities,
+    resetCapability,
     feedback: state.feedback,
     error: state.error,
     setAxis: (axis) => updateState((value) => ({ ...value, axis, error: null })),
@@ -538,6 +623,8 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
     distributeSelection,
     duplicateSelection,
     snapToAnchor,
+    resetSelection,
+    commitEntityTransform,
     selectFromTree,
     handleSelectionChange,
     handleReady: refreshSnapshots,

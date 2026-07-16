@@ -1,14 +1,10 @@
-import type { AuthoringTool } from "./session-state";
-
-export type StudioShortcut =
-  | { readonly type: "tool"; readonly tool: AuthoringTool }
-  | { readonly type: "undo" }
-  | { readonly type: "redo" }
-  | { readonly type: "save" }
-  | { readonly type: "duplicate" }
-  | { readonly type: "delete" }
-  | { readonly type: "focus" }
-  | { readonly type: "clear" };
+import {
+  STUDIO_COMMANDS,
+  type StudioCommandDefinition,
+  type StudioCommandId,
+  type StudioPlatform,
+  type StudioShortcutChord,
+} from "./shortcut-registry";
 
 export interface ShortcutInput {
   readonly key: string;
@@ -20,38 +16,60 @@ export interface ShortcutInput {
   readonly targetEditable?: boolean;
 }
 
-export function resolveStudioShortcut(input: ShortcutInput): StudioShortcut | null {
-  if (isEditingText(input)) return null;
-  const command = input.metaKey || input.ctrlKey;
-  const key = input.key.toLowerCase();
-
-  if (command && !input.altKey && key === "z") {
-    return { type: input.shiftKey ? "redo" : "undo" };
-  }
-  if (command && !input.altKey && !input.shiftKey && key === "s") return { type: "save" };
-  if (command && !input.altKey && !input.shiftKey && key === "d") return { type: "duplicate" };
-  if (command || input.altKey) return null;
-  if (input.key === "Delete" || input.key === "Backspace") return { type: "delete" };
-  if (input.key === "Escape") return { type: "clear" };
-  if (key === "f") return { type: "focus" };
-  if (key === "q") return { type: "tool", tool: "select" };
-  if (key === "w") return { type: "tool", tool: "translate" };
-  if (key === "e") return { type: "tool", tool: "rotate" };
-  if (key === "r") return { type: "tool", tool: "scale" };
-  return null;
+export interface StudioShortcutContext {
+  readonly platform: StudioPlatform;
+  readonly canEdit: boolean;
+  readonly hasSelection: boolean;
+  readonly canResetSelection: boolean;
+  readonly modalOpen: boolean;
+  readonly transformDragging: boolean;
 }
 
-export function canExecuteStudioShortcut(shortcut: StudioShortcut, canEdit: boolean): boolean {
-  if (canEdit) return true;
-  return shortcut.type === "save" || shortcut.type === "focus" || shortcut.type === "clear";
-}
-
-export function resolveExecutableStudioShortcut(
+export function resolveStudioShortcut(
   input: ShortcutInput,
-  canEdit: boolean,
-): StudioShortcut | null {
-  const shortcut = resolveStudioShortcut(input);
-  return shortcut !== null && canExecuteStudioShortcut(shortcut, canEdit) ? shortcut : null;
+  context: StudioShortcutContext,
+): StudioCommandId | null {
+  if (isEditingText(input) || context.modalOpen || context.transformDragging) return null;
+  const definition = STUDIO_COMMANDS.find((candidate) =>
+    candidate.chords.some((chord) => matchesChord(input, chord, context.platform)),
+  );
+  if (definition === undefined || !canExecuteStudioCommand(definition, context)) return null;
+  return definition.id;
+}
+
+export function canExecuteStudioCommand(
+  definition: StudioCommandDefinition,
+  context: Pick<StudioShortcutContext, "canEdit" | "hasSelection" | "canResetSelection">,
+): boolean {
+  if (definition.requiresEdit && !context.canEdit) return false;
+  if (definition.requiresSelection && !context.hasSelection) return false;
+  return !definition.requiresReset || context.canResetSelection;
+}
+
+function matchesChord(
+  input: ShortcutInput,
+  chord: StudioShortcutChord,
+  platform: StudioPlatform,
+): boolean {
+  if (chord.platform !== undefined && chord.platform !== platform) return false;
+  const expectsMeta = chord.primary === true && platform === "mac";
+  const expectsControl = chord.control === true || (chord.primary === true && platform === "other");
+  return (
+    normalizeInputKey(input) === normalizeKey(chord.key) &&
+    input.altKey === (chord.alt ?? false) &&
+    input.shiftKey === (chord.shift ?? false) &&
+    input.metaKey === expectsMeta &&
+    input.ctrlKey === expectsControl
+  );
+}
+
+function normalizeInputKey(input: ShortcutInput): string {
+  if (input.shiftKey && input.key === "/") return "?";
+  return normalizeKey(input.key);
+}
+
+function normalizeKey(key: string): string {
+  return key.length === 1 ? key.toLowerCase() : key;
 }
 
 function isEditingText(input: ShortcutInput): boolean {

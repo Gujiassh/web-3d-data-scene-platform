@@ -412,7 +412,7 @@ test.describe("Feature 006 scene layout", () => {
 
     await selectTreeEntities(page, ["layout-entity-b"]);
     await page.getByLabel("Grid").fill("0.5");
-    await page.getByRole("button", { name: "Move" }).click();
+    await page.getByRole("button", { name: "Move (W)", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Snap" })).toContainText("T 0.5");
     const translatePixels = await canvas.screenshot();
     await dragTransformControl(page, canvas, [-0.75, 0, 2.25], "x", "linear", 72);
@@ -432,7 +432,7 @@ test.describe("Feature 006 scene layout", () => {
 
     await selectTreeEntities(page, ["layout-entity-b"]);
     await page.locator(".layout-snap-fields").getByLabel("Scale", { exact: true }).fill("0.25");
-    await page.getByRole("button", { name: "Scale" }).click();
+    await page.getByRole("button", { name: "Scale (R)", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Snap" })).toContainText("S 0.25");
     await dragTransformControl(page, canvas, translatedB.position, "x", "linear", 56);
     await expectRevision(page, 3);
@@ -489,7 +489,7 @@ test.describe("Feature 006 scene layout", () => {
 
     await selectTreeEntities(page, ["layout-entity-c"]);
     await page.getByLabel("Angle").fill("15");
-    await page.getByRole("button", { name: "Rotate" }).click();
+    await page.getByRole("button", { name: "Rotate (E)", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Snap" })).toContainText("R 15.0 deg");
     await dragTransformControl(page, canvas, [3.5, 0, -0.25], "y", "rotation", 58);
     await expectRevision(page, 2);

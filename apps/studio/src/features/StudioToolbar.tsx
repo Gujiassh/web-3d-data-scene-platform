@@ -3,6 +3,7 @@ import {
   Download,
   Copy,
   FolderOpen,
+  CircleHelp,
   MousePointer2,
   Move3d,
   Pause,
@@ -21,6 +22,7 @@ import { ThemeSwitch } from "@web3d/demo-support/theme-switch";
 import { useTheme } from "@web3d/demo-support/theme-provider";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { detectStudioPlatform, studioCommandShortcut } from "../session/shortcut-registry";
 import type { AuthoringTool, SaveState, StudioMode } from "../session/session-state";
 
 interface StudioToolbarProps {
@@ -45,18 +47,21 @@ interface StudioToolbarProps {
   readonly onExport: () => void;
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
+  readonly onOpenHelp: () => void;
+  readonly helpButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
 const tools = [
-  { value: "select", icon: MousePointer2 },
-  { value: "translate", icon: Move3d },
-  { value: "rotate", icon: Rotate3d },
-  { value: "scale", icon: Scale3d },
+  { value: "select", commandId: "tool.select", icon: MousePointer2 },
+  { value: "translate", commandId: "tool.translate", icon: Move3d },
+  { value: "rotate", commandId: "tool.rotate", icon: Rotate3d },
+  { value: "scale", commandId: "tool.scale", icon: Scale3d },
 ] as const;
 
 export function StudioToolbar(props: StudioToolbarProps) {
   const { locale, setLocale, t } = useStudioI18n();
   const { theme, toggleTheme } = useTheme();
+  const platform = detectStudioPlatform(globalThis.navigator);
 
   return (
     <header className="studio-toolbar">
@@ -120,13 +125,14 @@ export function StudioToolbar(props: StudioToolbarProps) {
       </div>
 
       <div className="toolbar-group" aria-label={t.toolbar.authoringToolsGroup}>
-        {tools.map(({ value, icon: Icon }) => (
+        {tools.map(({ value, commandId, icon: Icon }) => (
           <IconCommand
             active={props.tool === value}
             disabled={!props.canEdit}
             icon={<Icon size={16} />}
             key={value}
             label={t.toolbar.tools[value]}
+            shortcut={studioCommandShortcut(commandId, platform)}
             onClick={() => props.onToolChange(value)}
           />
         ))}
@@ -152,6 +158,13 @@ export function StudioToolbar(props: StudioToolbarProps) {
       </div>
 
       <span className="toolbar-spacer" />
+      <IconCommand
+        {...(props.helpButtonRef === undefined ? {} : { buttonRef: props.helpButtonRef })}
+        icon={<CircleHelp size={16} />}
+        label={t.toolbar.help}
+        shortcut={studioCommandShortcut("help.open", platform)}
+        onClick={props.onOpenHelp}
+      />
       <LanguageSwitch
         ariaLabel={t.app.languageSwitch.ariaLabel}
         chineseLabel={t.app.languageSwitch.chineseLabel}
@@ -186,24 +199,32 @@ function IconCommand({
   active = false,
   disabled = false,
   description = null,
+  buttonRef,
   icon,
   label,
+  shortcut,
   onClick,
 }: {
   readonly active?: boolean;
   readonly disabled?: boolean;
   readonly description?: string | null;
+  readonly buttonRef?: React.Ref<HTMLButtonElement>;
   readonly icon: React.ReactNode;
   readonly label: string;
+  readonly shortcut?: string;
   readonly onClick: () => void;
 }) {
+  const commandLabel = shortcut === undefined ? label : `${label} (${shortcut})`;
+  const accessibleLabel = description === null ? commandLabel : `${commandLabel}. ${description}`;
+  const title = description === null ? commandLabel : `${commandLabel} - ${description}`;
   return (
     <button
-      aria-label={description === null ? label : `${label}. ${description}`}
+      ref={buttonRef}
+      aria-label={accessibleLabel}
       aria-pressed={active}
       className={`icon-button ${active ? "is-active" : ""}`}
       disabled={disabled}
-      title={description ?? label}
+      title={title}
       type="button"
       onClick={onClick}
     >

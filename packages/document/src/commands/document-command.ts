@@ -16,6 +16,11 @@ import type {
 } from "./types.js";
 import { applyDataBindingDocumentCommand } from "./data-binding-command.js";
 import { applyLayoutDocumentCommand } from "./layout-command.js";
+import {
+  assertTransformInvariant,
+  cloneTransform,
+  transformsEqual,
+} from "./transform-invariants.js";
 
 export function executeDocumentCommand(
   document: SceneDocument,
@@ -124,19 +129,19 @@ function applyTransformCommand(
   before: Transform,
   after: Transform,
 ): SceneDocument {
+  const entity = document.entities.find((candidate) => candidate.id === entityId);
+  if (entity === undefined) throw new Error(`Entity '${entityId}' does not exist.`);
+  if (entity.locked) throw new Error(`Locked entity '${entityId}' cannot be transformed.`);
+  assertTransformInvariant(before, `Transform before '${entityId}'`);
+  assertTransformInvariant(after, `Transform after '${entityId}'`);
+  if (!transformsEqual(entity.transform, before)) {
+    throw new Error(`Transform before snapshot does not match entity '${entityId}'.`);
+  }
+  if (transformsEqual(before, after)) return document;
   return reviseDocument(document, {
-    entities: replaceEntity(document.entities, entityId, (entity) => {
-      if (entity.locked) {
-        throw new Error(`Locked entity '${entityId}' cannot be transformed.`);
-      }
-      if (!transformsEqual(entity.transform, before)) {
-        throw new Error(`Transform before snapshot does not match entity '${entityId}'.`);
-      }
-      return {
-        ...entity,
-        transform: cloneTransform(after),
-      };
-    }),
+    entities: document.entities.map((candidate) =>
+      candidate.id === entityId ? { ...candidate, transform: cloneTransform(after) } : candidate,
+    ),
   });
 }
 
@@ -317,22 +322,6 @@ function cloneTarget(target: SceneTarget, overrides: Partial<SceneTarget> = {}):
   };
 }
 
-function cloneTransform(transform: Transform): Transform {
-  return {
-    position: [...transform.position] as Transform["position"],
-    rotation: [...transform.rotation] as Transform["rotation"],
-    scale: [...transform.scale] as Transform["scale"],
-  };
-}
-
-function transformsEqual(left: Transform, right: Transform): boolean {
-  return (
-    arraysEqual(left.position, right.position) &&
-    arraysEqual(left.rotation, right.rotation) &&
-    arraysEqual(left.scale, right.scale)
-  );
-}
-
 function assetsEqual(left: SceneAsset, right: SceneAsset): boolean {
   return (
     left.id === right.id &&
@@ -353,8 +342,4 @@ function assetStatsEqual(left: SceneAsset["stats"], right: SceneAsset["stats"]):
     left.materialCount === right.materialCount &&
     left.triangleCount === right.triangleCount
   );
-}
-
-function arraysEqual(left: readonly number[], right: readonly number[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
 }

@@ -89,6 +89,10 @@ export class TransformAuthoringController {
     return this.#activeTool;
   }
 
+  isDragging(): boolean {
+    return this.#draggingEntityId !== null;
+  }
+
   dispose(): void {
     this.#cancelDrag(true);
     this.#orbitControls.enabled = true;
@@ -216,7 +220,16 @@ function sameTransformSettings(
 }
 
 function isTransformable(entity: RuntimeEntity): boolean {
-  return entity.entity.visible && !entity.entity.locked;
+  return !entity.entity.locked && isEffectivelyVisible(entity.object);
+}
+
+function isEffectivelyVisible(object: Object3D): boolean {
+  let current: Object3D | null = object;
+  while (current !== null) {
+    if (!current.visible) return false;
+    current = current.parent;
+  }
+  return true;
 }
 
 function readTransform(object: Object3D): Transform {

@@ -1,4 +1,4 @@
-import type { GroupEntity, SceneDocument, SceneEntity, SceneTarget, Transform } from "../types.js";
+import type { GroupEntity, SceneDocument, SceneEntity, SceneTarget } from "../types.js";
 import type {
   CreateGroupCommand,
   DuplicateSubtreeCommand,
@@ -10,6 +10,11 @@ import type {
   ReparentEntitiesCommand,
   TransformEntitiesCommand,
 } from "./types.js";
+import {
+  assertTransformInvariant,
+  cloneTransform,
+  transformsEqual,
+} from "./transform-invariants.js";
 
 export function applyLayoutDocumentCommand(
   document: SceneDocument,
@@ -32,7 +37,7 @@ export function applyLayoutDocumentCommand(
 function createGroup(document: SceneDocument, command: CreateGroupCommand): SceneDocument {
   if (command.group.type !== "group") throw new Error("Created entity must be a group.");
   assertUnusedId(document, command.group.id, "group");
-  assertFiniteTransform(command.group.transform, `Group '${command.group.id}'`);
+  assertTransformInvariant(command.group.transform, `Group '${command.group.id}'`);
   assertUnlockedGroupDestination(document.entities, command.group.parentId);
   preflightPlacementChanges(document, command.members, new Set([command.group.id]));
   if (command.members.length > 0) {
@@ -86,8 +91,8 @@ function transformEntities(
   for (const change of command.changes) {
     const entity = requireEntity(entitiesById, change.entityId);
     if (entity.locked) throw new Error(`Locked entity '${change.entityId}' cannot be transformed.`);
-    assertFiniteTransform(change.before, `Transform before '${change.entityId}'`);
-    assertFiniteTransform(change.after, `Transform after '${change.entityId}'`);
+    assertTransformInvariant(change.before, `Transform before '${change.entityId}'`);
+    assertTransformInvariant(change.after, `Transform after '${change.entityId}'`);
     if (!transformsEqual(entity.transform, change.before)) {
       throw new Error(`Transform before snapshot does not match entity '${change.entityId}'.`);
     }
@@ -320,16 +325,7 @@ function assertAcyclicHierarchy(entities: readonly SceneEntity[]): void {
 }
 
 function assertFinitePlacement(placement: EntityPlacement, label: string): void {
-  assertFiniteTransform(placement.transform, label);
-}
-
-function assertFiniteTransform(transform: Transform, label: string): void {
-  if (!transform.scale.every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error(`${label} scale values must be finite and greater than zero.`);
-  }
-  if (![...transform.position, ...transform.rotation].every(Number.isFinite)) {
-    throw new Error(`${label} must contain only finite transform values.`);
-  }
+  assertTransformInvariant(placement.transform, label);
 }
 
 function placementMatches(entity: SceneEntity, placement: EntityPlacement): boolean {
@@ -474,26 +470,6 @@ function cloneTargetForDuplicate(target: SceneTarget, id: string, entityId: stri
     nodeIndex: target.nodeIndex,
     metadata: { ...target.metadata },
   };
-}
-
-function cloneTransform(transform: Transform): Transform {
-  return {
-    position: [...transform.position] as Transform["position"],
-    rotation: [...transform.rotation] as Transform["rotation"],
-    scale: [...transform.scale] as Transform["scale"],
-  };
-}
-
-function transformsEqual(left: Transform, right: Transform): boolean {
-  return (
-    arraysEqual(left.position, right.position) &&
-    arraysEqual(left.rotation, right.rotation) &&
-    arraysEqual(left.scale, right.scale)
-  );
-}
-
-function arraysEqual(left: readonly number[], right: readonly number[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function reviseDocument(
