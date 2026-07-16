@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { setInterfacePreferences } from "./settings-helpers";
 
 const studioUrl = "/";
 const studioLocaleKey = "web3d.studio.locale";
@@ -196,7 +197,7 @@ test.describe("Theme and scene naming", () => {
     await expectNoPageOverflow(page);
     await page.screenshot({ path: artifact("studio-dark-1440x900.png"), fullPage: true });
 
-    await page.getByRole("button", { name: "Switch to light theme" }).click();
+    await setInterfacePreferences(page, { theme: "light" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     expect(await isRememberedCanvas(page, canvas)).toBe(true);
     await expect(page.getByTestId("document-revision")).toHaveAttribute(
@@ -207,10 +208,10 @@ test.describe("Theme and scene naming", () => {
     expect(await activeStoredDocument(page)).toEqual(before);
     expect(await page.evaluate((key) => localStorage.getItem(key), studioThemeKey)).toBe("light");
 
-    await openProjectMenu(page);
-    await page.getByRole("button", { name: "Scene settings", exact: true }).click();
+    await page.getByTestId("scene-settings-button").click();
     const dialog = page.getByRole("dialog", { name: "Scene settings" });
     await expect(dialog).toBeVisible();
+    await dialog.getByRole("tab", { name: "Appearance" }).click();
     await expect(dialog.getByRole("radio", { name: "Follow interface theme" })).toBeChecked();
     await expect(page.locator(".studio-toolbar")).toHaveAttribute("inert", "");
     await page.screenshot({
@@ -230,11 +231,11 @@ test.describe("Theme and scene naming", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expectCanvasBackground(page, canvas, [244, 246, 245]);
-    await expect(page.getByRole("button", { name: "Open project menu" })).toBeFocused();
+    await expect(page.getByTestId("scene-settings-button")).toBeFocused();
 
-    await openProjectMenu(page);
-    await page.getByRole("button", { name: "Scene settings", exact: true }).click();
+    await page.getByTestId("scene-settings-button").click();
     const applyDialog = page.getByRole("dialog", { name: "Scene settings" });
+    await applyDialog.getByRole("tab", { name: "Appearance" }).click();
     await applyDialog.getByText("Custom color", { exact: true }).click();
     await setColorInput(applyDialog.getByLabel("Background color", { exact: true }), "#336699");
     await applyDialog.getByRole("button", { name: "Apply", exact: true }).click();
@@ -253,23 +254,22 @@ test.describe("Theme and scene naming", () => {
         environment: { backgroundMode: "custom", background: "#336699" },
       });
 
-    await page.getByRole("button", { name: "Switch to dark theme" }).click();
+    await setInterfacePreferences(page, { theme: "dark" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
     expect(await isRememberedCanvas(page, canvas)).toBe(true);
 
-    await openProjectMenu(page);
-    await page.getByRole("button", { name: "Scene settings", exact: true }).click();
+    await page.getByTestId("scene-settings-button").click();
     const followPreviewDialog = page.getByRole("dialog", { name: "Scene settings" });
+    await followPreviewDialog.getByRole("tab", { name: "Appearance" }).click();
     await followPreviewDialog.getByText("Follow interface theme", { exact: true }).click();
     await expectCanvasBackground(page, canvas, [17, 23, 21]);
     await followPreviewDialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
 
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByRole("button", { name: "Chinese" }).click();
-    await page.locator(".project-menu-trigger").click();
-    await page.locator(".project-menu-commands button").filter({ hasText: "场景设置" }).click();
+    await setInterfacePreferences(page, { locale: "zh-CN" });
+    await page.getByTestId("scene-settings-button").click();
     await expect(page.locator(".scene-settings-dialog")).toBeVisible();
     await expectNoPageOverflow(page);
     await page.screenshot({
@@ -277,7 +277,7 @@ test.describe("Theme and scene naming", () => {
       fullPage: true,
     });
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "英文" }).click();
+    await setInterfacePreferences(page, { locale: "en" });
 
     await page.reload();
     const reloadedCanvas = await readyCanvas(page);

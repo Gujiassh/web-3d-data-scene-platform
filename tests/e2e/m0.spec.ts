@@ -18,8 +18,8 @@ test.describe("M0 Studio browser acceptance", () => {
     await expect(page.getByTestId("viewport-mode")).toHaveText("EDIT / SELECT / NO SELECTION");
     await expect(page.getByRole("treeitem")).toHaveCount(0);
     await expect(page.getByText("No selection", { exact: true })).toBeVisible();
-    await expect(page.locator(".diagnostics-title span")).toHaveText("0");
-    await expect(page.getByText("document=valid storage=indexeddb authoring=ready")).toBeVisible();
+    await expect(page.locator(".studio-diagnostics")).toHaveCount(0);
+    await expect(page.getByText("document=valid storage=indexeddb authoring=ready")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Run", exact: true }).click();
     await expect(page.getByTestId("viewport-mode")).toHaveText("RUN / SELECT / NO SELECTION");

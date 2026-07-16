@@ -35,45 +35,32 @@ test.describe("M1 Studio browser acceptance", () => {
     await nameInput.press("Enter");
     await expectRevision(page, 2);
 
-    const positionX = page.getByLabel("Position X");
-    await positionX.fill("1.5");
-    await positionX.press("Enter");
-    await expectRevision(page, 3);
-
     const renamedRow = page.getByRole("treeitem").filter({ hasText: "Factory Cell" }).first();
     await renamedRow.getByRole("button", { name: "Hide Factory Cell" }).click();
-    await expectRevision(page, 4);
+    await expectRevision(page, 3);
     await renamedRow.getByRole("button", { name: "Lock Factory Cell" }).click();
-    await expectRevision(page, 5);
-    await expect(positionX).toBeDisabled();
+    await expectRevision(page, 4);
     await expect(page.getByText("Locked", { exact: true })).toBeVisible();
     await page.screenshot({ path: artifact("m1-locked-hidden-1440x900.png"), fullPage: true });
 
     await page.getByRole("button", { name: "Undo" }).click();
+    await expectRevision(page, 5);
+    await expect(page.getByText("Locked", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Undo" }).click();
     await expectRevision(page, 6);
-    await expect(positionX).toBeDisabled();
-    await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 7);
     await expect(renamedRow.getByRole("button", { name: "Hide Factory Cell" })).toBeVisible();
-    await expect(positionX).toBeEnabled();
-    await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 8);
-    await expect(positionX).toHaveValue("0");
 
     await page.getByRole("button", { name: "Redo" }).click();
-    await expectRevision(page, 9);
-    await expect(positionX).toHaveValue("1.5");
-    await page.getByRole("button", { name: "Redo" }).click();
-    await expectRevision(page, 10);
+    await expectRevision(page, 7);
     await expect(renamedRow.getByRole("button", { name: "Show Factory Cell" })).toBeVisible();
     await page.getByRole("button", { name: "Redo" }).click();
-    await expectRevision(page, 11);
-    await expect(positionX).toBeDisabled();
+    await expectRevision(page, 8);
+    await expect(page.getByText("Locked", { exact: true })).toBeVisible();
 
     await renamedRow.getByRole("button", { name: "Show Factory Cell" }).click();
-    await expectRevision(page, 12);
+    await expectRevision(page, 9);
     await renamedRow.getByRole("button", { name: "Unlock Factory Cell" }).click();
-    await expectRevision(page, 13);
+    await expectRevision(page, 10);
 
     const selectFrame = await canvas.screenshot();
     await page.getByRole("button", { name: "Move (W)", exact: true }).click();
@@ -83,21 +70,6 @@ test.describe("M1 Studio browser acceptance", () => {
     expect(moveFrame.equals(selectFrame)).toBe(false);
     expect((await canvasMetrics(page, canvas)).axisColorRatio).toBeGreaterThan(0.0005);
     await page.screenshot({ path: artifact("m1-move-gizmo-1440x900.png"), fullPage: true });
-
-    const canvasBox = await canvas.boundingBox();
-    expect(canvasBox).not.toBeNull();
-    const dragStart = {
-      x: (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) * 0.69,
-      y: (canvasBox?.y ?? 0) + (canvasBox?.height ?? 0) * 0.57,
-    };
-    await page.mouse.move(dragStart.x, dragStart.y);
-    await page.mouse.down();
-    await page.mouse.move(dragStart.x + (canvasBox?.width ?? 0) * 0.08, dragStart.y, { steps: 8 });
-    await expectRevision(page, 13);
-    await page.screenshot({ path: artifact("m1-transform-preview-1440x900.png"), fullPage: true });
-    await page.mouse.up();
-    await expectRevision(page, 14);
-    expect(Number(await positionX.inputValue())).toBeGreaterThan(1.5);
 
     await page.getByRole("button", { name: "Rotate (E)", exact: true }).click();
     await expect(page.getByTestId("viewport-mode")).toContainText("ROTATE");
@@ -116,27 +88,27 @@ test.describe("M1 Studio browser acceptance", () => {
     await expect(page.getByRole("button", { name: "Duplicate selection" })).toBeDisabled();
     await page.keyboard.press("w");
     await page.keyboard.press("Delete");
-    await expectRevision(page, 14);
+    await expectRevision(page, 10);
     await expect(page.getByRole("treeitem")).toHaveCount(1);
     await expect(page.getByTestId("viewport-mode")).toContainText("RUN / SELECT");
     await page.getByRole("button", { name: "Edit", exact: true }).click();
 
     await page.getByRole("button", { name: "Duplicate selection" }).click();
-    await expectRevision(page, 15);
+    await expectRevision(page, 11);
     await expect(page.getByRole("treeitem")).toHaveCount(2);
     await page.getByRole("button", { name: "Delete selection" }).click();
-    await expectRevision(page, 16);
+    await expectRevision(page, 12);
     await expect(page.getByRole("treeitem")).toHaveCount(1);
     await expect(page.getByText("No selection", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 17);
+    await expectRevision(page, 13);
     await expect(page.getByRole("treeitem")).toHaveCount(2);
 
-    await expectStoredRevision(page, 17);
+    await expectStoredRevision(page, 13);
     await expect(page.getByTestId("save-state")).toHaveText("Saved locally");
     await page.reload();
     await readyCanvas(page);
-    await expect(page.getByTestId("document-revision")).toHaveText("revision 17");
+    await expect(page.getByTestId("document-revision")).toHaveText("revision 13");
     await expect(page.getByRole("treeitem")).toHaveCount(2);
     await expect(page.getByRole("treeitem").filter({ hasText: "Factory Cell" })).toHaveCount(2);
 
@@ -144,10 +116,10 @@ test.describe("M1 Studio browser acceptance", () => {
     const reloadNameInput = page.getByLabel("Name", { exact: true });
     await reloadNameInput.fill("Reload Flush Cell");
     await reloadNameInput.press("Enter");
-    await expectRevision(page, 18);
+    await expectRevision(page, 14);
     await reloadFromDocument(page);
     await readyCanvas(page);
-    await expect(page.getByTestId("document-revision")).toHaveText("revision 18");
+    await expect(page.getByTestId("document-revision")).toHaveText("revision 14");
     await expect(page.getByRole("treeitem").filter({ hasText: "Reload Flush Cell" })).toHaveCount(
       1,
     );
@@ -238,6 +210,11 @@ test.describe("M1 Studio browser acceptance", () => {
     await expectRevision(page, 2);
     await expect(page.getByTestId("save-state")).toHaveText("Save failed", { timeout: 5_000 });
     await expectStoredRevision(page, 1);
+    await page.getByRole("button", { name: "Save local project" }).click();
+    const diagnostics = page.locator(".studio-diagnostics");
+    await expect(diagnostics).toBeVisible();
+    await expect(diagnostics.locator(".diagnostics-title span")).toHaveText("1");
+    await expect(diagnostics.locator(".diagnostics-stream")).not.toHaveText("");
     await page.screenshot({ path: artifact("m1-save-failed-1440x900.png"), fullPage: true });
 
     await setStorageFailure(page, false);

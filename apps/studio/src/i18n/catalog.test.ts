@@ -66,4 +66,12 @@ describe("Studio catalog", () => {
       "当前预设：自定义",
     );
   });
+
+  it("keeps app Settings language and theme labels symmetric", () => {
+    expect(Object.keys(english.appSettings)).toEqual(Object.keys(chinese.appSettings));
+    expect(english.toolbar.settings).toBe("Settings");
+    expect(chinese.toolbar.settings).toBe("设置");
+    expect(english.toolbar.sceneSettings).toBe("Scene settings");
+    expect(chinese.toolbar.sceneSettings).toBe("场景设置");
+  });
 });

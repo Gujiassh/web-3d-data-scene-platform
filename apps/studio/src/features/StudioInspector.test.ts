@@ -29,7 +29,7 @@ describe("StudioInspector", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps alarm focus and disabled layout controls reachable in one Run scroll region", () => {
+  it("keeps alarm focus without exposing hidden layout controls in Run", () => {
     const onFocusTarget = vi.fn();
     const preview = {
       ...createStudioPreviewState(false),
@@ -64,8 +64,6 @@ describe("StudioInspector", () => {
             layout: layoutModel(),
             onFocusTarget,
             onRename: () => undefined,
-            onReset: () => ({ status: "unavailable" as const }),
-            onTransformChange: () => ({ status: "unavailable" as const }),
           }),
         ),
       );
@@ -76,8 +74,6 @@ describe("StudioInspector", () => {
     const content = inspector.children[1] as HTMLElement;
     expect(content.classList.contains("run-inspector-content")).toBe(true);
     expect(content.querySelector(".run-preview-panel")).not.toBeNull();
-    expect(content.querySelector(".scene-layout-panel")).not.toBeNull();
-
     const alarmButton = content.querySelector<HTMLButtonElement>(
       'button[aria-label="Focus alarm target target-a"]',
     );
@@ -86,11 +82,7 @@ describe("StudioInspector", () => {
     expect(onFocusTarget).toHaveBeenCalledOnce();
     expect(onFocusTarget).toHaveBeenCalledWith("target-a");
 
-    const layoutControls = content.querySelectorAll<
-      HTMLButtonElement | HTMLInputElement | HTMLSelectElement
-    >('[data-layout-control="true"]');
-    expect(layoutControls).toHaveLength(16);
-    expect(Array.from(layoutControls).every((control) => control.disabled)).toBe(true);
+    expect(content.querySelector(".scene-layout-panel")).toBeNull();
   });
 });
 

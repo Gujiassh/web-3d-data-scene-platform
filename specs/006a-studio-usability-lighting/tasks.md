@@ -154,6 +154,22 @@ roll back; appearance preview/apply/cancel/undo round-trips as current 1.2 witho
 - [x] T038 Run reverse Critical review for migration/save/runtime lifecycle and close all findings
 - [x] T039 Commit the accepted feature with a coherent Chinese commit and push `main`
 
+## Post-Acceptance Studio Surface Simplification
+
+- [x] T040 Move Scene settings beside Help and add a separate application Settings dialog for locale/theme
+- [x] T041 Remove the duplicate Project-menu entry and hide Transform/Arrange/Snap/Spatial inspector surfaces
+- [x] T042 Collapse empty Diagnostics while preserving real diagnostic messages
+- [x] T043 Replace obsolete visible-layout E2E with current hierarchy, Run-gate and hidden-surface evidence
+
+### Surface simplification acceptance
+
+- Final unit: 81 files / 435 tests.
+- TypeScript: root, E2E and all five workspace projects passed.
+- ESLint, production build (1917 modules), i18n, product design, topology, Prettier and diff checks passed.
+- Chromium/WebGL: 20/20 passed with four workers.
+- Standard review: initial held-preview, diagnostics-oracle and hidden-Transform findings were reworked and the
+  original reviewer returned PASS with no remaining finding.
+
 ### 006A.3 final acceptance
 
 - Full unit: 80 files / 429 tests passed. Root, E2E and all five workspace TypeScript projects passed after

@@ -15,6 +15,7 @@ import "./data-binding/data-binding.css";
 import "./help/shortcut-help.css";
 import "./layout/scene-layout.css";
 import "./scene-settings/scene-settings.css";
+import "./settings/app-settings.css";
 import "./transform/transform-editor.css";
 
 const root = document.querySelector<HTMLDivElement>("#root");

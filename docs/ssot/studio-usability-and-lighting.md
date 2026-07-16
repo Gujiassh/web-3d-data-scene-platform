@@ -3,6 +3,28 @@
 > 状态：006A.1/006A.2/006A.3 accepted
 > 用户批准：2026-07-16，包含 `SceneDocument 1.1.0 -> 1.2.0` 和真实 IndexedDB 数据迁移
 
+## 2026-07-16 产品表面精简
+
+- Toolbar 将 `Scene settings` 与应用级 `Settings` 放在 Help 旁边。`Scene settings` 默认进入 Lighting，
+  继续提供 Appearance/Lighting 两个平级页签，且只在 Edit 可用；应用级 `Settings` 在 Edit/Run 均可用，
+  只管理持久化的中英文和浅色/深色偏好。Project menu 不再重复提供 Scene settings。
+- Object inspector 不再渲染 Transform 表单。精简的 Hierarchy 仍提供 Group 与显式 reparent；Arrange、
+  Transform snap、anchor snap 和 Spatial status 不进入产品 React 树。Run 只呈现运行数据，不渲染编辑层级。
+- 底部 Diagnostics 不再使用 `document=valid storage=indexeddb authoring=ready` 空态；没有真实诊断时整个
+  band 不渲染并释放占用高度，有诊断时仍显示实际消息和数量。
+- 这次只改变 Studio surface。TransformControls、快捷键、DocumentCommand、layout planner、Smart Align、
+  Undo/Redo 和 JSON/ZIP/IndexedDB 合同保持不变，供视口直接编辑和后续灯光实体 authoring 复用。
+- 浏览器证据收敛到当前可见流程：固定 archive 往返、精简 Hierarchy 编组/reparent、Run mutation gate、
+  真实 X/Y/Z/XY TransformControls、Smart Align guide、顶部设置、主题/语言持久化和场景外观。隐藏的
+  arrange/snap 算法继续由 planner/command/unit tests 覆盖，不再伪装成公开 UI acceptance。
+- 最终 Standard review 首轮发现应用 Settings 会提前清除 Apply 后的 `awaiting-ready` appearance preview、
+  diagnostics 缺少正向 browser oracle、Object Transform 缺少明确不可达断言。返修增加 variant-aware
+  `closeSceneSettingsDraftPreview`，只清 draft、不清 held preview；真实手动保存失败证明 diagnostics band、
+  count 和 message；layout E2E 明确证明 Transform/Position X 不在产品树。原 reviewer 复审 PASS。
+- 最终门禁：81 files / 435 unit tests、root/E2E/5 workspace TypeScript、ESLint、production build
+  1917 modules、i18n、product design、single-Studio topology、Prettier、diff check 和 Chromium/WebGL 20/20
+  全部通过。20 条浏览器流程以 4 workers 在 29.1s 完成。
+
 ## 产品边界
 
 Feature 006A 是已验收 Scene Layout 的易用性后续阶段，按 006A.1 命令与回正、006A.2 智能对齐、

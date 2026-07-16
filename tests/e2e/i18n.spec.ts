@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { setInterfacePreferences } from "./settings-helpers";
 
 const studioUrl = "/";
 const studioLocaleKey = "web3d.studio.locale";
@@ -38,7 +39,7 @@ test.describe("Chinese and English interface", () => {
     expect(revision).toBe("1");
     const before = await exportCanonicalDocument(page);
 
-    await page.getByRole("button", { name: "英文", exact: true }).click();
+    await setInterfacePreferences(page, { locale: "en" });
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
     await expect(canvas).toHaveAttribute("aria-label", "Interactive 3D scene");

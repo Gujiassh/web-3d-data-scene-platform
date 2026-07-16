@@ -27,12 +27,14 @@ import {
   type SceneSettingsDraft,
 } from "./scene-settings/model";
 import {
+  closeSceneSettingsDraftPreview,
   createSceneSettingsDraftPreview,
   holdSceneSettingsPreviewUntilReady,
   releaseSceneSettingsPreviewOnReady,
   resolveSceneSettingsPreview,
   type SceneSettingsPreviewState,
 } from "./scene-settings/preview-state";
+import { AppSettingsDialog } from "./settings/AppSettingsDialog";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
 type LeftPanel = "scene" | "assets";
@@ -47,6 +49,8 @@ export function App() {
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const sceneSettingsButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
@@ -55,6 +59,7 @@ export function App() {
     null,
   );
   const [helpOpen, setHelpOpen] = useState(false);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [smartAlignEnabled, toggleSmartAlign] = useSmartAlignPreference();
   const [sceneSettingsPreview, setSceneSettingsPreview] =
     useState<SceneSettingsPreviewState | null>(null);
@@ -114,9 +119,7 @@ export function App() {
     restoreSceneSettingsFocus();
   };
   const restoreSceneSettingsFocus = (): void => {
-    requestAnimationFrame(() =>
-      document.querySelector<HTMLButtonElement>(".project-menu-trigger")?.focus(),
-    );
+    requestAnimationFrame(() => sceneSettingsButtonRef.current?.focus());
   };
   const handleSceneSettingsPreview = useCallback(
     (settings: SceneSettingsDraft) => {
@@ -129,6 +132,18 @@ export function App() {
   const closeHelp = (): void => {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
+  };
+  const closeAppSettings = (): void => {
+    setAppSettingsOpen(false);
+    requestAnimationFrame(() => settingsButtonRef.current?.focus());
+  };
+  const openSceneSettings = (): void => {
+    if (!workspace.canEdit || projectDocumentKey === null || project === null) return;
+    setProjectMenuOpen(false);
+    setHelpOpen(false);
+    setAppSettingsOpen(false);
+    setSceneSettingsDraftValue(sceneSettingsDraft(project.document.environment));
+    setSceneSettingsKey(projectDocumentKey);
   };
 
   useEffect(() => {
@@ -183,6 +198,7 @@ export function App() {
     hasSelection: selectedEntityId !== null,
     modalOpen:
       helpOpen ||
+      appSettingsOpen ||
       workspace.importState !== null ||
       sceneNameDialogMode !== null ||
       sceneSettingsOpen,
@@ -204,6 +220,8 @@ export function App() {
     <div className="studio-app">
       <StudioToolbar
         helpButtonRef={helpButtonRef}
+        sceneSettingsButtonRef={sceneSettingsButtonRef}
+        settingsButtonRef={settingsButtonRef}
         canEdit={workspace.canEdit}
         canDuplicate={sceneLayout.capabilities.duplicate.enabled}
         canRedo={historyCapabilities.canRedo}
@@ -230,7 +248,17 @@ export function App() {
         onOpenProjectMenu={() => setProjectMenuOpen((open) => !open)}
         onOpenHelp={() => {
           setProjectMenuOpen(false);
+          setAppSettingsOpen(false);
           setHelpOpen(true);
+        }}
+        onOpenSceneSettings={openSceneSettings}
+        onOpenSettings={() => {
+          setProjectMenuOpen(false);
+          setHelpOpen(false);
+          setSceneSettingsKey(null);
+          setSceneSettingsDraftValue(null);
+          setSceneSettingsPreview(closeSceneSettingsDraftPreview);
+          setAppSettingsOpen(true);
         }}
         onToggleSmartAlign={toggleSmartAlign}
         onRedo={workspace.redo}
@@ -241,7 +269,6 @@ export function App() {
 
       {projectMenuOpen && project !== null && (
         <ProjectMenu
-          canConfigureScene={workspace.canEdit}
           canRename={workspace.canEdit}
           currentProjectId={project.record.id}
           recent={workspace.recent.map((item) => ({
@@ -271,12 +298,6 @@ export function App() {
           onRename={() => {
             setProjectMenuOpen(false);
             setSceneNameDialogMode("rename");
-          }}
-          onSceneSettings={() => {
-            if (!workspace.canEdit || projectDocumentKey === null) return;
-            setProjectMenuOpen(false);
-            setSceneSettingsDraftValue(sceneSettingsDraft(project.document.environment));
-            setSceneSettingsKey(projectDocumentKey);
           }}
           onOpen={(projectId) => {
             setProjectMenuOpen(false);
@@ -418,22 +439,18 @@ export function App() {
             onRename={(entityId, name) =>
               workspace.execute({ type: "rename-entity", entityId, name })
             }
-            onReset={sceneLayout.resetSelection}
-            onTransformChange={sceneLayout.commitEntityTransform}
           />
         )}
 
-        <section className="studio-diagnostics" aria-label={t.app.diagnostics.label}>
-          <div className="diagnostics-title">
-            <TriangleAlert size={14} /> {t.app.diagnostics.label}
-            <span>{workspace.diagnostics.length}</span>
-          </div>
-          <div className="diagnostics-stream mono">
-            {workspace.diagnostics.length === 0
-              ? t.app.diagnostics.ready
-              : workspace.diagnostics.join(" · ")}
-          </div>
-        </section>
+        {workspace.diagnostics.length > 0 && (
+          <section className="studio-diagnostics" aria-label={t.app.diagnostics.label}>
+            <div className="diagnostics-title">
+              <TriangleAlert size={14} /> {t.app.diagnostics.label}
+              <span>{workspace.diagnostics.length}</span>
+            </div>
+            <div className="diagnostics-stream mono">{workspace.diagnostics.join(" · ")}</div>
+          </section>
+        )}
       </main>
 
       {workspace.importState !== null && (
@@ -466,6 +483,7 @@ export function App() {
       {sceneSettingsOpen && project !== null && sceneSettingsDraftValue !== null && (
         <SceneSettingsDialog
           draft={sceneSettingsDraftValue}
+          initialTab="lighting"
           key={projectDocumentKey ?? undefined}
           onApply={(settings) => {
             const outcome = workspace.execute(
@@ -495,6 +513,7 @@ export function App() {
       )}
 
       {helpOpen && <ShortcutHelpDialog onClose={closeHelp} />}
+      {appSettingsOpen && <AppSettingsDialog onClose={closeAppSettings} />}
 
       <input
         ref={modelInputRef}

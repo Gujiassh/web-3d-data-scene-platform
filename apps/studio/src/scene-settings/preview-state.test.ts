@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { lightingForPreset, type SceneSettingsDraft } from "./model";
 import {
+  closeSceneSettingsDraftPreview,
   createSceneSettingsDraftPreview,
   holdSceneSettingsPreviewUntilReady,
   releaseSceneSettingsPreviewOnReady,
@@ -42,5 +43,14 @@ describe("scene settings preview state", () => {
     expect(resolveSceneSettingsPreview(draft, key, "#111715")?.background).toBe("#111715");
     expect(resolveSceneSettingsPreview(draft, "project-b\u0000scene-a", "#111715")).toBeNull();
     expect(resolveSceneSettingsPreview(null, key, "#111715")).toBeNull();
+  });
+
+  it("closes only an open draft and preserves an applied preview until ready", () => {
+    const draft = createSceneSettingsDraftPreview(key, settings);
+    const awaiting = holdSceneSettingsPreviewUntilReady(key, settings, 8);
+
+    expect(closeSceneSettingsDraftPreview(draft)).toBeNull();
+    expect(closeSceneSettingsDraftPreview(awaiting)).toBe(awaiting);
+    expect(closeSceneSettingsDraftPreview(null)).toBeNull();
   });
 });

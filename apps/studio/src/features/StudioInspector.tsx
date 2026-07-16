@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Activity, Box, Database } from "lucide-react";
 
-import type { DocumentCommand, SceneDocument, SceneEntity, Transform } from "@web3d/document";
+import type { DocumentCommand, SceneDocument, SceneEntity } from "@web3d/document";
 
 import { DataBindingPanel } from "../data-binding/DataBindingPanel";
 import { RunPreviewPanel } from "../data-binding/RunPreviewPanel";
@@ -10,7 +10,6 @@ import { useStudioI18n } from "../i18n/I18nProvider";
 import { SceneLayoutPanel } from "../layout/SceneLayoutPanel";
 import type { StudioSceneLayout } from "../layout/useStudioSceneLayout";
 import type { StudioCommandOutcome } from "../workspace/command-outcome";
-import type { TransformResetComponent } from "../transform/transform-reset";
 import { EntityInspector } from "./EntityInspector";
 import { inspectorAuthoringStateKey } from "./inspector-authoring-state";
 import { inspectorTabForKey, type InspectorTab } from "./inspector-tabs";
@@ -28,8 +27,6 @@ interface StudioInspectorProps {
   readonly layout: StudioSceneLayout;
   readonly onFocusTarget: (targetId: string) => void;
   readonly onRename: (entityId: string, name: string) => void;
-  readonly onTransformChange: (entityId: string, transform: Transform) => StudioCommandOutcome;
-  readonly onReset: (component: TransformResetComponent) => StudioCommandOutcome;
 }
 
 export function StudioInspector(props: StudioInspectorProps) {
@@ -60,7 +57,6 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
               preview={props.preview}
               selectedEntityId={props.selectedEntityId}
             />
-            <SceneLayoutPanel layout={props.layout} />
           </div>
         </>
       ) : (
@@ -91,14 +87,11 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
           >
             <EntityInspector
               authoritativeRevision={props.document.revision}
-              canReset={props.layout.resetCapability.enabled}
-              editable={props.layout.primaryTransformEditable}
+              editable={props.editable && props.entity !== null && !props.entity.locked}
               entity={props.entity}
               onRename={props.onRename}
-              onReset={props.onReset}
-              onTransformChange={props.onTransformChange}
             />
-            <SceneLayoutPanel layout={props.layout} />
+            <SceneLayoutPanel compact layout={props.layout} />
           </div>
           <div
             aria-labelledby="data-inspector-tab"

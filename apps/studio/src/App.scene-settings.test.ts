@@ -84,7 +84,7 @@ const harness = vi.hoisted(() => ({
       save: { status: "saved" as const, revision: 1 },
     },
     recent: [],
-    diagnostics: [],
+    diagnostics: [] as string[],
     importState: null,
     assetResolver: { resolve: vi.fn() },
     dirty: false,
@@ -303,7 +303,6 @@ describe("App scene settings preview", () => {
       );
     });
 
-    act(() => container.querySelector<HTMLButtonElement>(".project-menu-trigger")!.click());
     const beforeOpen = harness.authoringSceneRenders.length;
     expect(() => {
       act(() =>
@@ -368,6 +367,42 @@ describe("App scene settings preview", () => {
     expect(harness.lightingRenders.at(-1)).toBeNull();
   });
 
+  it("keeps an applied preview while application Settings opens before matching ready", () => {
+    renderApp();
+    openSceneSettings();
+    act(() => tab("Appearance").click());
+    checkInput(input("Custom color"), true);
+    changeInput(input("Background color"), "#336699");
+    harness.workspace.execute.mockReturnValueOnce({ status: "changed", revision: 2 });
+
+    act(() =>
+      container
+        .querySelector<HTMLFormElement>("form")!
+        .dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true })),
+    );
+    act(() => button("Settings").click());
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe("Settings");
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 1 }));
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 2 }));
+    expect(harness.authoringSceneRenders.at(-1)).toBeNull();
+  });
+
+  it("renders Diagnostics only when a real message exists", () => {
+    harness.workspace.diagnostics = ["ASSET_LOAD_FAILED Missing asset bytes"];
+    renderApp();
+
+    expect(container.querySelector(".diagnostics-title span")?.textContent).toBe("1");
+    expect(container.querySelector(".diagnostics-stream")?.textContent).toBe(
+      "ASSET_LOAD_FAILED Missing asset bytes",
+    );
+    harness.workspace.diagnostics = [];
+    renderApp();
+    expect(container.querySelector(".studio-diagnostics")).toBeNull();
+  });
+
   it("synchronously selects the runtime tool before entering Run without recreating the Viewer", () => {
     harness.workspace.session.tool = "translate";
     renderApp();
@@ -412,7 +447,6 @@ describe("App scene settings preview", () => {
   }
 
   function openSceneSettings(): void {
-    act(() => container.querySelector<HTMLButtonElement>(".project-menu-trigger")!.click());
     act(() => button("Scene settings").click());
   }
 

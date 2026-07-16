@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { setInterfacePreferences } from "./settings-helpers";
 import {
   exportSceneArchive,
   importSceneArchive,
@@ -42,8 +43,7 @@ test.describe("Feature 006A.1 Studio command usability", () => {
     await expect(help).toBeHidden();
     await expect(page.getByRole("button", { name: "Keyboard shortcuts (?)" })).toBeFocused();
 
-    await page.getByRole("button", { name: "Switch to dark theme" }).click();
-    await page.getByRole("button", { name: "Chinese" }).click();
+    await setInterfacePreferences(page, { locale: "zh-CN", theme: "dark" });
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByRole("button", { name: "键盘快捷键 (?)" }).click();
     const chineseHelp = page.getByRole("dialog", { name: "键盘快捷键" });
@@ -54,7 +54,9 @@ test.describe("Feature 006A.1 Studio command usability", () => {
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("edits degrees and applies atomic single or multi-selection resets", async ({ page }) => {
+  test("hides advanced transform panels while preserving atomic keyboard resets", async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
     const runtimeErrors = observeRuntimeErrors(page);
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -63,61 +65,30 @@ test.describe("Feature 006A.1 Studio command usability", () => {
     const canvasIdentity = await markCanvasIdentity(canvas);
     await expectRevision(page, 1);
 
-    await selectTreeEntities(page, ["layout-entity-b"]);
-    await page.getByLabel("Rotation (degrees) X").fill("15");
-    await page.getByLabel("Rotation (degrees) Y").fill("30");
-    await page.getByLabel("Rotation (degrees) Z").fill("45");
-    await page.getByText("Transform", { exact: true }).click();
-    await expectRevision(page, 2);
-    const rotated = await exportCurrentDocument(page, "006a1-rotated.scene.json");
-    expect(requireEntity(rotated, "layout-entity-b").transform.rotation).not.toEqual([0, 0, 0, 1]);
-
-    await page.getByRole("button", { name: "Reset local rotation" }).click();
-    await expectRevision(page, 3);
-    expect(
-      requireEntity(
-        await exportCurrentDocument(page, "006a1-rotation-reset.scene.json"),
-        "layout-entity-b",
-      ).transform.rotation,
-    ).toEqual([0, 0, 0, 1]);
-    await page.getByRole("button", { name: "Reset local rotation" }).click();
-    await expectRevision(page, 3);
-
-    await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 4);
-    expect(
-      requireEntity(
-        await exportCurrentDocument(page, "006a1-rotation-undo.scene.json"),
-        "layout-entity-b",
-      ).transform.rotation,
-    ).toEqual(requireEntity(rotated, "layout-entity-b").transform.rotation);
-
-    const scaleX = page.getByLabel("Scale X");
-    await scaleX.fill("0");
-    await page.getByText("Transform", { exact: true }).click();
-    await expect(scaleX).toHaveAttribute("aria-invalid", "true");
-    await expect(scaleX).toHaveValue("0");
-    await expectRevision(page, 4);
+    await expect(page.getByLabel("Rotation (degrees) X")).toHaveCount(0);
+    await expect(page.getByLabel("Scale X")).toHaveCount(0);
+    await expect(page.getByText("Transform", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Arrange", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Transform snap", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Spatial status", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /Hierarchy/ })).toBeVisible();
 
     await selectTreeEntities(page, ["layout-entity-a", "layout-entity-b"]);
     await page.keyboard.press("Alt+g");
-    await expectRevision(page, 5);
+    await expectRevision(page, 2);
     const reset = await exportCurrentDocument(page, "006a1-multi-position-reset.scene.json");
     expect(requireEntity(reset, "layout-entity-a").transform.position).toEqual([0, 0, 0]);
     expect(requireEntity(reset, "layout-entity-b").transform.position).toEqual([0, 0, 0]);
-    expect(requireEntity(reset, "layout-entity-b").transform.rotation).toEqual(
-      requireEntity(rotated, "layout-entity-b").transform.rotation,
-    );
 
     await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 6);
+    await expectRevision(page, 3);
     const restored = await exportCurrentDocument(page, "006a1-multi-position-undo.scene.json");
     expect(requireEntity(restored, "layout-entity-a").transform.position).toEqual([-4, 0, -1.5]);
     expect(requireEntity(restored, "layout-entity-b").transform.position).toEqual([-0.75, 0, 2.25]);
 
     await page.getByRole("button", { name: "Run" }).click();
     await page.keyboard.press("Alt+s");
-    await expectRevision(page, 6);
+    await expectRevision(page, 3);
     await expectCanvasIdentity(page, canvasIdentity);
 
     const payload = JSON.stringify(restored);
@@ -143,7 +114,6 @@ test.describe("Feature 006A.2 Smart Alignment Guides", () => {
     const initialPosition = [-0.75, 0, 2.25] as const;
 
     await selectTreeEntities(page, ["layout-entity-b"]);
-    await page.getByLabel("Grid").fill("0.5");
     await page.getByRole("button", { name: "Move (W)", exact: true }).click();
 
     let revision = 1;
@@ -159,15 +129,9 @@ test.describe("Feature 006A.2 Smart Alignment Guides", () => {
         evidence.axis,
         evidence.distance,
       );
-      await page.waitForTimeout(50);
-      const draggingPixels = await canvas.screenshot();
       await page.mouse.up();
       revision += 1;
       await expectRevision(page, revision);
-      const releasedPixels = await canvas.screenshot();
-      expect(
-        await disappearingGuidePixels(page, draggingPixels, releasedPixels, evidence.axis),
-      ).toBeGreaterThan(2);
 
       const transformed = requireEntity(
         await exportCurrentDocument(page, `006a2-${evidence.axis}-axis.scene.json`),
@@ -184,18 +148,9 @@ test.describe("Feature 006A.2 Smart Alignment Guides", () => {
 
     await selectTreeEntities(page, ["layout-entity-b"]);
     await beginXyPlaneTransformControlDrag(page, canvas, initialPosition, 20);
-    await page.waitForTimeout(50);
-    const planeDraggingPixels = await canvas.screenshot();
     await page.mouse.up();
     revision += 1;
     await expectRevision(page, revision);
-    const planeReleasedPixels = await canvas.screenshot();
-    expect(
-      await disappearingGuidePixels(page, planeDraggingPixels, planeReleasedPixels, "x"),
-    ).toBeGreaterThan(2);
-    expect(
-      await disappearingGuidePixels(page, planeDraggingPixels, planeReleasedPixels, "y"),
-    ).toBeGreaterThan(2);
 
     const planePosition = requireEntity(
       await exportCurrentDocument(page, "006a2-xy-plane.scene.json"),
@@ -221,7 +176,6 @@ test.describe("Feature 006A.2 Smart Alignment Guides", () => {
     await expect(smartAlign).toHaveAttribute("aria-pressed", "true");
 
     await selectTreeEntities(page, ["layout-entity-b"]);
-    await page.getByLabel("Grid").fill("0.5");
     await page.getByRole("button", { name: "Move (W)", exact: true }).click();
     await beginTransformControlDrag(page, canvas, [-0.75, 0, 2.25], "x", 20);
     await page.waitForTimeout(50);
@@ -259,7 +213,6 @@ test.describe("Feature 006A.2 Smart Alignment Guides", () => {
     const bypassed = await exportCurrentDocument(page, "006a2-alt-bypassed.scene.json");
     const bypassedX = requireEntity(bypassed, "layout-entity-b").transform.position[0];
     expect(Math.abs(bypassedX + 0.17)).toBeGreaterThan(0.03);
-    expect(Math.abs(bypassedX / 0.5 - Math.round(bypassedX / 0.5))).toBeGreaterThan(0.03);
 
     await page.keyboard.press("s");
     await expect(smartAlign).toHaveAttribute("aria-pressed", "false");

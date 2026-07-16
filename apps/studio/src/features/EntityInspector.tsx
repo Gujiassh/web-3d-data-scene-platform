@@ -1,21 +1,15 @@
 import { useState } from "react";
-import { Box, Lock, Move3d } from "lucide-react";
+import { Box, Lock } from "lucide-react";
 
-import type { SceneEntity, Transform } from "@web3d/document";
+import type { SceneEntity } from "@web3d/document";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
-import { TransformEditor } from "../transform/TransformEditor";
-import type { TransformResetComponent } from "../transform/transform-reset";
-import type { StudioCommandOutcome } from "../workspace/command-outcome";
 
 interface EntityInspectorProps {
   readonly entity: SceneEntity | null;
   readonly authoritativeRevision: number;
   readonly editable: boolean;
-  readonly canReset: boolean;
   readonly onRename: (entityId: string, name: string) => void;
-  readonly onReset: (component: TransformResetComponent) => StudioCommandOutcome;
-  readonly onTransformChange: (entityId: string, transform: Transform) => StudioCommandOutcome;
 }
 
 export function EntityInspector(props: EntityInspectorProps) {
@@ -79,18 +73,6 @@ function EntityInspectorForm(
           mono
         />
       </section>
-      <section className="inspector-section">
-        <h2>
-          <Move3d size={13} /> {t.inspector.transform}
-        </h2>
-        <TransformEditor
-          canReset={props.canReset}
-          editable={props.editable && !props.entity.locked && props.entity.visible}
-          transform={props.entity.transform}
-          onCommit={(after) => props.onTransformChange(props.entity.id, after)}
-          onReset={props.onReset}
-        />
-      </section>
       {props.entity.locked && (
         <div className="inspector-notice">
           <Lock size={13} /> {t.inspector.locked}
@@ -118,12 +100,5 @@ function InspectorValue({
 }
 
 function entityEditorKey(entity: SceneEntity, authoritativeRevision: number): string {
-  return [
-    authoritativeRevision,
-    entity.id,
-    entity.name,
-    ...entity.transform.position,
-    ...entity.transform.rotation,
-    ...entity.transform.scale,
-  ].join(":");
+  return [authoritativeRevision, entity.id, entity.name].join(":");
 }

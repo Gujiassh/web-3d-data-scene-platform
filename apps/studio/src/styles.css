@@ -254,10 +254,14 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 280px minmax(640px, 1fr) 320px;
-  grid-template-rows: minmax(0, 1fr) 32px;
+  grid-template-rows: minmax(0, 1fr) auto;
   grid-template-areas:
     "left viewport inspector"
     "diagnostics diagnostics diagnostics";
+}
+
+.studio-diagnostics:empty {
+  display: none;
 }
 
 .studio-left {

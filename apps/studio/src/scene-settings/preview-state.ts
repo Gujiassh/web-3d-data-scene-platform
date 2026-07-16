@@ -66,3 +66,9 @@ export function releaseSceneSettingsPreviewOnReady(
   }
   return state;
 }
+
+export function closeSceneSettingsDraftPreview(
+  state: SceneSettingsPreviewState | null,
+): SceneSettingsPreviewState | null {
+  return state?.status === "draft" ? null : state;
+}

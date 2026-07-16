@@ -1,0 +1,76 @@
+.app-settings-dialog {
+  width: min(420px, calc(100vw - 40px));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-settings-dialog > header {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-settings-dialog h2 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.app-settings-content {
+  display: grid;
+  gap: 18px;
+  padding: 18px 16px;
+}
+
+.app-settings-content fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.app-settings-content legend {
+  margin-bottom: 7px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.app-setting-segments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+}
+
+.app-setting-segments button {
+  min-height: 32px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.app-setting-segments button[aria-pressed="true"] {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+}
+
+.app-setting-segments button:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: 1px;
+}

@@ -105,6 +105,14 @@ SceneDocument 升级为 1.1.0，以显式 `theme | custom` 模式区分宿主主
 - 旧项目迁移后的首帧灯光与当前固定 Runtime 灯光一致，IndexedDB/JSON/ZIP 只产出 current schema。
 - 1280x720 与 1440x900 的中英文、明暗主题 Help/Scene settings/Canvas 无重叠和裁切。
 
+### 后续产品表面调整
+
+2026-07-16 根据实际使用反馈精简 Studio：Scene settings 与应用 Settings 移到 Help 旁；语言和主题只在
+应用 Settings 管理；Project menu 不再重复设置入口。Object inspector 只保留对象信息、数据与精简
+Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 Spatial status。没有真实诊断时
+底部 Diagnostics 不渲染。底层 transform/layout/smart-align contracts 与 tests 保留，下一阶段的灯光实体
+直接复用 scene tree、selection、TransformControls、DocumentCommand 和 persistence，不重新造编辑链路。
+
 ## 007：热点与交互
 
 ### 所有权

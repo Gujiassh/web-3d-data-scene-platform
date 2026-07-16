@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { setInterfacePreferences } from "./settings-helpers";
 import { importSceneArchive, type SceneDocument } from "../../packages/document/src/index.js";
 
 const studioUrl = "/";
@@ -62,14 +63,12 @@ test.describe("M2 Studio data binding", () => {
     await page.screenshot({ path: artifact("m2-edit-1440x900.png"), fullPage: true });
 
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByRole("button", { name: "Switch to dark theme" }).click();
-    await page.getByRole("button", { name: "Chinese" }).click();
+    await setInterfacePreferences(page, { locale: "zh-CN", theme: "dark" });
     await expectPopulatedRuleEditor(page, { saveLabel: "保存绑定" });
     await expectInspectorContentFits(page);
     await expectNoPageOverflow(page);
     await page.screenshot({ path: artifact("m2-edit-1280x720.png"), fullPage: true });
-    await page.getByRole("button", { name: "英文" }).click();
-    await page.getByRole("button", { name: "Switch to light theme" }).click();
+    await setInterfacePreferences(page, { locale: "en", theme: "light" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
 
@@ -145,10 +144,9 @@ test.describe("M2 Studio data binding", () => {
     await page.screenshot({ path: artifact("m2-run-critical-1440x900.png"), fullPage: true });
 
     const scheduledBeforePreferences = (await mockTimerState(page)).scheduled;
-    await page.getByRole("button", { name: "Switch to dark theme" }).click();
-    await page.getByRole("button", { name: "Chinese" }).click();
+    await setInterfacePreferences(page, { locale: "zh-CN", theme: "dark" });
     await expect(page.getByRole("heading", { name: "数据源" })).toBeVisible();
-    await page.getByRole("button", { name: "英文" }).click();
+    await setInterfacePreferences(page, { locale: "en" });
     await expect(page.getByRole("heading", { name: "Sources" })).toBeVisible();
     expect(await isRememberedCanvas(page, reloadedCanvas)).toBe(true);
     expect((await mockTimerState(page)).scheduled).toBe(scheduledBeforePreferences);
@@ -472,6 +470,8 @@ async function diagnosticsSnapshot(page: Page): Promise<{
   readonly count: string;
   readonly text: string;
 }> {
+  const diagnostics = page.locator(".studio-diagnostics");
+  if ((await diagnostics.count()) === 0) return { count: "0", text: "" };
   return {
     count: (await page.locator(".diagnostics-title span").textContent()) ?? "",
     text: (await page.locator(".diagnostics-stream").textContent()) ?? "",

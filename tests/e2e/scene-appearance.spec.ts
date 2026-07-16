@@ -160,8 +160,7 @@ async function importAppearanceArchive(page: Page): Promise<Locator> {
 }
 
 async function openSceneSettings(page: Page): Promise<void> {
-  await openProjectMenu(page);
-  await page.getByRole("button", { name: "Scene settings", exact: true }).click();
+  await page.getByTestId("scene-settings-button").click();
   await expect(page.getByRole("dialog", { name: "Scene settings" })).toBeVisible();
 }
 

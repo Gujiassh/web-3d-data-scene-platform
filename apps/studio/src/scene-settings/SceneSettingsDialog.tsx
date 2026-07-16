@@ -16,6 +16,7 @@ import {
 
 export interface SceneSettingsDialogProps {
   readonly draft: SceneSettingsDraft;
+  readonly initialTab?: SceneSettingsTab;
   readonly onApply: (draft: SceneSettingsDraft) => boolean;
   readonly onCancel: () => void;
   readonly onDraftChange: (draft: SceneSettingsDraft) => void;
@@ -31,7 +32,8 @@ export function SceneSettingsDialog(props: SceneSettingsDialogProps) {
   const appearancePanelId = useId();
   const lightingPanelId = useId();
   const errorId = useId();
-  const [activeTab, setActiveTab] = useState<SceneSettingsTab>("appearance");
+  const initialTab = props.initialTab ?? "appearance";
+  const [activeTab, setActiveTab] = useState<SceneSettingsTab>(initialTab);
   const [submissionFailed, setSubmissionFailed] = useState(false);
   const preset = deriveLightingPreset(props.draft.lighting);
   const direction = deriveLightingDirection(props.draft.lighting.key.directionToLight);
@@ -46,11 +48,11 @@ export function SceneSettingsDialog(props: SceneSettingsDialogProps) {
       : [];
     const previousInert = siblings.map((element) => ({ element, inert: element.inert }));
     for (const sibling of siblings) sibling.inert = true;
-    appearanceTabRef.current?.focus();
+    tabRefs()[initialTab].current?.focus();
     return () => {
       for (const entry of previousInert) entry.element.inert = entry.inert;
     };
-  }, []);
+  }, [initialTab]);
 
   const update = (next: SceneSettingsDraft): void => {
     setSubmissionFailed(false);

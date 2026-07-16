@@ -33,7 +33,6 @@ export const english = {
     },
     diagnostics: {
       label: "Diagnostics",
-      ready: "document=valid storage=indexeddb authoring=ready",
     },
     languageSwitch: {
       ariaLabel: "Studio language",
@@ -62,6 +61,8 @@ export const english = {
     editMode: "Edit",
     runMode: "Run",
     help: "Keyboard shortcuts",
+    sceneSettings: "Scene settings",
+    settings: "Settings",
     smartAlign: "Smart Align",
     tools: {
       select: "Select",
@@ -145,6 +146,16 @@ export const english = {
     rename: "Rename scene",
     creating: "Creating",
     renaming: "Renaming",
+  },
+  appSettings: {
+    title: "Settings",
+    close: "Close settings",
+    language: "Language",
+    chinese: "Chinese",
+    english: "English",
+    theme: "Theme",
+    light: "Light",
+    dark: "Dark",
   },
   sceneSettings: {
     title: "Scene settings",
@@ -584,7 +595,6 @@ export const chinese: CatalogShape<typeof english> = {
     },
     diagnostics: {
       label: "诊断",
-      ready: "document=valid storage=indexeddb authoring=ready",
     },
     languageSwitch: {
       ariaLabel: "Studio 语言",
@@ -613,6 +623,8 @@ export const chinese: CatalogShape<typeof english> = {
     editMode: "编辑",
     runMode: "运行",
     help: "键盘快捷键",
+    sceneSettings: "场景设置",
+    settings: "设置",
     smartAlign: "智能对齐",
     tools: {
       select: "选择",
@@ -690,6 +702,16 @@ export const chinese: CatalogShape<typeof english> = {
     rename: "重命名场景",
     creating: "正在新建",
     renaming: "正在重命名",
+  },
+  appSettings: {
+    title: "设置",
+    close: "关闭设置",
+    language: "语言",
+    chinese: "中文",
+    english: "英文",
+    theme: "主题",
+    light: "浅色",
+    dark: "深色",
   },
   sceneSettings: {
     title: "场景设置",

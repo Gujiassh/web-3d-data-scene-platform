@@ -13,14 +13,12 @@ import {
   Rotate3d,
   Save,
   Scale3d,
+  Settings2,
+  SunMedium,
   Trash2,
   Undo2,
   Upload,
 } from "lucide-react";
-
-import { LanguageSwitch } from "@web3d/demo-support/language-switch";
-import { ThemeSwitch } from "@web3d/demo-support/theme-switch";
-import { useTheme } from "@web3d/demo-support/theme-provider";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
 import { detectStudioPlatform, studioCommandShortcut } from "../session/shortcut-registry";
@@ -50,8 +48,12 @@ interface StudioToolbarProps {
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
   readonly onOpenHelp: () => void;
+  readonly onOpenSceneSettings: () => void;
+  readonly onOpenSettings: () => void;
   readonly onToggleSmartAlign: () => void;
   readonly helpButtonRef?: React.Ref<HTMLButtonElement>;
+  readonly sceneSettingsButtonRef?: React.Ref<HTMLButtonElement>;
+  readonly settingsButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
 const tools = [
@@ -62,8 +64,7 @@ const tools = [
 ] as const;
 
 export function StudioToolbar(props: StudioToolbarProps) {
-  const { locale, setLocale, t } = useStudioI18n();
-  const { theme, toggleTheme } = useTheme();
+  const { t } = useStudioI18n();
   const platform = detectStudioPlatform(globalThis.navigator);
 
   return (
@@ -176,18 +177,22 @@ export function StudioToolbar(props: StudioToolbarProps) {
         shortcut={studioCommandShortcut("help.open", platform)}
         onClick={props.onOpenHelp}
       />
-      <LanguageSwitch
-        ariaLabel={t.app.languageSwitch.ariaLabel}
-        chineseLabel={t.app.languageSwitch.chineseLabel}
-        englishLabel={t.app.languageSwitch.englishLabel}
-        locale={locale}
-        onChange={setLocale}
+      <IconCommand
+        {...(props.sceneSettingsButtonRef === undefined
+          ? {}
+          : { buttonRef: props.sceneSettingsButtonRef })}
+        disabled={!props.canEdit}
+        icon={<SunMedium size={16} />}
+        label={t.toolbar.sceneSettings}
+        testId="scene-settings-button"
+        onClick={props.onOpenSceneSettings}
       />
-      <ThemeSwitch
-        darkLabel={t.app.themeSwitch.switchToDark}
-        lightLabel={t.app.themeSwitch.switchToLight}
-        theme={theme}
-        onToggle={toggleTheme}
+      <IconCommand
+        {...(props.settingsButtonRef === undefined ? {} : { buttonRef: props.settingsButtonRef })}
+        icon={<Settings2 size={16} />}
+        label={t.toolbar.settings}
+        testId="app-settings-button"
+        onClick={props.onOpenSettings}
       />
       <button
         className="secondary-command"
@@ -214,6 +219,7 @@ function IconCommand({
   icon,
   label,
   shortcut,
+  testId,
   onClick,
 }: {
   readonly active?: boolean;
@@ -223,6 +229,7 @@ function IconCommand({
   readonly icon: React.ReactNode;
   readonly label: string;
   readonly shortcut?: string;
+  readonly testId?: string;
   readonly onClick: () => void;
 }) {
   const commandLabel = shortcut === undefined ? label : `${label} (${shortcut})`;
@@ -234,6 +241,7 @@ function IconCommand({
       aria-label={accessibleLabel}
       aria-pressed={active}
       className={`icon-button ${active ? "is-active" : ""}`}
+      data-testid={testId}
       disabled={disabled}
       title={title}
       type="button"

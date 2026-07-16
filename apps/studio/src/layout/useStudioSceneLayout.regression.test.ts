@@ -15,7 +15,6 @@ import {
 import type { AuthoringSceneHandle } from "@web3d/react";
 import type { AuthoringTool, EntitySpatialSnapshot } from "@web3d/runtime";
 
-import { EntityInspector } from "../features/EntityInspector";
 import { StudioI18nProvider } from "../i18n/I18nProvider";
 import { SceneLayoutPanel } from "./SceneLayoutPanel";
 import { matrixFromTransform } from "./spatial-math";
@@ -51,7 +50,7 @@ describe("useStudioSceneLayout regressions", () => {
     vi.unstubAllGlobals();
   });
 
-  it("blocks invalid Inspector and gizmo transforms before dispatch", () => {
+  it("blocks invalid transform commits before dispatch", () => {
     let layout!: StudioSceneLayout;
     const execute = vi.fn();
     act(() => {
@@ -69,15 +68,6 @@ describe("useStudioSceneLayout regressions", () => {
       );
     });
     flushAllRafs(rafs);
-
-    const scaleX = inputByLabel(container, "Scale X");
-    changeInput(scaleX, "0");
-    blurInput(scaleX);
-    expect(scaleX.value).toBe("0");
-    expect(scaleX.getAttribute("aria-invalid")).toBe("true");
-    expect(execute).not.toHaveBeenCalled();
-    expect(container.querySelector("[data-revision]")?.textContent).toBe("1");
-    expect(layout.error).toBeNull();
 
     const before = sourceEntity(scene(1)).transform;
     const invalidTransforms: Transform[] = [
@@ -276,21 +266,9 @@ function InspectorHarness({
     addDiagnostic: () => undefined,
   });
   onLayout(layout);
-  const source = sourceEntity(document);
   return createElement(
     "div",
     null,
-    createElement(EntityInspector, {
-      authoritativeRevision: document.revision,
-      canReset: layout.resetCapability.enabled,
-      entity: source,
-      editable: true,
-      onRename: () => undefined,
-      onReset: layout.resetSelection,
-      onTransformChange(entityId, after) {
-        return layout.commitEntityTransform(entityId, after);
-      },
-    }),
     createElement("output", { "data-revision": true }, String(document.revision)),
   );
 }
@@ -527,10 +505,6 @@ function changeInput(input: HTMLInputElement, value: string): void {
     setter.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
-}
-
-function blurInput(input: HTMLInputElement): void {
-  act(() => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
 }
 
 function flushNextRaf(rafs: Map<number, FrameRequestCallback>): void {
