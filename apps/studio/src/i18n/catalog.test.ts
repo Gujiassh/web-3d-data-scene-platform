@@ -46,5 +46,9 @@ describe("Studio catalog", () => {
     );
     expect(english.shortcutHelp.commands["reset.rotation"].label).toBe("Reset rotation");
     expect(chinese.shortcutHelp.commands["reset.rotation"].label).toBe("重置旋转");
+    expect(english.shortcutHelp.commands["smart-align.toggle"].label).toBe("Toggle Smart Align");
+    expect(chinese.shortcutHelp.commands["smart-align.toggle"].label).toBe("切换智能对齐");
+    expect(english.toolbar.smartAlign).toBe("Smart Align");
+    expect(chinese.toolbar.smartAlign).toBe("智能对齐");
   });
 });

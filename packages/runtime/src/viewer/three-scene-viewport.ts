@@ -171,6 +171,7 @@ class ThreeSceneViewport {
           initialTool: this.#authoring.initialTool,
           emit: (event) => this.#emitAuthoring(event),
           requestRender: this.#requestRender,
+          getSpatialSnapshots: () => this.#allEntitySpatialSnapshots(),
         })
       : null;
 
@@ -465,12 +466,25 @@ class ThreeSceneViewport {
     this.#requestRender();
   }
 
+  setSmartAlignEnabled(enabled: boolean): void {
+    this.#ensureActive();
+    this.#transformAuthoring?.setSmartAlignEnabled(enabled);
+    this.#requestRender();
+  }
+
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[] {
     this.#ensureActive();
     if (!this.#authoring.enabled || this.#document === null || this.#generation === null) {
       throw new Error("Entity spatial snapshots require a loaded authoring scene.");
     }
     return createEntitySpatialSnapshots(this.#document, this.#generation, entityIds);
+  }
+
+  #allEntitySpatialSnapshots(): readonly EntitySpatialSnapshot[] {
+    if (this.#document === null || this.#generation === null) return [];
+    return createEntitySpatialSnapshots(this.#document, this.#generation, [
+      ...this.#generation.entities.keys(),
+    ]);
   }
 
   async setView(viewId: string): Promise<void> {
@@ -636,12 +650,12 @@ class ThreeSceneViewport {
     const previousPrimaryEntityId = this.#entitySelection.primaryEntityId;
     this.#entitySelection = selection;
     this.#syncSelectionOverlay();
+    this.#transformAuthoring?.sync(
+      this.#generation,
+      selection.entityIds,
+      selection.primaryEntityId,
+    );
     if (previousPrimaryEntityId !== selection.primaryEntityId) {
-      this.#transformAuthoring?.sync(
-        this.#generation,
-        selection.entityIds,
-        selection.primaryEntityId,
-      );
       this.#emitAuthoring({
         type: "entity-selection-change",
         entityId: selection.primaryEntityId,

@@ -37,3 +37,10 @@ export function reconcileAuthoringTransformSettings(
 ): void {
   if (transformSettings !== undefined) viewer.setTransformSettings(transformSettings);
 }
+
+export function reconcileAuthoringSmartAlign(
+  viewer: Pick<AuthoringSceneViewer, "setSmartAlignEnabled">,
+  enabled: boolean | undefined,
+): void {
+  viewer.setSmartAlignEnabled(enabled ?? true);
+}

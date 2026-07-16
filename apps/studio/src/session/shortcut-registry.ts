@@ -7,6 +7,7 @@ export type StudioCommandId =
   | "tool.translate"
   | "tool.rotate"
   | "tool.scale"
+  | "smart-align.toggle"
   | "reset.position"
   | "reset.rotation"
   | "reset.scale"
@@ -60,6 +61,7 @@ export const STUDIO_COMMANDS = [
   command("tool.translate", "transform", [{ key: "w" }], true),
   command("tool.rotate", "transform", [{ key: "e" }], true),
   command("tool.scale", "transform", [{ key: "r" }], true),
+  command("smart-align.toggle", "transform", [{ key: "s" }], true),
   command("reset.position", "transform", [{ key: "g", alt: true }], true, true, true),
   command("reset.rotation", "transform", [{ key: "r", alt: true }], true, true, true),
   command("reset.scale", "transform", [{ key: "s", alt: true }], true, true, true),

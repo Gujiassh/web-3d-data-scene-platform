@@ -17,6 +17,7 @@ import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
 import { useStudioShortcuts, type StudioShortcutActions } from "./session/useStudioShortcuts";
+import { useSmartAlignPreference } from "./smart-align/preference";
 import { SceneBackgroundSettingsDialog } from "./scene-background/SceneBackgroundSettingsDialog";
 import {
   createSetSceneBackgroundCommand,
@@ -50,6 +51,7 @@ export function App() {
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
   const [sceneSettingsKey, setSceneSettingsKey] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [smartAlignEnabled, toggleSmartAlign] = useSmartAlignPreference();
   const [sceneBackgroundPreview, setSceneBackgroundPreview] =
     useState<SceneBackgroundPreviewState | null>(null);
 
@@ -156,6 +158,7 @@ export function App() {
     "tool.translate": () => workspace.setTool("translate"),
     "tool.rotate": () => workspace.setTool("rotate"),
     "tool.scale": () => workspace.setTool("scale"),
+    "smart-align.toggle": toggleSmartAlign,
     "reset.position": () => void sceneLayout.resetSelection("position"),
     "reset.rotation": () => void sceneLayout.resetSelection("rotation"),
     "reset.scale": () => void sceneLayout.resetSelection("scale"),
@@ -210,6 +213,7 @@ export function App() {
         mode={session?.mode ?? "edit"}
         projectName={project?.record.name ?? t.app.openingProject}
         save={session?.save ?? { status: "saving", revision: 0 }}
+        smartAlignEnabled={smartAlignEnabled}
         tool={activeTool}
         onDelete={deleteSelection}
         onDuplicate={() => {
@@ -223,6 +227,7 @@ export function App() {
           setProjectMenuOpen(false);
           setHelpOpen(true);
         }}
+        onToggleSmartAlign={toggleSmartAlign}
         onRedo={workspace.redo}
         onSave={() => void workspace.save().catch(() => undefined)}
         onToolChange={workspace.setTool}
@@ -347,6 +352,7 @@ export function App() {
               key={project.record.id}
               primaryEntityId={session?.primaryEntityId ?? null}
               selectedEntityIds={session?.selectedEntityIds ?? []}
+              smartAlignEnabled={smartAlignEnabled}
               source={project.document}
               themeBackground={themeBackground}
               transformSettings={sceneLayout.transformSettings}

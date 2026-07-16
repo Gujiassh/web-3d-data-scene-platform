@@ -25,6 +25,7 @@ import { reconcileAuthoringSceneRuntime } from "./authoring-runtime-reconciliati
 import {
   reconcileAuthoringSceneSelection,
   reconcileAuthoringSceneSelectionAfterLoad,
+  reconcileAuthoringSmartAlign,
   reconcileAuthoringTransformSettings,
 } from "./authoring-controlled-state";
 
@@ -42,6 +43,7 @@ export interface AuthoringSceneHandle {
   getTool(): AuthoringTool;
   isTransformDragging(): boolean;
   setTransformSettings(settings: AuthoringTransformSettings): void;
+  setSmartAlignEnabled(enabled: boolean): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setThemeBackground(color: string | null): void;
@@ -66,6 +68,7 @@ export interface AuthoringSceneProps {
   readonly selectedEntityIds?: readonly string[];
   readonly primaryEntityId?: string | null;
   readonly transformSettings?: AuthoringTransformSettings;
+  readonly smartAlignEnabled?: boolean;
   readonly onReady?: (event: ReadyEvent) => void;
   readonly onSelectionChange?: (event: SelectionEvent) => void;
   readonly onBindingStateChange?: (event: BindingStateEvent) => void;
@@ -176,6 +179,11 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
 
     useEffect(() => {
       const viewer = viewerRef.current;
+      if (viewer !== null) reconcileAuthoringSmartAlign(viewer, props.smartAlignEnabled);
+    }, [props.smartAlignEnabled]);
+
+    useEffect(() => {
+      const viewer = viewerRef.current;
       if (viewer === null) return;
       const nextAdapters = props.adapters ?? {};
       const generation = runtimeReconciliationRef.current + 1;
@@ -218,6 +226,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         setTransformSettings(settings) {
           requiredViewer(viewerRef).setTransformSettings(settings);
+        },
+        setSmartAlignEnabled(enabled) {
+          requiredViewer(viewerRef).setSmartAlignEnabled(enabled);
         },
         getEntitySpatialSnapshots(entityIds) {
           return requiredViewer(viewerRef).getEntitySpatialSnapshots(entityIds);

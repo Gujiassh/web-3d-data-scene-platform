@@ -9,7 +9,8 @@ import type { AuthoringSceneHandle } from "@web3d/react";
 
 import { StudioI18nProvider } from "./i18n/I18nProvider";
 import type { StudioSceneLayout } from "./layout/useStudioSceneLayout";
-import type { AuthoringTool } from "./session/session-state";
+import type { AuthoringTool, StudioMode } from "./session/session-state";
+import { SMART_ALIGN_PREFERENCE_KEY } from "./smart-align/preference";
 
 type TestCommandOutcome =
   | { readonly status: "changed"; readonly revision: number }
@@ -25,6 +26,7 @@ const harness = vi.hoisted(() => ({
   authoringReady: undefined as ((event: TestReadyEvent) => void) | undefined,
   authoringSceneMounts: 0,
   authoringSceneRenders: [] as Array<string | null | undefined>,
+  smartAlignRenders: [] as Array<boolean | undefined>,
   viewerCalls: [] as string[],
   workspace: {
     loading: false,
@@ -63,7 +65,7 @@ const harness = vi.hoisted(() => ({
     },
     history: { document: null, undoStack: [], redoStack: [] },
     session: {
-      mode: "edit" as const,
+      mode: "edit" as StudioMode,
       tool: "select" as AuthoringTool,
       selectedEntityIds: [],
       primaryEntityId: null,
@@ -106,6 +108,7 @@ vi.mock("@web3d/react", async () => {
     AuthoringScene: React.forwardRef(function MockAuthoringScene(
       props: {
         readonly backgroundPreview?: string | null;
+        readonly smartAlignEnabled?: boolean;
         readonly onReady?: (event: TestReadyEvent) => void;
       },
       ref: React.ForwardedRef<AuthoringSceneHandle>,
@@ -119,6 +122,7 @@ vi.mock("@web3d/react", async () => {
           getTool: () => "select",
           isTransformDragging: () => false,
           setTransformSettings: vi.fn(),
+          setSmartAlignEnabled: vi.fn(),
           getEntitySpatialSnapshots: () => [],
           setDataRuntimeEnabled: vi.fn(async () => undefined),
           setThemeBackground: vi.fn(),
@@ -134,6 +138,7 @@ vi.mock("@web3d/react", async () => {
       }, []);
       harness.authoringReady = props.onReady;
       harness.authoringSceneRenders.push(props.backgroundPreview);
+      harness.smartAlignRenders.push(props.smartAlignEnabled);
       return React.createElement("div", { "data-authoring-scene": true });
     }),
   };
@@ -241,9 +246,14 @@ describe("App scene background preview", () => {
     harness.authoringReady = undefined;
     harness.authoringSceneMounts = 0;
     harness.authoringSceneRenders.length = 0;
+    harness.smartAlignRenders.length = 0;
     harness.viewerCalls.length = 0;
     harness.workspace.execute.mockReset();
     harness.workspace.execute.mockReturnValue({ status: "unchanged", revision: 1 });
+    harness.workspace.canEdit = true;
+    harness.workspace.session.mode = "edit";
+    harness.workspace.session.tool = "select";
+    localStorage.clear();
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     vi.stubGlobal(
       "matchMedia",
@@ -256,6 +266,7 @@ describe("App scene background preview", () => {
     container.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it("does not loop when the settings dialog reports its initial preview", () => {
@@ -312,6 +323,26 @@ describe("App scene background preview", () => {
     expect(harness.viewerCalls).toEqual(["tool:select", "mode:run"]);
     expect(harness.authoringSceneMounts).toBe(1);
     harness.workspace.session.tool = "select";
+  });
+
+  it("drives Viewer, toolbar and exact S from one persistent preference without resetting in Run", () => {
+    renderApp();
+    expect(harness.smartAlignRenders.at(-1)).toBe(true);
+    const smartAlign = button("Smart Align (S)");
+    expect(smartAlign.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", bubbles: true })));
+    expect(harness.smartAlignRenders.at(-1)).toBe(false);
+    expect(localStorage.getItem(SMART_ALIGN_PREFERENCE_KEY)).toBe("false");
+
+    harness.workspace.canEdit = false;
+    harness.workspace.session.mode = "run";
+    renderApp();
+    expect(button("Smart Align (S)").disabled).toBe(true);
+    expect(button("Smart Align (S)").getAttribute("aria-pressed")).toBe("false");
+    expect(localStorage.getItem(SMART_ALIGN_PREFERENCE_KEY)).toBe("false");
+    harness.workspace.canEdit = true;
+    harness.workspace.session.mode = "edit";
   });
 
   function renderApp(): void {

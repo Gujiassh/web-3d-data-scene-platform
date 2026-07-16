@@ -41,7 +41,24 @@ describe("StudioToolbar", () => {
     expect(duplicate?.title).toBe("Duplicate selection - Layout editing is disabled in Run mode.");
   });
 
-  function renderToolbar(duplicateDisabledReason: string | null): void {
+  it("keeps Smart Align pressed but non-interactive in Run", () => {
+    const onToggleSmartAlign = vi.fn();
+    renderToolbar(null, onToggleSmartAlign);
+    const smartAlign = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Smart Align (S)"]',
+    );
+
+    expect(smartAlign).not.toBeNull();
+    expect(smartAlign?.disabled).toBe(true);
+    expect(smartAlign?.getAttribute("aria-pressed")).toBe("true");
+    smartAlign?.click();
+    expect(onToggleSmartAlign).not.toHaveBeenCalled();
+  });
+
+  function renderToolbar(
+    duplicateDisabledReason: string | null,
+    onToggleSmartAlign: () => void = () => undefined,
+  ): void {
     const noop = () => undefined;
     act(() => {
       root.render(
@@ -62,6 +79,7 @@ describe("StudioToolbar", () => {
               canDuplicate: false,
               duplicateDisabledReason,
               hasSelection: true,
+              smartAlignEnabled: true,
               onOpenProjectMenu: noop,
               onUndo: noop,
               onRedo: noop,
@@ -73,6 +91,7 @@ describe("StudioToolbar", () => {
               onDuplicate: noop,
               onDelete: noop,
               onOpenHelp: noop,
+              onToggleSmartAlign,
             }),
           ),
         }),

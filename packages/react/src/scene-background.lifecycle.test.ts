@@ -49,6 +49,7 @@ vi.mock("@web3d/runtime", () => {
       setThemeBackground: vi.fn(),
       setTool: vi.fn(),
       setTransformSettings: vi.fn(),
+      setSmartAlignEnabled: vi.fn(),
       setView: vi.fn(() => Promise.resolve()),
     };
   };

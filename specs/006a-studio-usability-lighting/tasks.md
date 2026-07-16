@@ -66,14 +66,46 @@ unchanged, reject invalid/stale/effectively-hidden selections and Undo exactly.
 **Independent test**: Fixed X/Y/Z/plane drags choose the specified per-axis oracle, render matching guides,
 commit once, bypass with Alt and retain only the local preference.
 
-- [ ] T017 [P] [US3] Implement pure candidate/reference/threshold oracle and benchmark in `packages/runtime/src/authoring/smart-align/`
-- [ ] T018 [P] [US3] Implement disposable guide overlay and tests in `packages/runtime/src/authoring/smart-align/`
-- [ ] T019 [US3] Add TransformControls active-axis/modifier preview integration in `packages/runtime/src/authoring/transform-authoring-controller.ts`
-- [ ] T020 [US3] Add stable Runtime/React Smart Align controlled API in `packages/runtime/src/` and `packages/react/src/`
-- [ ] T021 [P] [US3] Add versioned local preference and toolbar switch in `apps/studio/src/smart-align/`
-- [ ] T022 [US3] Integrate revision-bound references and lifecycle cleanup in `apps/studio/src/layout/` and `apps/studio/src/App.tsx`
-- [ ] T023 [US3] Add 500-entity benchmark and real-WebGL guide/drag/payload evidence in `tests/e2e/studio-usability.spec.ts`
-- [ ] T024 [US3] Complete 006A.2 independent review, original-worker rework and checkpoint in `specs/006a-studio-usability-lighting/tasks.md`
+- [x] T017 [P] [US3] Implement pure candidate/reference/threshold oracle and benchmark in `packages/runtime/src/authoring/smart-align/`
+- [x] T018 [P] [US3] Implement disposable guide overlay and tests in `packages/runtime/src/authoring/smart-align/`
+- [x] T019 [US3] Add TransformControls active-axis/modifier preview integration in `packages/runtime/src/authoring/transform-authoring-controller.ts`
+- [x] T020 [US3] Add stable Runtime/React Smart Align controlled API in `packages/runtime/src/` and `packages/react/src/`
+- [x] T021 [P] [US3] Add versioned local preference and toolbar switch in `apps/studio/src/smart-align/`
+- [x] T022 [US3] Integrate revision-bound reference/selection/load cleanup in `packages/runtime/src/` and preference orchestration in `apps/studio/src/App.tsx`
+- [x] T023 [US3] Add 500-entity benchmark and real-WebGL guide/drag/payload evidence in `tests/e2e/studio-usability.spec.ts`
+- [x] T024 [US3] Complete 006A.2 independent review, original-worker rework and checkpoint in `specs/006a-studio-usability-lighting/tasks.md`
+
+### 006A.2 implementation checkpoint
+
+- Planner: frozen revision-bound snapshots feed per-axis sorted indexes and binary range lookup. The exact
+  lexicographic candidate tuple, entity-before-origin tie, selected hierarchy exclusions, locked/hidden/null-bounds
+  rules and 8 CSS-pixel camera threshold are covered by pure tests.
+- Transform semantics: raw world preview is evaluated once; Smart Align wins per active axis, otherwise fixed
+  Position step matches Three.js r185 world rounding. Rotated/scaled parents convert snapped world coordinates back
+  to local. Preview and final commit share the same transform and one drag emits at most one commit.
+- Lifecycle: guides and frozen references clear on release, cancel, any selection collection change, tool/mode
+  transition, superseded load and dispose. Guide clear disposes geometry. Physical Alt state survives consecutive
+  drags while held and bypasses both smart and fixed snap without changing the preference.
+- Studio/API: Runtime owns planning and guides; React forwards one controlled boolean; Studio owns versioned
+  `web3d.studio.smart-align.v1`, exact `S`, Magnet pressed state and bilingual Help. Run disables interaction without
+  resetting preference. No Smart Align responsibility entered `useStudioSceneLayout` or persisted document state.
+- Performance: 500 entities / 1,497 anchors per axis / 200 warm / 1,000 measured runs produced median 0.694ms,
+  p95 1.249ms and max 3.415ms on 2026-07-16, passing the p95 <= 4ms gate.
+- Browser evidence: actual Chromium/WebGL X/Y/Z axis and XY plane TransformControls drags commit
+  `[-0.17,0,2.25]`, `[-0.75,0.45,2.25]`, `[-0.75,0,2.21875]` and `[-0.17,0.45,2.25]`; inactive axes remain exact
+  and matching guide pixels clear on release. Undo/Redo works, Alt commits unsnapped x=-0.27214460920524886,
+  Canvas identity survives controlled changes, preference survives reload, and JSON/ZIP/IndexedDB scans contain
+  no Smart Align transient state.
+- Gate discipline: typecheck/build invoke document validator generation and must finish before Vite/Playwright.
+  A parallel review typecheck caused transient HMR default-export failures and three unrelated browser failures;
+  after one sequential validator generation, all three failed flows passed 3/3. Final full Playwright evidence is
+  recorded only from the non-concurrent run.
+- Final gates: 79 files / 411 unit tests, root/workspace TypeScript, ESLint, production build, i18n, product design,
+  single-Studio topology, Prettier and diff checks passed; final sequential Chromium/WebGL passed 23/23.
+- Independent closure: initial review findings for exhaustive relation order, actual X/Y/Z/plane WebGL evidence and
+  the stale T022 ownership label were accepted. The original Runtime worker added 9 rank mappings, 8 adjacent
+  equal-delta competitions and actual X/Y/Z/XY pointer flows with guide/inactive-axis evidence; T022 now names the
+  Runtime/App owners. Independent static re-review returned PASS with no remaining finding.
 
 ## Phase 6: User Story 4 - Scene Appearance And 1.2 Migration
 

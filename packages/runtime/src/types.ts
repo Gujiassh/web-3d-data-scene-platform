@@ -265,6 +265,7 @@ export interface AuthoringSceneViewer {
   getTool(): AuthoringTool;
   isTransformDragging(): boolean;
   setTransformSettings(settings: AuthoringTransformSettings): void;
+  setSmartAlignEnabled(enabled: boolean): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;

@@ -4,6 +4,7 @@ import {
   Copy,
   FolderOpen,
   CircleHelp,
+  Magnet,
   MousePointer2,
   Move3d,
   Pause,
@@ -37,6 +38,7 @@ interface StudioToolbarProps {
   readonly canDuplicate: boolean;
   readonly duplicateDisabledReason: string | null;
   readonly hasSelection: boolean;
+  readonly smartAlignEnabled: boolean;
   readonly onOpenProjectMenu: () => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
@@ -48,6 +50,7 @@ interface StudioToolbarProps {
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
   readonly onOpenHelp: () => void;
+  readonly onToggleSmartAlign: () => void;
   readonly helpButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
@@ -136,6 +139,14 @@ export function StudioToolbar(props: StudioToolbarProps) {
             onClick={() => props.onToolChange(value)}
           />
         ))}
+        <IconCommand
+          active={props.smartAlignEnabled}
+          disabled={!props.canEdit}
+          icon={<Magnet size={16} />}
+          label={t.toolbar.smartAlign}
+          shortcut={studioCommandShortcut("smart-align.toggle", platform)}
+          onClick={props.onToggleSmartAlign}
+        />
       </div>
 
       <div className="mode-control" aria-label={t.toolbar.modeGroup}>

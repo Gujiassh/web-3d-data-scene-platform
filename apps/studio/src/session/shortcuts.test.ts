@@ -32,8 +32,12 @@ describe("Studio shortcut registry", () => {
 describe("resolveStudioShortcut", () => {
   it("resolves tools, reset, history and platform aliases", () => {
     expect(resolveStudioShortcut({ ...input, key: "W" }, context)).toBe("tool.translate");
+    expect(resolveStudioShortcut({ ...input, key: "S" }, context)).toBe("smart-align.toggle");
     expect(resolveStudioShortcut({ ...input, key: "r", altKey: true }, context)).toBe(
       "reset.rotation",
+    );
+    expect(resolveStudioShortcut({ ...input, key: "s", altKey: true }, context)).toBe(
+      "reset.scale",
     );
     expect(resolveStudioShortcut({ ...input, key: "z", ctrlKey: true }, context)).toBe(
       "history.undo",
@@ -52,10 +56,14 @@ describe("resolveStudioShortcut", () => {
 
   it("requires exact modifiers", () => {
     expect(resolveStudioShortcut({ ...input, key: "w", shiftKey: true }, context)).toBeNull();
+    expect(resolveStudioShortcut({ ...input, key: "s", shiftKey: true }, context)).toBeNull();
     expect(
       resolveStudioShortcut({ ...input, key: "z", ctrlKey: true, altKey: true }, context),
     ).toBeNull();
     expect(resolveStudioShortcut({ ...input, key: "z", metaKey: true }, context)).toBeNull();
+    expect(resolveStudioShortcut({ ...input, key: "s", ctrlKey: true }, context)).toBe(
+      "project.save",
+    );
     expect(
       resolveStudioShortcut({ ...input, key: "z", metaKey: true }, { ...context, platform: "mac" }),
     ).toBe("history.undo");
@@ -88,6 +96,9 @@ describe("resolveStudioShortcut", () => {
     ).toBeNull();
     expect(
       resolveStudioShortcut({ ...input, key: "w" }, { ...context, canEdit: false }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "s" }, { ...context, canEdit: false }),
     ).toBeNull();
     expect(
       resolveStudioShortcut({ ...input, key: "s", ctrlKey: true }, { ...context, canEdit: false }),

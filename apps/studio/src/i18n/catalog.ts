@@ -62,6 +62,7 @@ export const english = {
     editMode: "Edit",
     runMode: "Run",
     help: "Keyboard shortcuts",
+    smartAlign: "Smart Align",
     tools: {
       select: "Select",
       translate: "Move",
@@ -104,6 +105,10 @@ export const english = {
       "tool.translate": { label: "Move tool", description: "Move the primary selected object" },
       "tool.rotate": { label: "Rotate tool", description: "Rotate the primary selected object" },
       "tool.scale": { label: "Scale tool", description: "Scale the primary selected object" },
+      "smart-align.toggle": {
+        label: "Toggle Smart Align",
+        description: "Enable or disable alignment guides while moving objects",
+      },
       "reset.position": { label: "Reset position", description: "Set local position to zero" },
       "reset.rotation": { label: "Reset rotation", description: "Set local rotation to identity" },
       "reset.scale": { label: "Reset scale", description: "Set local scale to one" },
@@ -577,6 +582,7 @@ export const chinese: CatalogShape<typeof english> = {
     editMode: "编辑",
     runMode: "运行",
     help: "键盘快捷键",
+    smartAlign: "智能对齐",
     tools: {
       select: "选择",
       translate: "移动",
@@ -613,6 +619,10 @@ export const chinese: CatalogShape<typeof english> = {
       "tool.translate": { label: "移动工具", description: "移动主选对象" },
       "tool.rotate": { label: "旋转工具", description: "旋转主选对象" },
       "tool.scale": { label: "缩放工具", description: "缩放主选对象" },
+      "smart-align.toggle": {
+        label: "切换智能对齐",
+        description: "移动对象时启用或停用对齐参考线",
+      },
       "reset.position": { label: "重置位置", description: "将局部位置归零" },
       "reset.rotation": { label: "重置旋转", description: "将局部旋转回正" },
       "reset.scale": { label: "重置缩放", description: "将局部缩放恢复为一" },

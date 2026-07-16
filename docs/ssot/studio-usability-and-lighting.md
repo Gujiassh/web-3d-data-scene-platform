@@ -1,6 +1,6 @@
 # Studio Usability And Lighting
 
-> 状态：006A.1 accepted；006A.2/006A.3 planned
+> 状态：006A.1/006A.2 accepted；006A.3 planned
 > 用户批准：2026-07-16，包含 `SceneDocument 1.1.0 -> 1.2.0` 和真实 IndexedDB 数据迁移
 
 ## 产品边界
@@ -70,6 +70,78 @@ Feature 006A 是已验收 Scene Layout 的易用性后续阶段，按 006A.1 命
 006A.1 不改 SceneDocument、archive、ProjectRecord、IndexedDB 或 autosave 合同。Help、shortcut、drag、
 Euler draft、reset capability 和 selection 均为 transient。
 
+## 006A.2 当前事实
+
+### Deterministic Smart Align planner
+
+- Runtime 在 translation `mouseDown` 冻结 revision-bound spatial snapshots 和每轴参考索引。参考集排除
+  moving entity、祖先、后代及其他 selected roots/subtrees；hidden/null-bounds 不进入索引，locked reference
+  仍可参与。scene origin 是独立 center target，不伪装成 entity。
+- 每个 X/Y/Z 索引按 coordinate、stable entity ID、anchor relation 排序。候选查询先二分定位
+  `[movingAnchor - threshold, movingAnchor + threshold]`，再只扫描范围内 anchors；最终按 absolute delta、
+  entity before origin、relation rank、deeper hierarchy、stable ID 的 tuple 选择，不依赖 mutable name、
+  document order 或 first available。
+- 阈值由 moving bounds center 的正 camera-space depth `-z` 和 perspective camera 计算：一个 CSS pixel
+  为 `2*d*tan(fov/2)/viewportCssHeight` world units，Smart Align 使用 8px。invalid/behind-camera depth、
+  stale/missing snapshots 只禁用当次 smart candidate；固定 Position step 仍可继续工作。
+- active TransformControls axis 冻结本次可变轴：axis handle 一轴，plane handle 两轴，free handle 三轴。
+  每轴 smart candidate 优先；没有 candidate 时才按 Three.js r185 world-space
+  `Math.round(world/step)*step` 回落，并通过 `parent.worldToLocal` 写回。负值和旋转/缩放 parent 已覆盖。
+
+### Preview, guide and modifier lifecycle
+
+- 同一 `objectChange` 先从 raw world preview 计算候选，再一次性写回 snapped transform，然后发出原有
+  `transform-preview`；`mouseUp` 读取相同 Object3D 值并最多发出一个原有 `transform-commit`。没有新增
+  drag event、SceneDocument command 或历史语义。
+- disposable guide overlay 每轴最多一条 `LineSegments`，关闭 depth test/write 并用 paired anchor marks。
+  plane/free 多轴命中时，每条 guide 的 moving endpoint 会应用其他轴的最终位移，使参考线与同帧最终
+  preview 对齐。release、selection change、tool/mode change、load、cancel 和 dispose 全部清理 guide；
+  hide/clear 同时 dispose 旧 geometry，而不是把无用 vertex buffer 留到会话结束。
+- Alt 使用两层状态：`altPressed` 跟踪物理键，`snapBypassed` 冻结/同步当前 drag。这样一次 drag 结束不会
+  伪造 Alt 已释放，持续按住 Alt 的连续拖拽仍绕过 smart 和 fixed snap；window blur 才清物理键状态。
+- selection collection 只要改变就同步 TransformAuthoringController，即使 primary 不变，也会取消当前
+  preview、恢复 before transform、清 guide 并按新 reference exclusion 重新附着。primary 不变时仍不
+  额外发 `entity-selection-change`。
+
+### Studio preference and package boundary
+
+- `web3d.studio.smart-align.v1` 只存显式 boolean，missing/invalid/restricted storage 默认 `true`。
+  canonical command registry 提供 exact `S`，并与 `Alt+S` reset scale、`Ctrl/Cmd+S` save 区分；同一
+  registry 驱动 Help 和中英文文案。
+- toolbar 的 Magnet 按钮与受控 `AuthoringScene.smartAlignEnabled` 使用同一 React preference。Run 只禁用
+  按钮/快捷键，不改偏好；回到 Edit 或 reload 恢复原值。React 原位 reconcile 现有 Viewer，不重建
+  Canvas、TransformControls、runtime generation 或 adapters。
+- Smart Align 不进入 `useStudioSceneLayout`，不进入 SceneDocument、JSON、ZIP、ProjectRecord、IndexedDB
+  documentJson、history 或 autosave。Runtime 拥有候选/相机阈值/固定回落/guide 生命周期；Studio 只拥有
+  command、preference 和 UI orchestration。
+
+### 006A.2 test and performance evidence
+
+- Pure/runtime integration: 3 files / 53 tests cover deterministic oracle, all nine relation ranks and adjacent
+  precedence, exact 8px boundary, reference
+  exclusions, entity/origin/depth/ID ties, axis/plane/free mapping, smart-before-fixed, negative r185 rounding,
+  transformed parent world/local conversion, stale snapshot fallback, preview/commit identity, one commit,
+  consecutive Alt drags and selection/load/tool/dispose cleanup.
+- 500-entity benchmark uses 500 bounded snapshots, 1,497 anchors per axis, 200 warm runs and 1,000 measured
+  runs. Acceptance evidence on 2026-07-16: median `0.694ms`, p95 `1.249ms`, max `3.415ms`; p95 is below the
+  approved 4ms gate.
+- Real Chromium/WebGL E2E drives actual X/Y/Z axis and XY plane TransformControls pointers. The committed positions
+  are X `[-0.17,0,2.25]`, Y `[-0.75,0.45,2.25]`, Z `[-0.75,0,2.21875]` and XY
+  `[-0.17,0.45,2.25]`; inactive axes stay unchanged and axis-colored guide pixels disappear on release. The X
+  result is distinct from the 0.5 fixed-grid value. Undo/Redo, Alt result `x=-0.27214460920524886`, preference
+  reload, Run gate, stable Canvas identity and zero Smart Align leakage in JSON/ZIP/IndexedDB also pass.
+- Verification process rule: `pnpm typecheck` and `pnpm build` run `packages/document` validator generation.
+  Do not run either command concurrently with the Vite server used by Playwright: the generated validator is
+  replaced during generation and can trigger a transient HMR module with no default export, causing unrelated
+  browser actions to be dropped. Run validator-generating gates first, then Playwright. This failure mode was
+  reproduced by a parallel independent review; the three affected existing flows passed immediately when rerun
+  sequentially.
+- Final acceptance: 79 files / 411 unit tests, root/workspace TypeScript, ESLint, production build, i18n, product
+  design, single-Studio topology, Prettier and diff checks passed. Final sequential Chromium/WebGL passed 23/23.
+  Independent review initially found incomplete relation-order and real multi-axis evidence plus one stale T022
+  ownership label; original Runtime worker added exhaustive relation and actual X/Y/Z/XY evidence, the task mapping
+  was corrected, and independent re-review returned PASS with no remaining finding.
+
 ## Review finding 裁决
 
 - **Run retains a live gizmo**: the broad finding was rejected because `reduceStudioSession` already forces
@@ -86,9 +158,9 @@ Euler draft、reset capability 和 selection 均为 transient。
 
 ## 后续合同
 
-006A.2 的 Smart Align 只处理 primary entity 的 world-bounds edge/center 对齐。候选 oracle、camera
-threshold、TransformControls preview 和 guide lifecycle 必须进入独立的 Runtime `smart-align` 模块；Studio
-preference/orchestration 必须进入独立 `apps/studio/src/smart-align/` hook。不得继续向当前 654 行的
+006A.2 的 Smart Align 只处理 primary entity 的 world-bounds edge/center 对齐。已实现的候选 oracle、
+camera threshold、TransformControls preview 和 guide lifecycle 位于独立 Runtime `smart-align` 模块；
+Studio preference/orchestration 位于独立 `apps/studio/src/smart-align/` hook。继续禁止向当前 654 行的
 `useStudioSceneLayout` 增加 Smart Align 规划、偏好或 guide 职责。
 
 006A.3 将 current SceneDocument 升级到 1.2.0，required `environment.lighting` 保存具体 fill/key 参数，不保存

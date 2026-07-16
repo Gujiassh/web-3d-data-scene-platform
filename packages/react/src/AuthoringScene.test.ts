@@ -5,6 +5,7 @@ import type { DataAdapter } from "@web3d/runtime";
 import {
   reconcileAuthoringSceneSelection,
   reconcileAuthoringSceneSelectionAfterLoad,
+  reconcileAuthoringSmartAlign,
   reconcileAuthoringTransformSettings,
 } from "./authoring-controlled-state";
 import { reconcileAuthoringSceneRuntime } from "./authoring-runtime-reconciliation";
@@ -41,6 +42,13 @@ describe("AuthoringScene controlled state", () => {
     expect(viewer.setTransformSettings).toHaveBeenCalledTimes(2);
     expect(viewer.setTransformSettings).toHaveBeenNthCalledWith(1, settings);
     expect(viewer.setTransformSettings).toHaveBeenNthCalledWith(2, settings);
+  });
+
+  it("reconciles Smart Align as transient controlled state", () => {
+    const viewer = controlledViewer();
+    reconcileAuthoringSmartAlign(viewer, undefined);
+    reconcileAuthoringSmartAlign(viewer, false);
+    expect(viewer.setSmartAlignEnabled.mock.calls).toEqual([[true], [false]]);
   });
 
   it("waits for the current source load and prevents stale controlled selection from winning", async () => {
@@ -192,5 +200,6 @@ function controlledViewer() {
   return {
     selectEntities: vi.fn<(entityIds: readonly string[], primaryEntityId: string | null) => void>(),
     setTransformSettings: vi.fn(),
+    setSmartAlignEnabled: vi.fn(),
   };
 }

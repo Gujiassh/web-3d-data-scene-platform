@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 
 import { parseSceneDocument, type SceneDocument } from "@web3d/document";
-import type { Material, Object3D } from "three";
-import { Color, Mesh, Raycaster } from "three";
+import type { Camera, Material, Object3D } from "three";
+import { Color, LineSegments, Mesh, Raycaster, Vector3 } from "three";
 import type * as ThreeModule from "three";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -20,8 +20,9 @@ const runtime = vi.hoisted(() => ({
   dispose: vi.fn(),
   frames: [] as FrameRequestCallback[],
   reportError: vi.fn(),
-  scenes: [] as Array<{ background: unknown }>,
+  scenes: [] as Array<{ background: unknown; getObjectByName(name: string): Object3D | undefined }>,
   transformControls: [] as FakeTransformControls[],
+  views: [] as FakeView[],
 }));
 
 vi.mock("three", async (importOriginal) => {
@@ -58,13 +59,21 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
   return {
     OrbitControls: class FakeOrbitControls {
       readonly target = new Vector3();
+      readonly camera: Camera;
       enableDamping = false;
       enabled = true;
+
+      constructor(camera: Camera) {
+        this.camera = camera;
+      }
 
       addEventListener(): void {}
       dispose(): void {}
       removeEventListener(): void {}
-      update(): void {}
+      update(): void {
+        this.camera.lookAt(this.target);
+        this.camera.updateMatrixWorld(true);
+      }
     },
   };
 });
@@ -75,6 +84,7 @@ vi.mock("three/addons/controls/TransformControls.js", async () => {
     readonly helper = new Object3D();
     readonly listeners = new Map<string, Set<(event: Record<string, unknown>) => void>>();
     mode = "translate";
+    axis: string | null = "X";
     object: Object3D | undefined;
     translationSnap: number | null = null;
     rotationSnap: number | null = null;
@@ -136,6 +146,7 @@ describe("createAuthoringSceneViewer", () => {
     runtime.frames.length = 0;
     runtime.scenes.length = 0;
     runtime.transformControls.length = 0;
+    runtime.views.length = 0;
     runtime.dispose.mockClear();
     runtime.reportError.mockClear();
     vi.restoreAllMocks();
@@ -575,6 +586,256 @@ describe("createAuthoringSceneViewer", () => {
     expect(controls.scaleSnap).toBe(0.1);
     expect(runtime.transformControls).toHaveLength(1);
     expect([...controls.listeners.values()].every((listeners) => listeners.size === 1)).toBe(true);
+    await viewer.dispose();
+  });
+
+  it("prefers a smart candidate over fixed world-grid snap and commits the snapped preview once", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const source = withEntityPosition(scene, "secondary-entity", [2.08, 0, 0]);
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(source);
+    viewer.setTransformSettings({
+      translationSnap: 0.5,
+      rotationSnapRadians: null,
+      scaleSnap: null,
+    });
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    controls.emit("mouseDown");
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+
+    controls.object.position.x = 1.99;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+
+    expect(controls.object.position.x).toBeCloseTo(2.08, 10);
+    expect(requiredGuideGroup().visible).toBe(true);
+    const previews = transformEvents(events, "transform-preview");
+    expect(previews).toHaveLength(1);
+    expect(previews[0]?.transform.position[0]).toBeCloseTo(2.08, 10);
+    controls.emit("mouseUp");
+    const commits = transformEvents(events, "transform-commit");
+    expect(commits).toHaveLength(1);
+    expect(commits[0]?.after).toEqual(previews[0]?.transform);
+    expect(requiredGuideGroup().visible).toBe(false);
+    expect(controls.translationSnap).toBe(0.5);
+    await viewer.dispose();
+  });
+
+  it("uses fixed world-grid fallback for negative world coordinates under a transformed parent", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withParentTransform(scene, [10, 0, 0]));
+    viewer.setTransformSettings({
+      translationSnap: 0.5,
+      rotationSnapRadians: null,
+      scaleSnap: null,
+    });
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    controls.emit("mouseDown");
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+
+    controls.object.position.y = 5.13;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    controls.emit("mouseUp");
+
+    expect(controls.object.getWorldPosition(new Vector3()).x).toBeCloseTo(-0.5, 10);
+    expect(transformEvents(events, "transform-preview")[0]?.transform.position[1]).toBeCloseTo(
+      5.25,
+      10,
+    );
+    expect(transformEvents(events, "transform-commit")).toHaveLength(1);
+    expect(requiredGuideGroup().visible).toBe(false);
+    await viewer.dispose();
+  });
+
+  it("keeps fixed world-grid fallback when revision-bound smart snapshots are stale", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(scene);
+    viewer.setTransformSettings({
+      translationSnap: 0.5,
+      rotationSnapRadians: null,
+      scaleSnap: null,
+    });
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    controls.object.position.x = 0.1;
+    controls.object.updateMatrixWorld(true);
+
+    controls.emit("mouseDown");
+    controls.object.position.x = -0.76;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    controls.emit("mouseUp");
+
+    expect(controls.object.position.x).toBe(-1);
+    expect(requiredGuideGroup().visible).toBe(false);
+    expect(transformEvents(events, "transform-preview")[0]?.transform.position[0]).toBe(-1);
+    expect(transformEvents(events, "transform-commit")).toHaveLength(1);
+    await viewer.dispose();
+  });
+
+  it("bypasses smart and fixed translation snapping with Alt for the active drag", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withEntityPosition(scene, "secondary-entity", [2.08, 0, 0]));
+    viewer.setTransformSettings({
+      translationSnap: 0.5,
+      rotationSnapRadians: null,
+      scaleSnap: null,
+    });
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    controls.emit("mouseDown");
+    requiredView().dispatch("keydown", { altKey: true });
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+
+    controls.object.position.x = 1.99;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    controls.emit("mouseUp");
+
+    expect(controls.object.position.x).toBeCloseTo(1.99, 10);
+    expect(transformEvents(events, "transform-preview")[0]?.transform.position[0]).toBeCloseTo(
+      1.99,
+      10,
+    );
+    expect(transformEvents(events, "transform-commit")).toHaveLength(1);
+    expect(requiredGuideGroup().visible).toBe(false);
+
+    controls.emit("mouseDown");
+    controls.object.position.x = 2.19;
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    expect(controls.object.position.x).toBeCloseTo(2.19, 10);
+    requiredView().dispatch("keyup", { altKey: false });
+    controls.emit("mouseUp");
+    expect(transformEvents(events, "transform-commit")).toHaveLength(2);
+    await viewer.dispose();
+  });
+
+  it("snaps only the axes enabled by a plane TransformControls handle", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withEntityPosition(scene, "secondary-entity", [2.08, 0.08, 0]));
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "XY";
+    controls.emit("mouseDown");
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+
+    controls.object.position.set(1.99, 0.04, 0.24);
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+
+    expect(controls.object.position.x).toBeCloseTo(2.08, 10);
+    expect(controls.object.position.y).toBeCloseTo(0.08, 10);
+    expect(controls.object.position.z).toBe(0.24);
+    expect(requiredGuideGroup().getObjectByName("smart-align-guide-x")?.visible).toBe(true);
+    expect(requiredGuideGroup().getObjectByName("smart-align-guide-y")?.visible).toBe(true);
+    expect(requiredGuideGroup().getObjectByName("smart-align-guide-z")?.visible).toBe(false);
+    const xPositions = requiredGuidePositions("x");
+    expect(xPositions[1]).toBeCloseTo(0.83, 6);
+    controls.emit("mouseUp");
+    expect(transformEvents(events, "transform-commit")).toHaveLength(1);
+    await viewer.dispose();
+  });
+
+  it("clears guides and cancels a drag when selection changes without changing primary", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withEntityPosition(scene, "secondary-entity", [2.08, 0, 0]));
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    controls.emit("mouseDown");
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    const draggedObject = controls.object;
+    draggedObject.position.x = 1.99;
+    draggedObject.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    expect(requiredGuideGroup().visible).toBe(true);
+    const selectionEventCount = selectionEvents(events).length;
+
+    viewer.selectEntities(["factory-cell", "secondary-entity"], "factory-cell");
+
+    expect(viewer.isTransformDragging()).toBe(false);
+    expect(draggedObject.position.x).toBe(0);
+    expect(requiredGuideGroup().visible).toBe(false);
+    expect(controls.object).toBe(draggedObject);
+    expect(selectionEvents(events)).toHaveLength(selectionEventCount);
+    expect(transformEvents(events, "transform-commit")).toHaveLength(0);
+    await viewer.dispose();
+    expect(runtime.scenes.at(-1)?.getObjectByName("smart-align-guides")).toBeUndefined();
+  });
+
+  it("clears active guides on a superseding load and reattaches without committing", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const source = withEntityPosition(scene, "secondary-entity", [2.08, 0, 0]);
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(source);
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    controls.axis = "X";
+    controls.emit("mouseDown");
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    const previousObject = controls.object;
+    previousObject.position.x = 1.99;
+    previousObject.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    expect(requiredGuideGroup().visible).toBe(true);
+
+    await viewer.load({ ...source, revision: source.revision + 1 });
+
+    expect(viewer.isTransformDragging()).toBe(false);
+    expect(previousObject.position.x).toBe(0);
+    expect(requiredGuideGroup().visible).toBe(false);
+    expect(controls.object).toBeDefined();
+    expect(controls.object).not.toBe(previousObject);
+    expect(transformEvents(events, "transform-commit")).toHaveLength(0);
     await viewer.dispose();
   });
 
@@ -1059,6 +1320,44 @@ function withEntity(scene: SceneDocument, entityId: string): SceneDocument {
   };
 }
 
+function withEntityPosition(
+  scene: SceneDocument,
+  entityId: string,
+  position: readonly [number, number, number],
+): SceneDocument {
+  const source = withEntity(scene, entityId);
+  return {
+    ...source,
+    entities: source.entities.map((entity) =>
+      entity.id === entityId
+        ? { ...entity, transform: { ...entity.transform, position: [...position] } }
+        : entity,
+    ),
+  };
+}
+
+function withParentTransform(
+  scene: SceneDocument,
+  position: readonly [number, number, number],
+): SceneDocument {
+  const source = withParentState(scene, { visible: true, locked: false });
+  return {
+    ...source,
+    entities: source.entities.map((entity) =>
+      entity.id === "fixture-parent"
+        ? {
+            ...entity,
+            transform: {
+              position: [...position],
+              rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2],
+              scale: [2, 2, 2],
+            },
+          }
+        : entity,
+    ),
+  };
+}
+
 function withGroup(
   scene: SceneDocument,
   entityId: string,
@@ -1202,12 +1501,47 @@ function requiredControls(): FakeTransformControls {
   return controls;
 }
 
+function requiredGuideGroup(): Object3D {
+  const guide = runtime.scenes.at(-1)?.getObjectByName("smart-align-guides");
+  if (guide === undefined) throw new Error("Smart Align guide group was not created.");
+  return guide;
+}
+
+function requiredGuidePositions(axis: "x" | "y" | "z"): Float32Array {
+  const guide = requiredGuideGroup().getObjectByName(`smart-align-guide-${axis}`);
+  if (!(guide instanceof LineSegments)) throw new Error(`Missing ${axis} Smart Align guide.`);
+  const positions = guide.geometry.getAttribute("position").array;
+  if (!(positions instanceof Float32Array))
+    throw new Error("Guide positions are not Float32 data.");
+  return positions;
+}
+
+function requiredView(): FakeView {
+  const view = runtime.views.at(-1);
+  if (view === undefined) throw new Error("Fake canvas view was not created.");
+  return view;
+}
+
+function transformEvents<T extends "transform-preview" | "transform-commit">(
+  events: readonly AuthoringViewerEvent[],
+  type: T,
+): Array<Extract<AuthoringViewerEvent, { type: T }>> {
+  return events.filter(
+    (event): event is Extract<AuthoringViewerEvent, { type: T }> => event.type === type,
+  );
+}
+
 function fakeCanvas() {
   const attributes: Record<string, string> = {};
   const listeners = new Map<string, Set<(event: Record<string, number>) => void>>();
+  const view = fakeView();
+  runtime.views.push(view);
   return {
     attributes,
+    clientHeight: 600,
+    clientWidth: 800,
     dataset: {} as Record<string, string>,
+    ownerDocument: { defaultView: view },
     style: {} as Record<string, string>,
     tabIndex: 0,
     addEventListener(type: string, listener: (event: Record<string, number>) => void): void {
@@ -1236,6 +1570,23 @@ function fakeCanvas() {
   };
 }
 
+function fakeView(): FakeView {
+  const listeners = new Map<string, Set<(event: Record<string, unknown>) => void>>();
+  return {
+    addEventListener(type, listener): void {
+      const entries = listeners.get(type) ?? new Set();
+      entries.add(listener);
+      listeners.set(type, entries);
+    },
+    dispatch(type, event): void {
+      listeners.get(type)?.forEach((listener) => listener(event));
+    },
+    removeEventListener(type, listener): void {
+      listeners.get(type)?.delete(listener);
+    },
+  };
+}
+
 function fakeContainer(): HTMLElement {
   return {
     clientHeight: 600,
@@ -1251,8 +1602,15 @@ type FakeTransformControls = {
   translationSnap: number | null;
   rotationSnap: number | null;
   scaleSnap: number | null;
+  axis: string | null;
   setTranslationSnap: ReturnType<typeof vi.fn>;
   setRotationSnap: ReturnType<typeof vi.fn>;
   setScaleSnap: ReturnType<typeof vi.fn>;
   emit: (type: string, event?: Record<string, unknown>) => void;
+};
+
+type FakeView = {
+  addEventListener(type: string, listener: (event: Record<string, unknown>) => void): void;
+  dispatch(type: string, event: Record<string, unknown>): void;
+  removeEventListener(type: string, listener: (event: Record<string, unknown>) => void): void;
 };
