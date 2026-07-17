@@ -260,3 +260,21 @@ values never schedule autosave.
 - After the generation fix, key WebGL passed 4/4 and final full Chromium/WebGL E2E passed 22/22.
 - Independent Critical review first found the High active-range Undo race. After controller-owned cancellation
   generation and regression rework, the same reviewer returned final PASS with no remaining contract finding.
+
+## 2026-07-17 007c Direct Authored-Light Inspector
+
+`LightInspector` remains responsible for UI drafts and completed-operation boundaries. `useStudioLightAuthoring`
+owns cancellation generation and thin Viewer wiring. `AuthoringSceneHandle` exposes one imperative
+`setAuthoredLightPropertyPreview` method; `ThreeSceneViewport` owns authority gates; `AuthoredLightController` mutates
+only color/intensity/distance/angle/penumbra on the existing Three resource and restores authored properties on clear.
+
+The Inspector has no form footer. Slider/color gestures preview continuously and commit once at completion. Exact
+text/number/transform fields commit on Enter/blur. Successful previews stay visible until matching source
+publication; cancellation, rejection, Undo/Redo, selection departure and Run clear them. No schema, command payload,
+autosave, archive or Viewer identity contract changes.
+
+Critical rework uses two Studio-owned preview layers: active transient input and held accepted state awaiting matching
+Runtime publication. Outgoing preview DTOs bind to the Viewer's currently published revision, while held target
+revisions determine release. This prevents rapid B preview/cancel from rolling accepted A back while A publication is
+pending and lets active B survive ready(A) before promotion to held B. Runtime remains property-only and stateless
+with respect to Studio history.

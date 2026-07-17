@@ -129,7 +129,7 @@ test.describe("Feature 006B light authoring", () => {
     await expect(page.getByText("Scale", { exact: true })).toHaveCount(0);
 
     await page.getByLabel("Brightness", { exact: true }).fill("1001");
-    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await page.getByLabel("Brightness", { exact: true }).blur();
     await expect(page.getByLabel("Brightness", { exact: true })).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -137,16 +137,27 @@ test.describe("Feature 006B light authoring", () => {
     await expect(page.getByLabel("Brightness", { exact: true })).toBeFocused();
     await expectRevision(page, 5);
 
-    await page.getByLabel("Brightness", { exact: true }).fill("42.5");
-    await page.getByLabel("Position X", { exact: true }).fill("2.5");
-    await page.getByLabel("Rotation (degrees) X").fill("15");
-    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    const brightnessSlider = page.getByLabel("Brightness slider", { exact: true });
+    await previewRange(brightnessSlider, [20, 35, 42]);
+    await expectRevision(page, 5);
+    await brightnessSlider.dispatchEvent("pointerup");
     await expectRevision(page, 6);
+    await expect(page.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
+
+    await page.getByLabel("Brightness", { exact: true }).fill("42.5");
+    await page.getByLabel("Brightness", { exact: true }).blur();
+    await expectRevision(page, 7);
+    await page.getByLabel("Position X", { exact: true }).fill("2.5");
+    await page.getByLabel("Position X", { exact: true }).blur();
+    await expectRevision(page, 8);
+    await page.getByLabel("Rotation (degrees) X").fill("15");
+    await page.getByLabel("Rotation (degrees) X").blur();
+    await expectRevision(page, 9);
 
     await spotRow.getByRole("button", { name: "Lock Spot light 1" }).click();
-    await expectRevision(page, 7);
+    await expectRevision(page, 10);
     await page.getByRole("button", { name: "Duplicate selection", exact: true }).click();
-    await expectRevision(page, 8);
+    await expectRevision(page, 11);
     await expect(page.getByRole("treeitem")).toHaveCount(3);
     await expect(page.getByRole("treeitem").filter({ hasText: "Spot light 2" })).toHaveAttribute(
       "aria-selected",
@@ -176,7 +187,7 @@ test.describe("Feature 006B light authoring", () => {
       .getByRole("button", { name: "Run", exact: true })
       .evaluate((button) => (button as HTMLButtonElement).click());
     await page.mouse.up();
-    await expectRevision(page, 8);
+    await expectRevision(page, 11);
     await expect(page.getByTestId("viewport-mode")).toContainText("RUN / SELECT");
     await expect(page.getByRole("treeitem").filter({ hasText: "Spot light 2" })).toHaveAttribute(
       "aria-selected",
@@ -186,7 +197,7 @@ test.describe("Feature 006B light authoring", () => {
 
     const afterRun = await exportCurrentDocument(page, "006b-after-run.scene.json");
     expect(requireLight(afterRun, "Spot light 2").transform).toEqual(spotCopy.transform);
-    expect(afterRun.revision).toBe(8);
+    expect(afterRun.revision).toBe(11);
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await expectCanvasIdentity(page, canvasIdentity);
     await page.screenshot({ path: artifact("006b-light-authoring-1440x900.png"), fullPage: true });
@@ -542,6 +553,19 @@ async function expectRevision(page: Page, revision: number): Promise<void> {
     "data-revision",
     String(revision),
   );
+}
+
+async function previewRange(input: Locator, values: readonly number[]): Promise<void> {
+  for (const value of values) {
+    await input.evaluate((element, next) => {
+      const control = element as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (setter === undefined) throw new Error("Range input setter is unavailable.");
+      setter.call(control, String(next));
+      control.dispatchEvent(new Event("input", { bubbles: true }));
+      control.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  }
 }
 
 async function markCanvasIdentity(canvas: Locator): Promise<string> {

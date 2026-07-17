@@ -20,6 +20,7 @@ import {
   type Diagnostic,
   type EntitySpatialSnapshot,
   type LightCreationFrame,
+  type AuthoredLightPropertyPreview,
   type SceneSource,
 } from "@web3d/runtime";
 import type { SceneLighting } from "@web3d/document";
@@ -54,6 +55,7 @@ export interface AuthoringSceneHandle {
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
   setLightingPreview(lighting: SceneLighting | null): void;
+  setAuthoredLightPropertyPreview(preview: AuthoredLightPropertyPreview | null): boolean;
   getLightCreationFrame(): Readonly<LightCreationFrame> | null;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
@@ -274,6 +276,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         setLightingPreview(lighting) {
           requiredViewer(viewerRef).setLightingPreview(lighting);
+        },
+        setAuthoredLightPropertyPreview(preview) {
+          return requiredViewer(viewerRef).setAuthoredLightPropertyPreview(preview);
         },
         getLightCreationFrame() {
           return requiredViewer(viewerRef).getLightCreationFrame();

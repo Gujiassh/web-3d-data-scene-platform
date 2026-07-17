@@ -7,7 +7,7 @@ import {
   type Transform,
 } from "@web3d/document";
 import type { Camera, Material, Object3D, Scene } from "three";
-import { BoxHelper, Color, LineSegments, Mesh, Raycaster, Vector3 } from "three";
+import { BoxHelper, Color, LineSegments, Mesh, PointLight, Raycaster, Vector3 } from "three";
 import type * as ThreeModule from "three";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -417,6 +417,55 @@ describe("createAuthoringSceneViewer", () => {
     expect(controls.object).toBeUndefined();
     viewer.setTool("translate");
     expect(controls.object?.name).toBe(point.id);
+    await viewer.dispose();
+  });
+
+  it("gates authored-light property preview by current Edit authority and clears it on lifecycle changes", async () => {
+    const { asset, scene } = await fixture();
+    const point = pointLight("point-preview");
+    const source = withLights(scene, [point], 40);
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(source);
+    viewer.selectEntity(point.id);
+    const three = runtime.scenes.at(-1)?.getObjectByName(`authored-point:${point.id}`);
+    expect(three).toBeInstanceOf(PointLight);
+    const light = three as PointLight;
+    const preview = {
+      documentId: source.id,
+      documentRevision: source.revision,
+      entityId: point.id,
+      light: { kind: "point" as const, color: "#336699", intensity: 60, range: 8 },
+    };
+
+    expect(viewer.setAuthoredLightPropertyPreview(preview)).toBe(true);
+    expect(light.color.getHexString()).toBe("336699");
+    expect(light).toMatchObject({ intensity: 60, distance: 8 });
+    expect(viewer.getSnapshot().revision).toBe(40);
+    expect(viewer.setAuthoredLightPropertyPreview({ ...preview, documentRevision: 39 })).toBe(
+      false,
+    );
+    expect(light.intensity).toBe(60);
+
+    viewer.selectEntity(null);
+    expect(light.color.getHexString()).toBe("ffffff");
+    expect(light).toMatchObject({ intensity: 25, distance: 0 });
+    expect(viewer.setAuthoredLightPropertyPreview(preview)).toBe(false);
+    viewer.selectEntity(point.id);
+    expect(viewer.setAuthoredLightPropertyPreview(preview)).toBe(true);
+    viewer.setAuthoringMode("run");
+    expect(light.intensity).toBe(25);
+    expect(viewer.setAuthoredLightPropertyPreview(preview)).toBe(false);
+
+    viewer.setAuthoringMode("edit");
+    const updated = { ...point, light: { ...point.light, color: "#AA5500", intensity: 32 } };
+    await viewer.load(withLights(scene, [updated], 41));
+    const nextThree = runtime.scenes.at(-1)?.getObjectByName(`authored-point:${point.id}`);
+    expect(nextThree).toBeInstanceOf(PointLight);
+    expect((nextThree as PointLight).color.getHexString()).toBe("aa5500");
+    expect((nextThree as PointLight).intensity).toBe(32);
+    expect(viewer.setAuthoredLightPropertyPreview(preview)).toBe(false);
     await viewer.dispose();
   });
 

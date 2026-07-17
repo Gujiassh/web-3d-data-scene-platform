@@ -34,6 +34,7 @@ import { diagnostic, diagnosticError, RuntimeDiagnosticError } from "../diagnost
 import { AnimationFrameSlot } from "../lifecycle/idempotent-disposer";
 import type {
   AuthoringMode,
+  AuthoredLightPropertyPreview,
   AuthoringSceneViewer,
   AuthoringTool,
   AuthoringTransformSettings,
@@ -523,6 +524,7 @@ class ThreeSceneViewport {
     if (!this.#authoring.enabled || this.#authoringMode === mode) return;
     this.#authoringMode = mode;
     this.#pointerStart = null;
+    if (mode === "run") this.#generation?.authoredLights.clearPreview();
     this.#transformAuthoring?.setAuthoringMode(mode);
     this.#generation?.authoredLights.setAuthoringMode(mode);
     if (mode === "run") this.#selectionOverlay.clear();
@@ -552,6 +554,27 @@ class ThreeSceneViewport {
   setLightingPreview(lighting: SceneLighting | null): void {
     this.#ensureActive();
     this.#lighting.setPreview(lighting);
+  }
+
+  setAuthoredLightPropertyPreview(preview: AuthoredLightPropertyPreview | null): boolean {
+    this.#ensureActive();
+    if (preview === null) {
+      this.#generation?.authoredLights.clearPreview();
+      return true;
+    }
+    const entity = this.#document?.entities.find((candidate) => candidate.id === preview.entityId);
+    if (
+      this.#authoringMode !== "edit" ||
+      this.#document?.id !== preview.documentId ||
+      this.#document.revision !== preview.documentRevision ||
+      this.#entitySelection.primaryEntityId !== preview.entityId ||
+      entity?.type !== "light" ||
+      entity.locked ||
+      entity.light.kind !== preview.light.kind
+    ) {
+      return false;
+    }
+    return this.#generation?.authoredLights.setPreview(preview.entityId, preview.light) ?? false;
   }
 
   setGridPreview(visible: boolean | null): void {
@@ -839,6 +862,9 @@ class ThreeSceneViewport {
     this.#pendingEntitySelection = null;
     if (sameEntitySelection(this.#entitySelection, selection)) return;
     const previousPrimaryEntityId = this.#entitySelection.primaryEntityId;
+    if (previousPrimaryEntityId !== selection.primaryEntityId) {
+      this.#generation?.authoredLights.clearPreview();
+    }
     this.#entitySelection = selection;
     this.#syncSelectionOverlay();
     this.#transformAuthoring?.sync(

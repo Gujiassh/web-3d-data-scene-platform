@@ -224,7 +224,6 @@ export const english = {
       unlimited: "Unlimited",
       angleDegrees: "Beam angle (degrees)",
       penumbra: "Penumbra",
-      apply: "Apply",
       invalid: "Check the highlighted light fields.",
       applyFailed: "Could not update the light.",
       validation: {
@@ -817,7 +816,6 @@ export const chinese: CatalogShape<typeof english> = {
       unlimited: "无限",
       angleDegrees: "光束角度（度）",
       penumbra: "半影",
-      apply: "应用",
       invalid: "请检查标出的灯光字段。",
       applyFailed: "无法更新灯光。",
       validation: {

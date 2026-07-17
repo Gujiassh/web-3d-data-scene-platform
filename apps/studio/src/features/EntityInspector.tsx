@@ -12,6 +12,13 @@ interface EntityInspectorProps {
   readonly authoritativeRevision: number;
   readonly editable: boolean;
   readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
+  readonly lightPreviewCancellation: number;
+  readonly onCancelLightPreview: () => void;
+  readonly onAcceptLightPreview: (
+    entity: Extract<SceneEntity, { type: "light" }>,
+    revision: number,
+  ) => void;
+  readonly onPreviewLight: (entity: Extract<SceneEntity, { type: "light" }>) => void;
   readonly onRename: (entityId: string, name: string) => void;
 }
 
@@ -32,6 +39,10 @@ export function EntityInspector(props: EntityInspectorProps) {
         editable={props.editable && !props.entity.locked}
         entity={props.entity}
         execute={props.execute}
+        previewCancellation={props.lightPreviewCancellation}
+        onCancelPreview={props.onCancelLightPreview}
+        onAcceptPreview={props.onAcceptLightPreview}
+        onPreview={props.onPreviewLight}
         key={entityEditorKey(props.entity, props.authoritativeRevision)}
       />
     );

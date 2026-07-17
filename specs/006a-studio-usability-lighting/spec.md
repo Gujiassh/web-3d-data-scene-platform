@@ -464,3 +464,30 @@ all static/build gates, key WebGL 4/4 and final full Chromium/WebGL E2E 22/22.
 Independent Critical review first found the active-range Undo race; controller-owned cancellation generation now
 invalidates every late pointerup/change/blur after Undo, while pointercancel never commits. The same reviewer returned final
 PASS after regression rework.
+
+## 2026-07-17 Follow-up 007c: Direct Authored-Light Inspector
+
+007c supersedes the 006B authored-light Inspector Apply form without changing `LightEntity`, SceneDocument 1.3,
+command, persistence or archive contracts.
+
+- **LIGHT7C-FR-001**: Point/Spot Light Inspector MUST expose no Apply/form action. Color and valid numeric light
+  properties MUST preview on the existing Three light without a document command.
+- **LIGHT7C-FR-002**: One completed slider/color operation or one Enter/blur precision edit MUST execute at most one
+  complete existing `update-light-entity` command, producing at most one revision and one Undo entry.
+- **LIGHT7C-FR-003**: Invalid/rejected operations, Undo/Redo, selection departure and Run transition MUST clear the
+  transient preview and restore current authority. Late gesture completion after cancellation MUST not commit.
+- **LIGHT7C-NFR-001**: Runtime preview MUST be property-only and gated by current document ID/revision, Edit mode,
+  unlocked entity and matching light kind. Stale, unknown, locked, Run, kind-mismatched or invalid previews MUST be
+  rejected atomically.
+- **LIGHT7C-NFR-002**: Preview MUST preserve Canvas/generation/Three-light/helper identity and MUST NOT mutate
+  SceneDocument, history, autosave, selection, adapters or export payloads. Successful source publication supersedes
+  held preview atomically.
+
+Acceptance requires focused runtime/React/Studio tests, cold-start Chromium/WebGL light-authoring evidence, full
+unit/type/lint/build/static gates, contract review and synchronized SSoT/task records.
+
+Acceptance closed at 92 files / 560 unit tests, full type/lint/build/static gates, cold-start targeted
+Chromium/WebGL 2/2 and final full Chromium/WebGL 22/22.
+Independent Critical review first found a rapid-operation publication High and color-lifecycle coverage Medium.
+Layered active/held preview authority plus delayed-publication and native color regression coverage closed both; the
+same reviewer returned final PASS with no remaining finding.

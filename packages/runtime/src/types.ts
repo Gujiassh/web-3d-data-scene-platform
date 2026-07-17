@@ -1,4 +1,4 @@
-import type { SceneLighting, Transform, Vec3 } from "@web3d/document";
+import type { LightEntity, SceneLighting, Transform, Vec3 } from "@web3d/document";
 
 import type { SceneAsset, SceneDocument } from "./document-contract";
 
@@ -230,6 +230,13 @@ export interface AuthoringViewerSnapshot extends ViewerSnapshot {
   bindingStates: readonly RuntimeBindingState[];
 }
 
+export interface AuthoredLightPropertyPreview {
+  readonly documentId: string;
+  readonly documentRevision: number;
+  readonly entityId: string;
+  readonly light: LightEntity["light"];
+}
+
 export interface CreateViewerOptions {
   source?: SceneSource;
   assetResolver?: AssetResolver;
@@ -273,6 +280,7 @@ export interface AuthoringSceneViewer {
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
   setLightingPreview(lighting: SceneLighting | null): void;
+  setAuthoredLightPropertyPreview(preview: AuthoredLightPropertyPreview | null): boolean;
   setCanvasLabel(label: string): void;
   selectEntity(entityId: string | null): void;
   selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;

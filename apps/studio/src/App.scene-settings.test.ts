@@ -149,6 +149,7 @@ vi.mock("@web3d/react", async () => {
           setBackgroundPreview: vi.fn(),
           setGridPreview: vi.fn(),
           setLightingPreview: vi.fn(),
+          setAuthoredLightPropertyPreview: vi.fn(() => true),
           setView: vi.fn(async () => undefined),
           getSnapshot: vi.fn(),
         }),

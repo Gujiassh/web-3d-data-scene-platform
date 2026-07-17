@@ -141,6 +141,7 @@ export function App() {
     workspace.selectEntity(null);
   };
   const changeMode = (mode: "edit" | "run"): void => {
+    lightAuthoring.clearPreview();
     viewerRef.current?.setAuthoringMode(mode);
     if (mode === "run") viewerRef.current?.setTool("select");
     setLightingMenuOpen(false);
@@ -155,10 +156,12 @@ export function App() {
   };
   const undo = (): void => {
     settings.clearScenePreview();
+    lightAuthoring.clearPreview();
     workspace.undo();
   };
   const redo = (): void => {
     settings.clearScenePreview();
+    lightAuthoring.clearPreview();
     workspace.redo();
   };
   const shortcutActions: StudioShortcutActions = {
@@ -414,6 +417,7 @@ export function App() {
               onEvent={dataBinding.handleViewerEvent}
               onReady={(event) => {
                 settings.handleReady(event.documentId, event.revision);
+                lightAuthoring.handleReady(event.documentId, event.revision);
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
                 viewer.setTool(activeTool);
@@ -447,11 +451,14 @@ export function App() {
             editable={workspace.canEdit}
             entity={selectedEntity}
             execute={workspace.execute}
+            lightPreviewCancellation={lightAuthoring.previewCancellation}
             layout={sceneLayout}
             mode={session?.mode ?? "edit"}
             preview={dataBinding.preview}
             selectedEntityId={selectedEntityId}
             targetResolution={dataBinding.targetResolution}
+            onCancelLightPreview={lightAuthoring.cancelPreview}
+            onAcceptLightPreview={lightAuthoring.acceptPreview}
             onFocusTarget={(targetId) => {
               const entityId = project.document.targets.find(
                 (target) => target.id === targetId,
@@ -462,6 +469,7 @@ export function App() {
                 workspace.addDiagnostic(error instanceof Error ? error.message : String(error));
               });
             }}
+            onPreviewLight={lightAuthoring.preview}
             onRename={(entityId, name) =>
               workspace.execute({ type: "rename-entity", entityId, name })
             }

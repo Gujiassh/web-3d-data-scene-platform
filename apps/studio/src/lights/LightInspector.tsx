@@ -12,12 +12,17 @@ import {
   LIGHT_INTENSITY_SLIDER_MAX,
   sameLightEntity,
 } from "./model";
+import { LightColorControl, LightRangeControl } from "./LightInspectorControls";
 import "./light-authoring.css";
 
 interface LightInspectorProps {
   readonly entity: LightEntity;
   readonly editable: boolean;
+  readonly previewCancellation: number;
   readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
+  readonly onAcceptPreview: (entity: LightEntity, revision: number) => void;
+  readonly onCancelPreview: () => void;
+  readonly onPreview: (entity: LightEntity) => void;
 }
 
 type VectorDraft = readonly [string, string, string];
@@ -50,8 +55,9 @@ interface LightDraft {
 export function LightInspector(props: LightInspectorProps) {
   const { t } = useStudioI18n();
   const [draft, setDraft] = useState(() => draftFromEntity(props.entity));
-  const [submitted, setSubmitted] = useState(false);
-  const [applyFailed, setApplyFailed] = useState(false);
+  const draftRef = useRef(draft);
+  const [invalidVisible, setInvalidVisible] = useState(false);
+  const [commitFailed, setCommitFailed] = useState(false);
   const fields = useRef(new Map<FieldId, HTMLInputElement>());
   const registerInput = useCallback((field: FieldId, input: HTMLInputElement | null): void => {
     registerField(fields.current, field, input);
@@ -59,31 +65,66 @@ export function LightInspector(props: LightInspectorProps) {
   const validation = validateDraft(draft, props.entity.light.kind, t.lights.inspector.validation);
   const sliderValue = clamp(numberOrZero(draft.brightness), 0, LIGHT_INTENSITY_SLIDER_MAX);
 
-  const submit = (): void => {
-    setSubmitted(true);
-    setApplyFailed(false);
+  const updateDraft = (next: LightDraft): void => {
+    draftRef.current = next;
+    setDraft(next);
+  };
+  const previewDraft = (next: LightDraft): void => {
+    updateDraft(next);
+    const nextValidation = validateDraft(
+      next,
+      props.entity.light.kind,
+      t.lights.inspector.validation,
+    );
+    if (Object.values(nextValidation).every((message) => message === null)) {
+      props.onPreview(entityFromDraft(props.entity, next));
+    } else {
+      props.onCancelPreview();
+    }
+  };
+  const commitDraft = (next: LightDraft): void => {
+    updateDraft(next);
+    setCommitFailed(false);
+    const nextValidation = validateDraft(
+      next,
+      props.entity.light.kind,
+      t.lights.inspector.validation,
+    );
     const firstInvalid = orderedFieldIds(props.entity.light.kind).find(
-      (field) => validation[field] !== null,
+      (field) => nextValidation[field] !== null,
     );
     if (firstInvalid !== undefined) {
+      setInvalidVisible(true);
+      props.onCancelPreview();
       requestAnimationFrame(() => fields.current.get(firstInvalid)?.focus());
       return;
     }
-    const after = entityFromDraft(props.entity, draft);
-    if (sameLightEntity(props.entity, after)) return;
+    setInvalidVisible(false);
+    const after = entityFromDraft(props.entity, next);
+    if (sameLightEntity(props.entity, after)) {
+      props.onCancelPreview();
+      return;
+    }
     const outcome = props.execute(buildUpdateLightCommand(props.entity, after));
-    if (outcome.status === "rejected" || outcome.status === "unavailable") setApplyFailed(true);
+    if (outcome.status === "rejected" || outcome.status === "unavailable") {
+      updateDraft(draftFromEntity(props.entity));
+      setCommitFailed(true);
+      props.onCancelPreview();
+    } else if (outcome.status === "changed") {
+      props.onAcceptPreview(after, outcome.revision);
+    } else {
+      props.onCancelPreview();
+    }
+  };
+  const cancelDraft = (): void => {
+    updateDraft(draftFromEntity(props.entity));
+    setInvalidVisible(false);
+    setCommitFailed(false);
+    props.onCancelPreview();
   };
 
   return (
-    <form
-      className="light-inspector"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-    >
+    <div className="light-inspector">
       <section className="inspector-section">
         <h2 tabIndex={-1}>
           {props.entity.light.kind === "point" ? <Lightbulb size={13} /> : <Zap size={13} />}
@@ -97,7 +138,9 @@ export function LightInspector(props: LightInspectorProps) {
             data-light-inspector-primary={props.entity.id}
             disabled={!props.editable}
             value={draft.name}
-            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+            onBlur={() => commitDraft(draftRef.current)}
+            onChange={(event) => updateDraft({ ...draftRef.current, name: event.target.value })}
+            onKeyDown={(event) => handleTextCommitKey(event, cancelDraft)}
           />
         </label>
         <InspectorValue
@@ -113,14 +156,13 @@ export function LightInspector(props: LightInspectorProps) {
         <label className="inspector-field light-color-field">
           <span>{t.lights.inspector.color}</span>
           <span className="light-color-control">
-            <input
-              aria-label={t.lights.inspector.color}
+            <LightColorControl
               disabled={!props.editable}
-              type="color"
+              label={t.lights.inspector.color}
+              previewCancellation={props.previewCancellation}
               value={draft.color}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, color: event.target.value.toUpperCase() }))
-              }
+              onCommit={(color) => commitDraft({ ...draftRef.current, color })}
+              onPreview={(color) => previewDraft({ ...draftRef.current, color })}
             />
             <span className="mono">{draft.color}</span>
           </span>
@@ -130,16 +172,20 @@ export function LightInspector(props: LightInspectorProps) {
             {t.lights.inspector.brightness}
           </label>
           <span className="light-brightness-control">
-            <input
-              aria-label={t.lights.inspector.brightnessSlider}
+            <LightRangeControl
               disabled={!props.editable}
+              label={t.lights.inspector.brightnessSlider}
               max={LIGHT_INTENSITY_SLIDER_MAX}
-              min="0"
-              step="1"
-              type="range"
+              min={0}
+              previewCancellation={props.previewCancellation}
+              step={1}
               value={sliderValue}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, brightness: event.target.value }))
+              onCancel={cancelDraft}
+              onCommit={(brightness) =>
+                commitDraft({ ...draftRef.current, brightness: String(brightness) })
+              }
+              onPreview={(brightness) =>
+                previewDraft({ ...draftRef.current, brightness: String(brightness) })
               }
             />
             <input
@@ -154,9 +200,11 @@ export function LightInspector(props: LightInspectorProps) {
               step="0.1"
               type="number"
               value={draft.brightness}
+              onBlur={() => commitDraft(draftRef.current)}
               onChange={(event) =>
-                setDraft((current) => ({ ...current, brightness: event.target.value }))
+                previewDraft({ ...draftRef.current, brightness: event.target.value })
               }
+              onKeyDown={(event) => handleTextCommitKey(event, cancelDraft)}
             />
           </span>
         </div>
@@ -173,7 +221,9 @@ export function LightInspector(props: LightInspectorProps) {
             step="0.1"
             type="number"
             value={draft.range}
-            onChange={(event) => setDraft((current) => ({ ...current, range: event.target.value }))}
+            onBlur={() => commitDraft(draftRef.current)}
+            onChange={(event) => previewDraft({ ...draftRef.current, range: event.target.value })}
+            onKeyDown={(event) => handleTextCommitKey(event, cancelDraft)}
           />
         </label>
         {props.entity.light.kind === "spot" && (
@@ -191,9 +241,11 @@ export function LightInspector(props: LightInspectorProps) {
                 step="0.1"
                 type="number"
                 value={draft.angleDegrees}
+                onBlur={() => commitDraft(draftRef.current)}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, angleDegrees: event.target.value }))
+                  previewDraft({ ...draftRef.current, angleDegrees: event.target.value })
                 }
+                onKeyDown={(event) => handleTextCommitKey(event, cancelDraft)}
               />
             </label>
             <label className="inspector-field">
@@ -209,9 +261,11 @@ export function LightInspector(props: LightInspectorProps) {
                 step="0.01"
                 type="number"
                 value={draft.penumbra}
+                onBlur={() => commitDraft(draftRef.current)}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, penumbra: event.target.value }))
+                  previewDraft({ ...draftRef.current, penumbra: event.target.value })
                 }
+                onKeyDown={(event) => handleTextCommitKey(event, cancelDraft)}
               />
             </label>
           </>
@@ -227,9 +281,11 @@ export function LightInspector(props: LightInspectorProps) {
           label={t.inspector.position}
           values={draft.position}
           onRegister={registerInput}
+          onCancel={cancelDraft}
           onChange={(position) =>
-            setDraft((current) => ({ ...current, position, positionDirty: true }))
+            updateDraft({ ...draftRef.current, position, positionDirty: true })
           }
+          onCommit={() => commitDraft(draftRef.current)}
         />
         {props.entity.light.kind === "spot" && (
           <LightVectorField
@@ -239,17 +295,19 @@ export function LightInspector(props: LightInspectorProps) {
             label={t.inspector.rotationDegrees}
             values={draft.rotation}
             onRegister={registerInput}
+            onCancel={cancelDraft}
             onChange={(rotation) =>
-              setDraft((current) => ({ ...current, rotation, rotationDirty: true }))
+              updateDraft({ ...draftRef.current, rotation, rotationDirty: true })
             }
+            onCommit={() => commitDraft(draftRef.current)}
           />
         )}
       </section>
 
-      {(submitted && Object.values(validation).some((message) => message !== null)) ||
-      applyFailed ? (
+      {(invalidVisible && Object.values(validation).some((message) => message !== null)) ||
+      commitFailed ? (
         <div className="light-inspector-error" role="alert">
-          {applyFailed ? t.lights.inspector.applyFailed : t.lights.inspector.invalid}
+          {commitFailed ? t.lights.inspector.applyFailed : t.lights.inspector.invalid}
         </div>
       ) : null}
       {props.entity.locked && (
@@ -257,12 +315,7 @@ export function LightInspector(props: LightInspectorProps) {
           <Lock size={13} /> {t.inspector.locked}
         </div>
       )}
-      <div className="light-inspector-actions">
-        <button className="primary-command" disabled={!props.editable} type="submit">
-          {t.lights.inspector.apply}
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -274,6 +327,8 @@ function LightVectorField({
   values,
   onRegister,
   onChange,
+  onCancel,
+  onCommit,
 }: {
   readonly disabled: boolean;
   readonly fieldPrefix: "position" | "rotation";
@@ -282,6 +337,8 @@ function LightVectorField({
   readonly values: VectorDraft;
   readonly onRegister: (field: FieldId, input: HTMLInputElement | null) => void;
   readonly onChange: (values: VectorDraft) => void;
+  readonly onCancel: () => void;
+  readonly onCommit: () => void;
 }) {
   const { t } = useStudioI18n();
   const axes = [t.inspector.axis.x, t.inspector.axis.y, t.inspector.axis.z] as const;
@@ -307,6 +364,15 @@ function LightVectorField({
                   next[index] = event.target.value;
                   onChange(next);
                 }}
+                onBlur={onCommit}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    onCancel();
+                    event.currentTarget.blur();
+                  }
+                }}
               />
             </label>
           );
@@ -331,6 +397,17 @@ function InspectorValue({
       <strong className={mono ? "mono" : ""}>{value}</strong>
     </div>
   );
+}
+
+function handleTextCommitKey(
+  event: React.KeyboardEvent<HTMLInputElement>,
+  cancel: () => void,
+): void {
+  if (event.key === "Enter") event.currentTarget.blur();
+  if (event.key === "Escape") {
+    event.preventDefault();
+    cancel();
+  }
 }
 
 function draftFromEntity(entity: LightEntity): LightDraft {

@@ -82,6 +82,69 @@ describe("AuthoredLightController", () => {
     controller.dispose();
   });
 
+  it("previews one light in place and restores authored values on cancel", () => {
+    const root = new Group();
+    const entities = new Map<string, RuntimeEntity>();
+    const requestRender = vi.fn();
+    const controller = new AuthoredLightController(root, entities, requestRender);
+    const authored = spotLight("spot-a", 10, 12);
+    controller.stage([authored]).commit("edit");
+    const object = entities.get(authored.id)?.object;
+    const light = childOfType(object, SpotLight)!;
+    const helper = object?.getObjectByName("light-helper:spot-a") as LineSegments;
+    const preview: LightEntity = {
+      ...authored,
+      light: {
+        kind: "spot",
+        color: "#336699",
+        intensity: 44,
+        range: 18,
+        angleRadians: Math.PI / 3,
+        penumbra: 0.6,
+      },
+    };
+
+    expect(controller.setPreview(preview.id, preview.light)).toBe(true);
+    expect(entities.get(authored.id)?.object).toBe(object);
+    expect(light).toMatchObject({ intensity: 44, distance: 18, angle: Math.PI / 3, penumbra: 0.6 });
+    expect(light.color.getHexString().toUpperCase()).toBe("336699");
+    expect(
+      (helper.material as Material & { color: { getHexString(): string } }).color.getHexString(),
+    ).toBe("336699");
+
+    controller.clearPreview();
+    expect(entities.get(authored.id)?.object).toBe(object);
+    expect(light).toMatchObject({
+      intensity: 10,
+      distance: 12,
+      angle: Math.PI / 4,
+      penumbra: 1 / 3,
+    });
+    expect(light.color.getHexString().toUpperCase()).toBe("FFFFFF");
+    expect(requestRender).toHaveBeenCalledTimes(3);
+    controller.dispose();
+  });
+
+  it("rejects invalid or unknown previews atomically", () => {
+    const root = new Group();
+    const entities = new Map<string, RuntimeEntity>();
+    const controller = new AuthoredLightController(root, entities, vi.fn());
+    const authored = pointLight("point-a", 25, null);
+    controller.stage([authored]).commit("edit");
+    const light = childOfType(entities.get(authored.id)?.object, PointLight)!;
+
+    expect(controller.setPreview(authored.id, { ...authored.light, intensity: Number.NaN })).toBe(
+      false,
+    );
+    expect(controller.setPreview(authored.id, { ...authored.light, intensity: 1000.001 })).toBe(
+      false,
+    );
+    expect(controller.setPreview(authored.id, { ...authored.light, color: "#aabbcc" })).toBe(false);
+    expect(controller.setPreview("missing", pointLight("missing", 50, null).light)).toBe(false);
+    expect(light.intensity).toBe(25);
+    controller.dispose();
+  });
+
   it("stages off-state, atomically replaces entity resources, and disposes both generations", () => {
     const root = new Group();
     const entities = new Map<string, RuntimeEntity>();

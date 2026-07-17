@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import type {
   DocumentCommand,
@@ -9,7 +9,11 @@ import type {
   UpdateLightEntityCommand,
 } from "@web3d/document";
 import type { AuthoringSceneHandle } from "@web3d/react";
-import type { AuthoringTool, AuthoringViewerEvent } from "@web3d/runtime";
+import type {
+  AuthoringTool,
+  AuthoringViewerEvent,
+  AuthoredLightPropertyPreview,
+} from "@web3d/runtime";
 
 import { createBrowserIdFactory } from "../session/command-builders";
 import type { SelectionOperation } from "../session/session-state";
@@ -27,6 +31,10 @@ import {
 
 type TransformPreviewEvent = Extract<AuthoringViewerEvent, { type: "transform-preview" }>;
 type TransformCommitEvent = Extract<AuthoringViewerEvent, { type: "transform-commit" }>;
+
+interface LightPreviewLayer extends AuthoredLightPropertyPreview {
+  readonly targetRevision?: number;
+}
 
 export type LightAddDisabledReason = "run" | "limit" | "not-ready";
 export type LightDuplicateDisabledReason = "limit" | "mixed-selection";
@@ -49,13 +57,19 @@ export interface StudioLightAuthoring {
   readonly selectionContainsLight: boolean;
   readonly duplicateEnabled: boolean;
   readonly duplicateDisabledReason: LightDuplicateDisabledReason | null;
+  readonly previewCancellation: number;
   readonly add: (kind: StudioLightKind) => boolean;
   readonly canUseTool: (tool: AuthoringTool) => boolean;
   readonly deleteSelection: () => boolean;
   readonly duplicateSelection: () => boolean;
   readonly handleTransformCommit: (event: TransformCommitEvent) => boolean;
   readonly handleTransformPreview: (event: TransformPreviewEvent) => boolean;
+  readonly handleReady: (documentId: string, revision: number) => void;
   readonly refreshCreationAvailability: () => void;
+  readonly acceptPreview: (entity: LightEntity, revision: number) => void;
+  readonly cancelPreview: () => void;
+  readonly clearPreview: () => void;
+  readonly preview: (entity: LightEntity) => void;
   readonly updateLock: (entityId: string, locked: boolean) => boolean;
   readonly updateVisibility: (entityId: string, visible: boolean) => boolean;
 }
@@ -67,6 +81,9 @@ export function useStudioLightAuthoring(
   optionsRef.current = options;
   const availabilityKey = stateKey(options.document, options.mode);
   const [availability, setAvailability] = useState({ key: "", ready: false });
+  const [previewCancellation, setPreviewCancellation] = useState(0);
+  const activePreviewRef = useRef<LightPreviewLayer | null>(null);
+  const heldPreviewRef = useRef<LightPreviewLayer | null>(null);
   const frameReady = availability.key === availabilityKey && availability.ready;
   const lightCount = countAuthoredLights(options.document);
   const selectedLights = useMemo(
@@ -99,6 +116,92 @@ export function useStudioLightAuthoring(
       current.viewerRef.current?.getLightCreationFrame() !== null;
     setAvailability({ key, ready });
   }, []);
+
+  const renderPreview = useCallback((preview: LightPreviewLayer | null): boolean => {
+    const viewer = optionsRef.current.viewerRef.current;
+    if (viewer === null) return false;
+    if (preview === null) return viewer.setAuthoredLightPropertyPreview(null);
+    const snapshot = viewer.getSnapshot();
+    if (snapshot.documentId !== preview.documentId || snapshot.revision === null) {
+      return false;
+    }
+    return viewer.setAuthoredLightPropertyPreview({
+      documentId: preview.documentId,
+      documentRevision: snapshot.revision,
+      entityId: preview.entityId,
+      light: preview.light,
+    });
+  }, []);
+
+  const clearPreview = useCallback((): void => {
+    activePreviewRef.current = null;
+    heldPreviewRef.current = null;
+    renderPreview(null);
+    setPreviewCancellation((current) => current + 1);
+  }, [renderPreview]);
+
+  const cancelPreview = useCallback((): void => {
+    activePreviewRef.current = null;
+    renderPreview(heldPreviewRef.current);
+    setPreviewCancellation((current) => current + 1);
+  }, [renderPreview]);
+
+  const preview = useCallback(
+    (entity: LightEntity): void => {
+      const current = optionsRef.current;
+      if (current.document === null) return;
+      const layer: LightPreviewLayer = {
+        documentId: current.document.id,
+        documentRevision: current.document.revision,
+        entityId: entity.id,
+        light: entity.light,
+      };
+      activePreviewRef.current = layer;
+      renderPreview(layer);
+    },
+    [renderPreview],
+  );
+
+  const acceptPreview = useCallback(
+    (entity: LightEntity, revision: number): void => {
+      const current = optionsRef.current;
+      if (current.document === null) return;
+      const active = activePreviewRef.current;
+      const held: LightPreviewLayer = {
+        documentId: current.document.id,
+        documentRevision:
+          active?.entityId === entity.id ? active.documentRevision : current.document.revision,
+        entityId: entity.id,
+        light: entity.light,
+        targetRevision: revision,
+      };
+      activePreviewRef.current = null;
+      heldPreviewRef.current = held;
+      renderPreview(held);
+    },
+    [renderPreview],
+  );
+
+  const handleReady = useCallback(
+    (documentId: string, revision: number): void => {
+      const held = heldPreviewRef.current;
+      if (
+        held !== null &&
+        held.documentId === documentId &&
+        held.targetRevision !== undefined &&
+        revision >= held.targetRevision
+      ) {
+        heldPreviewRef.current = null;
+      }
+      renderPreview(activePreviewRef.current ?? heldPreviewRef.current);
+    },
+    [renderPreview],
+  );
+
+  useEffect(
+    () => clearPreview(),
+    [clearPreview, options.document?.id, options.mode, options.primaryEntityId],
+  );
 
   const add = useCallback((kind: StudioLightKind): boolean => {
     const current = optionsRef.current;
@@ -182,6 +285,7 @@ export function useStudioLightAuthoring(
     selectionContainsLight,
     duplicateEnabled: selectionContainsLight && duplicateDisabledReason === null,
     duplicateDisabledReason: selectionContainsLight ? duplicateDisabledReason : null,
+    previewCancellation,
     add,
     canUseTool(tool) {
       return primaryLight === null ? true : lightSupportsTool(primaryLight, tool);
@@ -190,7 +294,12 @@ export function useStudioLightAuthoring(
     duplicateSelection,
     handleTransformCommit,
     handleTransformPreview,
+    handleReady,
     refreshCreationAvailability,
+    acceptPreview,
+    cancelPreview,
+    clearPreview,
+    preview,
     updateLock,
     updateVisibility,
   };

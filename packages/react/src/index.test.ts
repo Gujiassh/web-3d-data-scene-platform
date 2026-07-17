@@ -80,6 +80,7 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneHandle["setBackgroundPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setGridPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setLightingPreview"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setAuthoredLightPropertyPreview"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setTransformSettings"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setSmartAlignEnabled"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["isTransformDragging"]>().toBeFunction();

@@ -20,7 +20,9 @@ import type { RuntimeEntity } from "./runtime-generation";
 interface AuthoredLightResource {
   readonly entity: LightEntity;
   readonly object: Object3D;
+  readonly light: PointLight | SpotLight;
   readonly authoringSurface: Group;
+  readonly helperMaterial: LineBasicMaterial;
 }
 
 export interface StagedAuthoredLights {
@@ -31,6 +33,8 @@ export interface StagedAuthoredLights {
 export interface AuthoredLightRuntime {
   stage(lights: readonly LightEntity[]): StagedAuthoredLights;
   setAuthoringMode(mode: AuthoringMode): void;
+  setPreview(entityId: string, light: LightEntity["light"]): boolean;
+  clearPreview(): void;
   entityForObject(object: Object3D): string | undefined;
   dispose(): void;
 }
@@ -43,6 +47,7 @@ export class AuthoredLightController implements AuthoredLightRuntime {
   #authoringMode: AuthoringMode = "run";
   #resources = new Map<string, AuthoredLightResource>();
   #objectEntities = new WeakMap<Object3D, string>();
+  #previewEntityId: string | null = null;
   #disposed = false;
 
   constructor(
@@ -89,6 +94,31 @@ export class AuthoredLightController implements AuthoredLightRuntime {
     this.#requestRender();
   }
 
+  setPreview(entityId: string, light: LightEntity["light"]): boolean {
+    this.#ensureActive();
+    if (!validPreview(light)) return false;
+    const previous =
+      this.#previewEntityId === null ? undefined : this.#resources.get(this.#previewEntityId);
+    const next = this.#resources.get(entityId);
+    if (next === undefined || next.entity.light.kind !== light.kind) return false;
+    if (previous !== undefined && previous !== next)
+      applyLightProperties(previous, previous.entity.light);
+    applyLightProperties(next, light);
+    this.#previewEntityId = entityId;
+    this.#requestRender();
+    return true;
+  }
+
+  clearPreview(): void {
+    this.#ensureActive();
+    if (this.#previewEntityId === null) return;
+    const previous = this.#resources.get(this.#previewEntityId);
+    this.#previewEntityId = null;
+    if (previous === undefined) return;
+    applyLightProperties(previous, previous.entity.light);
+    this.#requestRender();
+  }
+
   entityForObject(object: Object3D): string | undefined {
     let current: Object3D | null = object;
     while (current !== null) {
@@ -108,6 +138,7 @@ export class AuthoredLightController implements AuthoredLightRuntime {
     });
     this.#resources.clear();
     this.#objectEntities = new WeakMap();
+    this.#previewEntityId = null;
     this.#requestRender();
   }
 
@@ -119,6 +150,7 @@ export class AuthoredLightController implements AuthoredLightRuntime {
     });
 
     this.#authoringMode = mode;
+    this.#previewEntityId = null;
     resources.forEach((resource) => {
       setResourceAuthoringMode(resource, mode);
       this.#root.add(resource.object);
@@ -146,18 +178,14 @@ function createLightResource(entity: LightEntity): AuthoredLightResource {
   object.scale.fromArray(entity.transform.scale);
   object.visible = entity.visible;
 
+  let light: PointLight | SpotLight;
   if (entity.light.kind === "point") {
-    const light = new PointLight(
-      entity.light.color,
-      entity.light.intensity,
-      entity.light.range ?? 0,
-      2,
-    );
+    light = new PointLight(entity.light.color, entity.light.intensity, entity.light.range ?? 0, 2);
     light.castShadow = false;
     light.name = `authored-point:${entity.id}`;
     object.add(light);
   } else {
-    const light = new SpotLight(
+    light = new SpotLight(
       entity.light.color,
       entity.light.intensity,
       entity.light.range ?? 0,
@@ -172,14 +200,52 @@ function createLightResource(entity: LightEntity): AuthoredLightResource {
     object.add(light, light.target);
   }
 
+  const authoringSurface = createAuthoringSurface(entity);
+  const helper = authoringSurface.getObjectByName(`light-helper:${entity.id}`);
+  if (!(helper instanceof LineSegments) || !(helper.material instanceof LineBasicMaterial)) {
+    throw new TypeError(`Light ${entity.id} authoring helper is unavailable.`);
+  }
   const resource = {
     entity,
     object,
-    authoringSurface: createAuthoringSurface(entity),
+    light,
+    authoringSurface,
+    helperMaterial: helper.material,
   };
   object.updateMatrix();
   object.updateMatrixWorld(true);
   return resource;
+}
+
+function applyLightProperties(resource: AuthoredLightResource, light: LightEntity["light"]): void {
+  resource.light.color.set(light.color);
+  resource.light.intensity = light.intensity;
+  resource.light.distance = light.range ?? 0;
+  resource.helperMaterial.color.set(light.color);
+  if (resource.light instanceof SpotLight && light.kind === "spot") {
+    resource.light.angle = light.angleRadians;
+    resource.light.penumbra = light.penumbra;
+  }
+}
+
+function validPreview(light: LightEntity["light"]): boolean {
+  const values = [
+    light.intensity,
+    ...(light.range === null ? [] : [light.range]),
+    ...(light.kind === "spot" ? [light.angleRadians, light.penumbra] : []),
+  ];
+  return !(
+    !/^#[\dA-F]{6}$/.test(light.color) ||
+    !values.every(Number.isFinite) ||
+    light.intensity < 0 ||
+    light.intensity > 1000 ||
+    (light.range !== null && light.range <= 0) ||
+    (light.kind === "spot" &&
+      (light.angleRadians <= 0 ||
+        light.angleRadians > Math.PI / 2 ||
+        light.penumbra < 0 ||
+        light.penumbra > 1))
+  );
 }
 
 function createAuthoringSurface(entity: LightEntity): Group {

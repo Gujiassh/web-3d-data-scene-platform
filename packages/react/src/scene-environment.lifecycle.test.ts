@@ -4,7 +4,11 @@ import { StrictMode, act, createElement, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CreateAuthoringViewerOptions, SceneSource } from "@web3d/runtime";
+import type {
+  AuthoredLightPropertyPreview,
+  CreateAuthoringViewerOptions,
+  SceneSource,
+} from "@web3d/runtime";
 import type { SceneLighting } from "@web3d/document";
 
 interface FakeViewer {
@@ -16,6 +20,7 @@ interface FakeViewer {
   readonly setBackgroundPreview: ReturnType<typeof vi.fn>;
   readonly setGridPreview: ReturnType<typeof vi.fn>;
   readonly setLightingPreview: ReturnType<typeof vi.fn>;
+  readonly setAuthoredLightPropertyPreview: ReturnType<typeof vi.fn>;
   readonly setThemeBackground: ReturnType<typeof vi.fn>;
 }
 
@@ -59,6 +64,7 @@ vi.mock("@web3d/runtime", () => {
       setBackgroundPreview: vi.fn(),
       setGridPreview: vi.fn(),
       setLightingPreview: vi.fn(),
+      setAuthoredLightPropertyPreview: vi.fn(() => true),
       setCanvasLabel: vi.fn(),
       setDataRuntimeEnabled: vi.fn(() => Promise.resolve()),
       setThemeBackground: vi.fn(),
@@ -271,6 +277,14 @@ describe("React scene environment lifecycle", () => {
       position: [0, 2, 0],
       target: [0, 0, 0],
     });
+    const preview: AuthoredLightPropertyPreview = {
+      documentId: "scene-a",
+      documentRevision: 0,
+      entityId: "light-a",
+      light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+    };
+    expect(ref.current?.setAuthoredLightPropertyPreview(preview)).toBe(true);
+    expect(viewer.setAuthoredLightPropertyPreview).toHaveBeenCalledWith(preview);
   });
 });
 

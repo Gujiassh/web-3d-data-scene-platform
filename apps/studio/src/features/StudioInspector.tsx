@@ -24,8 +24,15 @@ interface StudioInspectorProps {
   readonly selectedEntityId: string | null;
   readonly targetResolution: TargetResolution;
   readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
+  readonly lightPreviewCancellation: number;
   readonly layout: StudioSceneLayout;
   readonly onFocusTarget: (targetId: string) => void;
+  readonly onCancelLightPreview: () => void;
+  readonly onAcceptLightPreview: (
+    entity: Extract<SceneEntity, { type: "light" }>,
+    revision: number,
+  ) => void;
+  readonly onPreviewLight: (entity: Extract<SceneEntity, { type: "light" }>) => void;
   readonly onRename: (entityId: string, name: string) => void;
 }
 
@@ -90,6 +97,10 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
               editable={props.editable && props.entity !== null && !props.entity.locked}
               entity={props.entity}
               execute={props.execute}
+              lightPreviewCancellation={props.lightPreviewCancellation}
+              onCancelLightPreview={props.onCancelLightPreview}
+              onAcceptLightPreview={props.onAcceptLightPreview}
+              onPreviewLight={props.onPreviewLight}
               onRename={props.onRename}
             />
             <SceneLayoutPanel compact layout={props.layout} />

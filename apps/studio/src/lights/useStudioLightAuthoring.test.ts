@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 
-import { act, createElement } from "react";
+import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DocumentCommand, LightEntity, SceneDocument } from "@web3d/document";
 import type { AuthoringSceneHandle } from "@web3d/react";
+import type { AuthoringViewerSnapshot } from "@web3d/runtime";
 
 import type { StudioCommandOutcome } from "../workspace/command-outcome";
 import type { SelectionOperation } from "../session/session-state";
@@ -188,6 +189,82 @@ describe("useStudioLightAuthoring", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it("layers rapid previews across cancellation and intermediate publication", () => {
+    const source = point();
+    let runtimeRevision = 1;
+    const viewer = handle({ position: [0, 2, 0], target: [0, 0, 0] });
+    vi.mocked(viewer.getSnapshot).mockImplementation(() => ({
+      lifecycle: "ready",
+      documentId: "scene-a",
+      revision: runtimeRevision,
+      selectedTargetId: null,
+      connections: {},
+      alarms: [],
+      selectedEntityId: source.id,
+      selectedEntityIds: [source.id],
+      primaryEntityId: source.id,
+      activeTool: "select",
+      dataRuntimeEnabled: false,
+      bindingStates: [],
+    }));
+    const setPreview = vi.mocked(viewer.setAuthoredLightPropertyPreview);
+    let updateDocument: (document: SceneDocument) => void = () => undefined;
+    function Harness() {
+      const [document, setDocument] = useState(scene([source]));
+      updateDocument = setDocument;
+      current = useStudioLightAuthoring({
+        document,
+        mode: "edit",
+        canEdit: true,
+        selectedEntityIds: [source.id],
+        primaryEntityId: source.id,
+        viewerRef: { current: viewer },
+        execute: vi.fn(),
+        selectEntity: vi.fn(),
+      });
+      return null;
+    }
+    act(() => root.render(createElement(Harness)));
+    setPreview.mockClear();
+    const accepted = { ...source, light: { ...source.light, intensity: 40 } };
+    const transient = { ...accepted, light: { ...accepted.light, intensity: 70 } };
+
+    act(() => current.preview(accepted));
+    act(() => current.acceptPreview(accepted, 2));
+    act(() => updateDocument({ ...scene([accepted]), revision: 2 }));
+    act(() => current.preview(transient));
+    act(() => current.cancelPreview());
+
+    const calls = setPreview.mock.calls.map(([preview]) => preview);
+    expect(calls.at(-2)).toMatchObject({
+      documentRevision: 1,
+      entityId: source.id,
+      light: { intensity: 70 },
+    });
+    expect(calls.at(-1)).toMatchObject({
+      documentRevision: 1,
+      entityId: source.id,
+      light: { intensity: 40 },
+    });
+    expect(calls.at(-1)).not.toBeNull();
+
+    runtimeRevision = 2;
+    act(() => current.preview(transient));
+    act(() => current.handleReady("scene-a", 2));
+    expect(setPreview.mock.calls.at(-1)?.[0]).toMatchObject({
+      documentRevision: 2,
+      light: { intensity: 70 },
+    });
+    act(() => current.acceptPreview(transient, 3));
+    expect(setPreview.mock.calls.at(-1)?.[0]).toMatchObject({
+      documentRevision: 2,
+      light: { intensity: 70 },
+    });
+    runtimeRevision = 3;
+    act(() => current.handleReady("scene-a", 3));
+    expect(setPreview.mock.calls.at(-1)?.[0]).toBeNull();
+  });
+
   function render({
     document,
     execute,
@@ -242,8 +319,22 @@ function handle(
     setBackgroundPreview: vi.fn(),
     setGridPreview: vi.fn(),
     setLightingPreview: vi.fn(),
+    setAuthoredLightPropertyPreview: vi.fn(() => true),
     setView: vi.fn(async () => undefined),
-    getSnapshot: vi.fn(),
+    getSnapshot: vi.fn<() => AuthoringViewerSnapshot>(() => ({
+      lifecycle: "created",
+      documentId: null,
+      revision: null,
+      selectedTargetId: null,
+      connections: {},
+      alarms: [],
+      selectedEntityId: null,
+      selectedEntityIds: [],
+      primaryEntityId: null,
+      activeTool: "select",
+      dataRuntimeEnabled: false,
+      bindingStates: [],
+    })),
   };
 }
 

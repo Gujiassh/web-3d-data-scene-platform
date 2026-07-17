@@ -420,3 +420,31 @@ schema 和既有 save 数据含义全部不变。
 - generation 修复后 key WebGL 4/4 与 final full Chromium/WebGL E2E 22/22 均通过。
 - 独立 Critical reviewer 首轮发现 High active-range Undo race；controller-owned cancellation generation 与
   回归测试返工后，同一 reviewer 最终复审 PASS，无 remaining contract finding。
+
+## 2026-07-17 007c authored-light Inspector 直接操控语义
+
+右侧 Object Inspector 的 Point/Spot Light 属性不再使用 form 或“Apply/应用”按钮。该 Inspector 与统一
+Settings 的 scene-wide fill/key Lighting 面板职责不同：前者编辑持久化 `LightEntity`，后者编辑
+`SceneEnvironment.lighting`。
+
+- 颜色、亮度、范围、Spot 光束角和半影在输入期间通过 `AuthoredLightPropertyPreview` 直接更新现有 Three
+  Light 与 helper color；preview 不修改 SceneDocument、revision、history、autosave、selection 或 Canvas identity。
+- 亮度 slider 在 pointer/keyboard gesture 结束时只执行一次完整 `update-light-entity` command。颜色在原生颜色
+  选择完成时提交；数值、名称、位置和旋转精确输入在 Enter/blur 时各提交一次。每个 accepted operation 对应
+  一个 revision 与一个 Undo entry，并进入既有 500ms debounce autosave。
+- preview DTO 只包含 `documentId`、`documentRevision`、`entityId` 和 `LightEntity.light`。Runtime 只在当前 Edit、
+  当前 revision、未锁定且 kind 一致时接受；Run、锁定、陈旧 revision、unknown entity 或 invalid value 原子拒绝。
+- 取消、拒绝、Undo/Redo、主选择变化和进入 Run 都清 preview；成功 command 的 preview 保持到 matching
+  light-only source publication 原子替换 runtime resource，避免先闪回旧值。SceneDocument 1.3、ProjectRecord、
+  IndexedDB、JSON/ZIP archive 与 `update-light-entity` payload schema/save meaning 不变。
+
+最终 full unit 为 92 files / 560 tests；typecheck、lint、production build、i18n、design、topology、format 与
+diff checks 通过。冷启动 Chromium/WebGL light-authoring E2E 2/2 通过，覆盖无 Apply、滑杆 preview 期间
+revision 不变、release 单提交、精确输入、Run 取消和 Canvas identity；最终完整 Chromium/WebGL E2E 22/22
+通过。
+
+独立 Critical review 首轮发现 High rapid-operation publication race 与 Medium color lifecycle coverage gap。
+Studio controller 加入 active transient + held accepted-awaiting-publication 两层 preview，按 Viewer 当前 published
+revision 渲染并按 matching ready revision 释放；延迟 publication、取消 B 恢复 A、active B 跨 ready(A)、接受 B
+直到 ready(B) 的组合序列均有测试。颜色 input/change/blur、duplicate completion、Undo 后 late event、accept revision
+与 rejection restoration 补齐后，同一 reviewer 最终 PASS，无 remaining finding。

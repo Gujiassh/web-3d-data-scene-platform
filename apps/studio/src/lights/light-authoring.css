@@ -197,9 +197,3 @@
   color: var(--danger);
   font-size: 10px;
 }
-
-.light-inspector-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px 12px 12px;
-}

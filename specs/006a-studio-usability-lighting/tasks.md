@@ -264,3 +264,21 @@ contract migration, payload evidence or lifecycle checks to a frontend-only clea
 - After the generation fix, key WebGL passed 4/4 and final full Chromium/WebGL E2E passed 22/22.
 - Independent Critical review first found High active-range Undo race. Controller-owned cancellation generation plus
   regression rework closed it; the same reviewer returned final PASS with no remaining contract finding.
+
+## Phase 10: 007c Direct Authored-Light Inspector
+
+- [x] T057 Remove the authored-light Inspector form/Apply action and define slider/color gesture versus precision
+      Enter/blur commit boundaries.
+- [x] T058 Add a property-only authored-light Runtime preview DTO with document/revision/Edit/lock/kind validity gates
+      and in-place Three light/helper updates.
+- [x] T059 Clear preview on cancel, rejection, Undo/Redo, selection departure and Run; hold accepted preview until
+      matching light-only source publication and invalidate late gesture completion.
+- [x] T060 Update unit/runtime/React/Studio and Chromium/WebGL light-authoring tests; preserve SceneDocument,
+      `update-light-entity`, IndexedDB, JSON/ZIP and autosave contracts.
+- [x] T061 Run final full gates, independent review and documentation closeout. English commit/push is the remaining
+      delivery action outside implementation acceptance.
+
+Final evidence: full unit 92 files / 560 tests; typecheck, lint, production build, i18n, design, topology, format and
+diff checks passed; cold-start Chromium/WebGL light-authoring 2/2 passed. Critical review first found High rapid
+publication timing and Medium color lifecycle coverage; active/held preview rework and regression tests closed both,
+and the same reviewer returned PASS with no remaining finding. Final full Chromium/WebGL E2E passed 22/22.

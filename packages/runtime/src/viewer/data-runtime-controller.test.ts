@@ -267,6 +267,8 @@ function generation(target: RuntimeTarget): RuntimeGeneration {
     authoredLights: {
       stage: vi.fn(() => ({ commit: vi.fn(), dispose: vi.fn() })),
       setAuthoringMode: vi.fn(),
+      setPreview: vi.fn(() => true),
+      clearPreview: vi.fn(),
       entityForObject: vi.fn(),
       dispose: vi.fn(),
     },
