@@ -36,6 +36,7 @@ export function deriveLayoutCapabilities(input: {
   }
   const selection = getSameParentCapability(input.document.entities, input.selectedEntityIds);
   const common = commonSelectionReason(selection);
+  const unsupported = selection.unsupportedEntityIds.length > 0 ? "selection-unsupported" : null;
   const fresh = snapshotReason(input.document, selection.rootEntityIds, input.snapshots, false);
   const freshBounds = snapshotReason(
     input.document,
@@ -50,26 +51,32 @@ export function deriveLayoutCapabilities(input: {
     input.snapshots,
   );
   const groupReason =
-    selection.rootEntityIds.length < 2
+    unsupported ??
+    (selection.rootEntityIds.length < 2
       ? "group-selection-minimum"
-      : (common ?? locked ?? hidden ?? freshBounds);
+      : (common ?? locked ?? hidden ?? freshBounds));
   const alignReason =
-    selection.rootEntityIds.length < 2
+    unsupported ??
+    (selection.rootEntityIds.length < 2
       ? "align-selection-minimum"
-      : (common ?? locked ?? hidden ?? freshBounds);
+      : (common ?? locked ?? hidden ?? freshBounds));
   const distributeReason =
-    selection.rootEntityIds.length < 3
+    unsupported ??
+    (selection.rootEntityIds.length < 3
       ? "distribute-selection-minimum"
-      : (common ?? locked ?? hidden ?? freshBounds);
+      : (common ?? locked ?? hidden ?? freshBounds));
   const reparentReason =
-    selection.rootEntityIds.length < 1
+    unsupported ??
+    (selection.rootEntityIds.length < 1
       ? "selection-required"
-      : (common ?? locked ?? reparentTargetReason(input, selection.rootEntityIds) ?? fresh);
+      : (common ?? locked ?? reparentTargetReason(input, selection.rootEntityIds) ?? fresh));
   const duplicateReason =
-    selection.rootEntityIds.length < 1
+    unsupported ??
+    (selection.rootEntityIds.length < 1
       ? "selection-required"
-      : (common ?? fresh ?? (input.duplicateOffsetValid ? null : "invalid-offset"));
-  const anchorReason = anchorSnapReason(input, selection.rootEntityIds, locked, hidden);
+      : (common ?? fresh ?? (input.duplicateOffsetValid ? null : "invalid-offset")));
+  const anchorReason =
+    unsupported ?? anchorSnapReason(input, selection.rootEntityIds, locked, hidden);
   return {
     group: action(groupReason),
     reparent: action(reparentReason),
@@ -126,6 +133,7 @@ function anchorSnapReason(
   if (input.anchorTargetId === sourceId) return "source-target-same";
   const target = input.document.entities.find((entity) => entity.id === input.anchorTargetId);
   if (target === undefined) return "target-required";
+  if (target.type === "light") return "target-invalid";
   if (target.locked) return "target-locked";
   const targetSnapshotReason = snapshotReason(input.document, [target.id], input.snapshots, true);
   if (targetSnapshotReason !== null) return targetSnapshotReason;

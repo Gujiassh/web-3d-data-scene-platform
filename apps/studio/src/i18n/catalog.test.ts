@@ -74,4 +74,17 @@ describe("Studio catalog", () => {
     expect(english.toolbar.sceneSettings).toBe("Scene settings");
     expect(chinese.toolbar.sceneSettings).toBe("场景设置");
   });
+
+  it("keeps authored-light menu, fields and disabled reasons bilingual", () => {
+    expect(Object.keys(english.lights.menu)).toEqual(Object.keys(chinese.lights.menu));
+    expect(Object.keys(english.lights.inspector.validation)).toEqual(
+      Object.keys(chinese.lights.inspector.validation),
+    );
+    expect(english.lights.menu.addPoint).toBe("Add point");
+    expect(chinese.lights.menu.addSpot).toBe("添加聚光灯");
+    expect(english.lights.menu.sceneSettings).toBe("Scene lighting settings");
+    expect(chinese.lights.menu.countLabel(3)).toContain("3/8");
+    expect(english.lights.inspector.brightness).toBe("Brightness");
+    expect(chinese.lights.inspector.brightness).toBe("亮度");
+  });
 });

@@ -29,7 +29,7 @@ export function createNewStudioProject(input: NewProjectInput): StudioProjectSna
 
 function createEmptyDocument(id: string, name: string): SceneDocument {
   const candidate: SceneDocument = {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id,
     name,
     revision: 0,

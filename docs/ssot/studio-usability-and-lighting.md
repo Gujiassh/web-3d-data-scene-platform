@@ -1,7 +1,7 @@
 # Studio Usability And Lighting
 
-> 状态：006A.1/006A.2/006A.3 accepted
-> 用户批准：2026-07-16，包含 `SceneDocument 1.1.0 -> 1.2.0` 和真实 IndexedDB 数据迁移
+> 状态：006A.1/006A.2/006A.3/006B accepted
+> 用户批准：2026-07-16 批准 006A；2026-07-17 批准完整 006B `SceneDocument 1.3.0` 合同
 
 ## 2026-07-16 产品表面精简
 
@@ -30,6 +30,9 @@
 Feature 006A 是已验收 Scene Layout 的易用性后续阶段，按 006A.1 命令与回正、006A.2 智能对齐、
 006A.3 场景外观顺序交付。它不实现建模、任意灯光实体、阴影、HDRI、快捷键自定义或等间距实时参考线，
 也不占用 Feature 007 的热点/标注/声明式交互所有权。
+
+Feature 006B 在该边界上新增受限的 root Point/Spot LightEntity authoring，不把环境 fill/key 变成实体，
+也不引入 directional/sun、阴影、物理光强单位、建模、灯光子节点或灯光数据绑定。
 
 ## 006A.1 当前事实
 
@@ -185,7 +188,7 @@ camera threshold、TransformControls preview 和 guide lifecycle 位于独立 Ru
 Studio preference/orchestration 位于独立 `apps/studio/src/smart-align/` hook。继续禁止向当前 654 行的
 `useStudioSceneLayout` 增加 Smart Align 规划、偏好或 guide 职责。
 
-006A.3 将 current SceneDocument 升级到 1.2.0，required `environment.lighting` 保存具体 fill/key 参数，不保存
+006A.3 当时将 SceneDocument 升级到 1.2.0，required `environment.lighting` 保存具体 fill/key 参数，不保存
 preset 名称。旧 1.0/1.1 先按冻结合同完整验证，再迁移并复验 1.2；IndexedDB 全记录在一个 readwrite
 transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、DB version/store 和 archive container 不变。
 
@@ -193,7 +196,7 @@ transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、
 
 ### SceneDocument 1.2 与真实迁移
 
-- Current contract 是 `SceneDocument 1.2.0`，required `environment.lighting` 只保存一组 concrete
+- 006A.3 验收时的 current contract 是 `SceneDocument 1.2.0`，required `environment.lighting` 只保存一组 concrete
   hemisphere fill 和 directional key；颜色必须是 canonical uppercase `#RRGGBB`，强度在 `[0,5]`，
   `directionToLight` 是误差不超过 `1e-6` 的单位向量。Standard 方向使用
   `normalize([5,10,7]) = [0.37904902178945177,0.7580980435789035,0.5306686305052324]`。
@@ -271,3 +274,57 @@ transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、
 - Independent re-review closed every accepted finding and confirmed PASS. The remaining evolution risk is
   structural: 006A.2 must keep Smart Align outside `useStudioSceneLayout` and retain Run transition, hidden
   ancestor, active-drag rollback and Viewer identity regression evidence.
+
+## 006B 当前事实
+
+### SceneDocument 1.3 与灯光实体
+
+- Current contract 是 `SceneDocument 1.3.0`。旧 1.2 经过冻结 structure/semantics validator 后只修改
+  `schemaVersion`，不创建灯光且不改变 revision 或任何既有 authored value。JSON/ZIP 接受 1.0-1.3，
+  export 只写 1.3，archive container 保持 1.0.0。
+- root-only LightEntity 只支持 Point/Spot，场景最多八盏。亮度是 unitless `[0,1000]`，Point 默认 25，
+  Spot 默认 10；Point 仅平移，Spot 可平移/旋转，Scale 永远不可编辑。灯光不能拥有子节点、参与
+  Group/Reparent/layout 或成为 data-binding target。
+- 只有 `add-light-entity`、`update-light-entity`、`remove-light-entity` 三种完整快照命令能修改灯光；generic
+  entity commands 遇到灯光会原子拒绝且不清 redo。锁定灯光只允许 visibility 变化或 unlock；Duplicate
+  生成 unlocked root copy，并使用确定性 `[1,0,0]` offset。
+- IndexedDB version/store 和八字段 ProjectRecord shape 不变。初始化在一个 readwrite transaction 中把所有
+  legacy documentJson 刷成 canonical 1.3；被重写记录的 `lastExportedRevision` 置 null，合法 current 1.3
+  record bytes 保持完全一致，任一 invalid record 或 write failure 回滚全部。
+
+### Runtime authority 与 Studio workflow
+
+- 同 document 的纯灯光 revision 先完整验证 current 1.3，再执行 revision matrix 和 exact classifier，最后
+  staged/atomic publish；Canvas、generation、assets、adapters、camera、controls、selection 和 fill/key rig
+  不重建。非灯光 diff、entity reorder 或任一其他差异走 full load；stale/superseded work 不发布。
+- Edit/Run 是独立于 data runtime 的受控 authoring mode。Run 同步回滚 active drag，并移除 controls、helper、
+  pick proxy、overlay 和 pick surface，但保留灯光照明及 logical selection；回到 Edit 只恢复一套有效资源。
+- 关键回归规则：light-only stage 不捕获 mode。staged resources 必须在 commit 时读取 viewport 当前 mode，
+  否则 Edit->Run 竞态会重新发布 Edit helper。双向 deferred tests 固定 Edit->Run 无 authoring surface，
+  Run->Edit 只恢复一套 helper/proxy/overlay，并复用同一 TransformControls。
+- Lighting menu 位于 Help 旁边，提供 Add point、Add spot、Scene lighting settings 和 `n/8`；Add 依赖
+  Runtime 的 finite ready creation frame，无 fallback。Object Inspector 单独管理 name、visibility、lock、
+  color、brightness、range、angle 和 penumbra；中英文、键盘菜单、禁用原因与焦点恢复均有单测/E2E。
+- imported glTF punctual lights 替换为 neutral Object3D，同时保留 parent slot、transform、children、parser
+  associations、targets 和 post-replacement `nodesByIndex` resolution，不让资产自带灯光绕过 authored authority。
+
+### 006B 验收证据
+
+- Final unit: 90 files / 533 tests。Document standalone current/1.0/1.1/1.2 validator smoke 通过；root/E2E/5
+  workspace TypeScript、ESLint、production build 1926 modules、i18n、product design、single-Studio topology、
+  Prettier 和 diff check 全部通过。
+- Chromium/WebGL full matrix 22/22 通过，包含 Lighting creation-frame/focus、Point/Spot tools、Run drag revert、
+  current 1.3 JSON/ZIP/IndexedDB、006A layout/usability、theme/i18n 和 M2 data binding。
+- Hardware performance acceptance 使用 Windows system Chrome 150、RTX 3090 Direct3D11、1440x900 DPR1。
+  两套 fixture 的每个状态都独立记录 compile transition，再串行观察 30 warm-ups 和 300 measured events；
+  mixed 4 Point/4 Spot warmed p95 为 006 `0.20ms`、PBR `0.30ms`，均低于 `33.3ms`。PBR mixed compile
+  transition 的 109ms 单独记录，没有混入 warmed gate。Canvas evidence 分别有 15/108 个 sampled colors。
+- Benchmark runner 对 SwiftShader/llvmpipe/unavailable、错误 viewport/DPR、fixture/state/sample shape、blank
+  Canvas 和 p95 超限直接失败。默认 Linux SwiftShader 路径已证明 exit 1；RTX 3090 硬件路径 exit 0。
+- First Critical review 发现 light-only mode race、软件渲染证据不满足 NFR、standalone smoke fixture 漂移和
+  benchmark 不执行门限。原 Runtime owner 修复 mode authority 并补双向红测；主控修复 validator smoke、
+  runner hard gates 与硬件证据。原 reviewer Nash 在 closure 阶段两次空 `completed`，因此由原文档 owner
+  Boole 执行 replacement review；它确认 A-D 与 CHK038 PASS。主控补齐完整门禁和本 SSoT 写回后关闭 T033/T034。
+- 剩余演进风险：`packages/runtime/src/viewer/three-scene-viewport.ts` 已达 1142 行。下一阶段若继续增加 load
+  strategy，应按 full-load/light-only orchestration 与 viewport interaction responsibility 拆分；本次不在
+  Critical 收尾中做跨层重构。

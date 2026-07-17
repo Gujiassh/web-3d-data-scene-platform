@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  parseSceneDocument,
   validateSceneDocument,
   type RenameDocumentCommand,
   type SceneDocument,
@@ -687,7 +688,7 @@ function changedEnvironment(environment: SceneEnvironment): SceneEnvironment {
 }
 
 function loadFixture(): SceneDocument {
-  const result = validateSceneDocument(JSON.parse(readFileSync(fixtureUrl, "utf8")) as unknown);
+  const result = parseSceneDocument(readFileSync(fixtureUrl, "utf8"));
   if (!result.ok)
     throw new Error(`Fixture must be valid: ${result.diagnostics[0]?.code ?? "unknown"}`);
   return result.value;

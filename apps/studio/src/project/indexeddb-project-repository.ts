@@ -262,9 +262,11 @@ async function migrateStoredProjects(db: IDBDatabase): Promise<void> {
     const projectStore = tx.objectStore(PROJECTS_STORE);
     const records = await request<PersistedProjectRecord[]>(projectStore.getAll());
     const rewrites = records.flatMap((record) => {
+      const declaredVersion = readStoredSchemaVersion(record.documentJson);
       const document = parseStoredDocument(record.documentJson, record.id);
+      if (declaredVersion === "1.3.0") return [];
       const documentJson = serializeProjectDocument(document);
-      return documentJson === record.documentJson ? [] : [{ ...record, documentJson }];
+      return [{ ...record, lastExportedRevision: null, documentJson }];
     });
     for (const record of rewrites) projectStore.put(record);
     await done;
@@ -272,6 +274,18 @@ async function migrateStoredProjects(db: IDBDatabase): Promise<void> {
     await abortAndWaitForTransaction(tx, done);
     throw error;
   }
+}
+
+function readStoredSchemaVersion(documentJson: string): unknown {
+  let value: unknown;
+  try {
+    value = JSON.parse(documentJson);
+  } catch {
+    return undefined;
+  }
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)["schemaVersion"]
+    : undefined;
 }
 
 function assertOpen(closed: boolean): void {

@@ -43,7 +43,7 @@ const harness = vi.hoisted(() => ({
         lastExportedRevision: null,
       },
       document: {
-        schemaVersion: "1.2.0" as const,
+        schemaVersion: "1.3.0" as const,
         id: "scene-a",
         name: "Project A",
         revision: 1,
@@ -135,6 +135,8 @@ vi.mock("@web3d/react", async () => {
           selectEntity: vi.fn(),
           selectEntities: vi.fn(),
           focusEntity: vi.fn(async () => undefined),
+          getLightCreationFrame: () => ({ position: [0, 2, 0], target: [0, 0, 0] }),
+          setAuthoringMode: (mode: "edit" | "run") => harness.viewerCalls.push(`authoring:${mode}`),
           setTool: (tool) => harness.viewerCalls.push(`tool:${tool}`),
           getTool: () => "select",
           isTransformDragging: () => false,
@@ -305,9 +307,8 @@ describe("App scene settings preview", () => {
 
     const beforeOpen = harness.authoringSceneRenders.length;
     expect(() => {
-      act(() =>
-        container.querySelector<HTMLButtonElement>('button[aria-label="Scene settings"]')!.click(),
-      );
+      act(() => button("Lighting").click());
+      act(() => buttonByVisibleName("Scene lighting settings").click());
     }).not.toThrow();
 
     expect(consoleError.mock.calls.flat().join(" ")).not.toContain("Maximum update depth exceeded");
@@ -410,7 +411,7 @@ describe("App scene settings preview", () => {
 
     act(() => buttonByVisibleName("Run").click());
 
-    expect(harness.viewerCalls).toEqual(["tool:select", "mode:run"]);
+    expect(harness.viewerCalls).toEqual(["authoring:run", "tool:select", "mode:run"]);
     expect(harness.authoringSceneMounts).toBe(1);
     harness.workspace.session.tool = "select";
   });
@@ -447,7 +448,8 @@ describe("App scene settings preview", () => {
   }
 
   function openSceneSettings(): void {
-    act(() => button("Scene settings").click());
+    act(() => button("Lighting").click());
+    act(() => buttonByVisibleName("Scene lighting settings").click());
   }
 
   function input(label: string): HTMLInputElement {

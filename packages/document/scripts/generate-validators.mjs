@@ -34,6 +34,10 @@ await Promise.all(
       schema: "scene-document-1.1.schema.json",
       output: "scene-document-1.1.validator",
     },
+    {
+      schema: "scene-document-1.2.schema.json",
+      output: "scene-document-1.2.validator",
+    },
   ].flatMap(({ schema, output }) => [
     generateValidator(schema, output),
     writeFile(

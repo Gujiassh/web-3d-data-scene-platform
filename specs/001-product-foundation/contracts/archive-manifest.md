@@ -35,8 +35,9 @@ must resolve inside the archive root.
 - Viewer hashes each listed file before activating the archive.
 - Missing, extra or mismatched files are blocking errors in MVP.
 - `sceneSchemaVersion` must match the migration-preceding version declared by raw `scene.json`.
-- Import accepts SceneDocument 1.0.0, 1.1.0 and 1.2.0 payloads; export writes only current 1.2.0 while
-  `archiveVersion` remains 1.0.0.
+- Import accepts raw SceneDocument 1.0.0, 1.1.0, 1.2.0 and 1.3.0 payloads and returns current
+  1.3.0. Export accepts and writes only current SceneDocument 1.3.0 while `archiveVersion` remains
+  1.0.0.
 - Asset hashes in SceneDocument must match the corresponding manifest file digest.
 - `createdAt` is informational and is not used for ordering project revisions.
 

@@ -1,5 +1,16 @@
-export { parseSceneDocument, validateSceneDocument } from "./validate.js";
-export { validateSceneDocumentStructure } from "./structure.js";
+export {
+  parseSceneDocument,
+  validateSceneDocument,
+  validateSceneDocument1_0,
+  validateSceneDocument1_1,
+  validateSceneDocument1_2,
+} from "./validate.js";
+export {
+  validateSceneDocumentStructure,
+  validateSceneDocument1_0Structure,
+  validateSceneDocument1_1Structure,
+  validateSceneDocument1_2Structure,
+} from "./structure.js";
 export { validateSceneDocumentSemantics } from "./semantics.js";
 export { serializeSceneDocument } from "./serialize.js";
 export { executeDocumentCommand } from "./commands/document-command.js";
@@ -10,6 +21,7 @@ export {
   undoHistoryCommand,
 } from "./commands/history.js";
 export type {
+  AddLightEntityCommand,
   DeleteSubtreeCommand,
   ConfigureBindingRuleSetCommand,
   CreateGroupCommand,
@@ -28,6 +40,7 @@ export type {
   ReparentEntitiesCommand,
   RemoveBindingCommand,
   RemoveMockDataSourceCommand,
+  RemoveLightEntityCommand,
   RenameDocumentCommand,
   RenameEntityCommand,
   SceneBackgroundSettings,
@@ -38,6 +51,7 @@ export type {
   SetTargetBusinessIdCommand,
   TransformEntityCommand,
   TransformEntitiesCommand,
+  UpdateLightEntityCommand,
   UpsertMockDataSourceCommand,
 } from "./commands/types.js";
 export { exportSceneArchive, importSceneArchive } from "./archive/codec.js";

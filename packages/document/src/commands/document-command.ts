@@ -2,6 +2,7 @@ import { validateSceneDocument } from "../validate.js";
 import type {
   AssetEntity,
   GroupEntity,
+  LightEntity,
   SceneAsset,
   SceneDocument,
   SceneEntity,
@@ -46,6 +47,7 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
     case "set-scene-environment":
       return applySceneEnvironmentCommand(document, command);
     case "rename-entity":
+      assertGenericEntityMutationAllowed(document, command.entityId, command.type);
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({
           ...entity,
@@ -53,6 +55,7 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
         })),
       });
     case "set-entity-visibility":
+      assertGenericEntityMutationAllowed(document, command.entityId, command.type);
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({
           ...entity,
@@ -60,6 +63,7 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
         })),
       });
     case "set-entity-lock":
+      assertGenericEntityMutationAllowed(document, command.entityId, command.type);
       return reviseDocument(document, {
         entities: replaceEntity(document.entities, command.entityId, (entity) => ({
           ...entity,
@@ -68,6 +72,12 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
       });
     case "transform-entity":
       return applyTransformCommand(document, command.entityId, command.before, command.after);
+    case "add-light-entity":
+      return addLightEntity(document, command.after);
+    case "update-light-entity":
+      return updateLightEntity(document, command.before, command.after);
+    case "remove-light-entity":
+      return removeLightEntity(document, command.before);
     case "create-group":
     case "reparent-entities":
     case "transform-entities":
@@ -250,6 +260,9 @@ function applyTransformCommand(
 ): SceneDocument {
   const entity = document.entities.find((candidate) => candidate.id === entityId);
   if (entity === undefined) throw new Error(`Entity '${entityId}' does not exist.`);
+  if (entity.type === "light") {
+    throw new Error(`LightEntity '${entityId}' cannot use generic transform-entity.`);
+  }
   if (entity.locked) throw new Error(`Locked entity '${entityId}' cannot be transformed.`);
   assertTransformInvariant(before, `Transform before '${entityId}'`);
   assertTransformInvariant(after, `Transform after '${entityId}'`);
@@ -264,8 +277,104 @@ function applyTransformCommand(
   });
 }
 
+function addLightEntity(document: SceneDocument, after: LightEntity): SceneDocument {
+  if (after?.type !== "light") throw new Error("Light after snapshot must be a LightEntity.");
+  assertUnusedId(document, after.id, "light entity");
+  const candidate = reviseDocument(document, {
+    entities: [...document.entities, cloneLightEntity(after)],
+  });
+  validateLightCommandCandidate(candidate, "Light after snapshot");
+  return candidate;
+}
+
+function updateLightEntity(
+  document: SceneDocument,
+  before: LightEntity,
+  after: LightEntity,
+): SceneDocument {
+  const current = requireLightEntity(document, before?.id);
+  assertValidLightReplacement(document, current.id, before, "Light before snapshot");
+  if (!deepEqual(current, before)) {
+    throw new Error(`Light before snapshot does not match entity '${current.id}'.`);
+  }
+  if (after?.type !== "light" || after.id !== current.id) {
+    throw new Error("Light after snapshot must retain the same LightEntity ID and type.");
+  }
+  assertValidLightReplacement(document, current.id, after, "Light after snapshot");
+  if (deepEqual(before, after)) return document;
+  if (current.locked && !lockedLightUpdateAllowed(before, after)) {
+    throw new Error(`Locked light '${current.id}' may only change visibility or unlock.`);
+  }
+  return reviseDocument(document, {
+    entities: document.entities.map((entity) =>
+      entity.id === current.id ? cloneLightEntity(after) : entity,
+    ),
+  });
+}
+
+function removeLightEntity(document: SceneDocument, before: LightEntity): SceneDocument {
+  const current = requireLightEntity(document, before?.id);
+  assertValidLightReplacement(document, current.id, before, "Light before snapshot");
+  if (!deepEqual(current, before)) {
+    throw new Error(`Light before snapshot does not match entity '${current.id}'.`);
+  }
+  if (current.locked) throw new Error(`Locked light '${current.id}' cannot be removed.`);
+  return reviseDocument(document, {
+    entities: document.entities.filter((entity) => entity.id !== current.id),
+  });
+}
+
+function assertValidLightReplacement(
+  document: SceneDocument,
+  currentId: string,
+  snapshot: LightEntity,
+  label: string,
+): void {
+  if (snapshot?.type !== "light") throw new Error(`${label} must be a LightEntity.`);
+  const candidate: SceneDocument = {
+    ...document,
+    entities: document.entities.map((entity) => (entity.id === currentId ? snapshot : entity)),
+  };
+  validateLightCommandCandidate(candidate, label);
+}
+
+function validateLightCommandCandidate(document: SceneDocument, label: string): void {
+  const result = validateSceneDocument(document);
+  if (result.ok) return;
+  const detail = result.diagnostics
+    .map((diagnostic) => `${diagnostic.code}@${diagnostic.path}`)
+    .join(", ");
+  throw new Error(`${label} is invalid: ${detail}`);
+}
+
+function requireLightEntity(document: SceneDocument, entityId: string | undefined): LightEntity {
+  const entity = document.entities.find((candidate) => candidate.id === entityId);
+  if (entity === undefined) throw new Error(`Light entity '${String(entityId)}' does not exist.`);
+  if (entity.type !== "light") throw new Error(`Entity '${entity.id}' is not a LightEntity.`);
+  return entity;
+}
+
+function lockedLightUpdateAllowed(before: LightEntity, after: LightEntity): boolean {
+  return deepEqual({ ...before, visible: after.visible, locked: after.locked }, after);
+}
+
+function assertGenericEntityMutationAllowed(
+  document: SceneDocument,
+  entityId: string,
+  route: string,
+): void {
+  const entity = document.entities.find((candidate) => candidate.id === entityId);
+  if (entity === undefined) throw new Error(`Entity '${entityId}' does not exist.`);
+  if (entity.type === "light") {
+    throw new Error(`LightEntity '${entityId}' cannot use generic ${route}.`);
+  }
+}
+
 function deleteSubtree(document: SceneDocument, rootEntityId: string): SceneDocument {
   const subtreeIds = new Set(collectSubtreeEntityIds(document.entities, rootEntityId));
+  if (document.entities.some((entity) => subtreeIds.has(entity.id) && entity.type === "light")) {
+    throw new Error(`LightEntity '${rootEntityId}' cannot use generic delete-subtree.`);
+  }
   const removedTargetIds = new Set(
     document.targets.filter((target) => subtreeIds.has(target.entityId)).map((target) => target.id),
   );
@@ -412,7 +521,48 @@ function cloneAsset(asset: SceneAsset): SceneAsset {
 }
 
 function cloneEntity(entity: SceneEntity): SceneEntity {
-  return entity.type === "asset" ? cloneAssetEntity(entity) : cloneGroupEntity(entity);
+  switch (entity.type) {
+    case "asset":
+      return cloneAssetEntity(entity);
+    case "group":
+      return cloneGroupEntity(entity);
+    case "light":
+      return cloneLightEntity(entity);
+  }
+}
+
+function cloneLightEntity(entity: LightEntity): LightEntity {
+  return {
+    ...entity,
+    transform: cloneTransform(entity.transform),
+    metadata: { ...entity.metadata },
+    light: { ...entity.light },
+  };
+}
+
+function deepEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => deepEqual(value, right[index]))
+    );
+  }
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") {
+    return false;
+  }
+  const leftRecord = left as Readonly<Record<string, unknown>>;
+  const rightRecord = right as Readonly<Record<string, unknown>>;
+  const leftKeys = Object.keys(leftRecord).sort();
+  const rightKeys = Object.keys(rightRecord).sort();
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) => key === rightKeys[index] && deepEqual(leftRecord[key], rightRecord[key]),
+    )
+  );
 }
 
 function cloneGroupEntity(entity: GroupEntity, overrides: Partial<GroupEntity> = {}): GroupEntity {

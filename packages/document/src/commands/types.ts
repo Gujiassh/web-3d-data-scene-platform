@@ -1,6 +1,7 @@
 import type {
   Binding,
   GroupEntity,
+  LightEntity,
   MockDataSource,
   RuleSet,
   SceneAsset,
@@ -56,6 +57,22 @@ export interface TransformEntityCommand {
   readonly entityId: string;
   readonly before: Transform;
   readonly after: Transform;
+}
+
+export interface AddLightEntityCommand {
+  readonly type: "add-light-entity";
+  readonly after: LightEntity;
+}
+
+export interface UpdateLightEntityCommand {
+  readonly type: "update-light-entity";
+  readonly before: LightEntity;
+  readonly after: LightEntity;
+}
+
+export interface RemoveLightEntityCommand {
+  readonly type: "remove-light-entity";
+  readonly before: LightEntity;
 }
 
 export interface EntityPlacement {
@@ -176,6 +193,9 @@ export type DocumentCommand =
   | SetEntityVisibilityCommand
   | SetEntityLockCommand
   | TransformEntityCommand
+  | AddLightEntityCommand
+  | UpdateLightEntityCommand
+  | RemoveLightEntityCommand
   | DeleteSubtreeCommand
   | ImportAssetInstanceCommand
   | LayoutDocumentCommand

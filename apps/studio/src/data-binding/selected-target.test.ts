@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { SceneDocument } from "@web3d/document";
+import type { LightEntity, SceneDocument } from "@web3d/document";
 
-import { createNewStudioProject } from "../session/new-project";
 import { resolveSelectedRootTarget } from "./selected-target";
 
 describe("resolveSelectedRootTarget", () => {
@@ -31,16 +30,31 @@ describe("resolveSelectedRootTarget", () => {
     expect(resolveSelectedRootTarget(emptyDocument(), "group-a").status).toBe("unsupported-entity");
     expect(resolveSelectedRootTarget(emptyDocument(), null).status).toBe("no-selection");
   });
+
+  it("never projects an authored light into a data target", () => {
+    const light: LightEntity = {
+      id: "light-a",
+      type: "light",
+      parentId: null,
+      name: "Point light 1",
+      visible: true,
+      locked: false,
+      transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      metadata: {},
+      light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+    };
+    const document = { ...emptyDocument(), entities: [light] };
+    expect(resolveSelectedRootTarget(document, light.id)).toEqual({ status: "unsupported-entity" });
+  });
 });
 
 function emptyDocument(): SceneDocument {
-  const document = createNewStudioProject({
-    id: "project-a",
-    name: "Project A",
-    createdAt: "2026-07-15T00:00:00Z",
-  }).document;
   return {
-    ...document,
+    schemaVersion: "1.3.0",
+    id: "scene-a",
+    name: "Project A",
+    revision: 0,
+    assets: [],
     entities: [
       {
         id: "group-a",
@@ -53,6 +67,23 @@ function emptyDocument(): SceneDocument {
         metadata: {},
       },
     ],
+    targets: [],
+    dataSources: [],
+    bindings: [],
+    ruleSets: [],
+    annotations: [],
+    views: [],
+    environment: {
+      backgroundMode: "theme",
+      background: "#F4F6F5",
+      grid: true,
+      unit: "m",
+      upAxis: "Y",
+      lighting: {
+        fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
+        key: { color: "#FFFFFF", intensity: 2.2, directionToLight: [0, 1, 0] },
+      },
+    },
   };
 }
 

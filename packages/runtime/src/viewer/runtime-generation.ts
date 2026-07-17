@@ -4,7 +4,8 @@ import { Color, Group, Mesh, type Material, type Object3D } from "three";
 import { loadGltfAsset } from "../assets/asset-loader";
 import { disposeObject3D, isolateTargetMaterials } from "../assets/dispose-object";
 import { diagnostic, diagnosticError } from "../diagnostics";
-import type { AssetResolver, Diagnostic } from "../types";
+import type { AssetResolver, AuthoringMode, Diagnostic } from "../types";
+import { AuthoredLightController, type AuthoredLightRuntime } from "./authored-light-controller";
 
 export interface RuntimeTarget {
   readonly object: Object3D;
@@ -27,6 +28,7 @@ export interface RuntimeGeneration {
   readonly entities: ReadonlyMap<string, RuntimeEntity>;
   readonly targets: ReadonlyMap<string, RuntimeTarget>;
   readonly diagnostics: readonly Diagnostic[];
+  readonly authoredLights: AuthoredLightRuntime;
   entityForObject(object: Object3D): string | undefined;
   targetForObject(object: Object3D): string | undefined;
   dispose(): void;
@@ -36,6 +38,8 @@ export async function buildRuntimeGeneration(
   document: SceneDocument,
   resolver: AssetResolver,
   signal: AbortSignal,
+  authoringMode: AuthoringMode = "run",
+  requestRender: () => void = () => undefined,
 ): Promise<RuntimeGeneration> {
   const root = new Group();
   root.name = `document:${document.id}`;
@@ -45,11 +49,13 @@ export async function buildRuntimeGeneration(
   const objectEntities = new WeakMap<Object3D, string>();
   const originalMaterials = new Set<Material>();
   const diagnostics: Diagnostic[] = [];
+  const authoredLights = new AuthoredLightController(root, runtimeEntities, requestRender);
   let disposed = false;
 
   try {
     for (const entity of document.entities) {
       signal.throwIfAborted();
+      if (entity.type === "light") continue;
       const object =
         entity.type === "group"
           ? createGroupEntity(entity)
@@ -66,6 +72,10 @@ export async function buildRuntimeGeneration(
       if (entity.type === "asset") assetNodes.set(entity.id, objectNodes(object));
       object.traverse((candidate) => objectEntities.set(candidate, entity.id));
     }
+
+    authoredLights
+      .stage(document.entities.filter((entity) => entity.type === "light"))
+      .commit(authoringMode);
 
     for (const entity of document.entities) {
       const object = entityObjects.get(entity.id);
@@ -151,7 +161,10 @@ export async function buildRuntimeGeneration(
       entities: runtimeEntities,
       targets: targetObjects,
       diagnostics: Object.freeze([...diagnostics]),
+      authoredLights,
       entityForObject(object) {
+        const lightEntityId = authoredLights.entityForObject(object);
+        if (lightEntityId !== undefined) return lightEntityId;
         let current: Object3D | null = object;
         while (current !== null) {
           const entityId = objectEntities.get(current);
@@ -172,11 +185,13 @@ export async function buildRuntimeGeneration(
       dispose() {
         if (disposed) return;
         disposed = true;
+        authoredLights.dispose();
         disposeObject3D(root);
         detachedMaterials.forEach((material) => material.dispose());
       },
     };
   } catch (error) {
+    authoredLights.dispose();
     const attachedMaterials = new Set<Material>();
     const disposableRoots = [
       root,
@@ -224,7 +239,7 @@ async function createAssetEntity(
   });
 }
 
-function createGroupEntity(entity: SceneEntity): Object3D {
+function createGroupEntity(entity: Extract<SceneEntity, { type: "group" }>): Object3D {
   const group = new Group();
   applyEntity(group, entity);
   return group;

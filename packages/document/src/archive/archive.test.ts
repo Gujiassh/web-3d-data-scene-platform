@@ -7,16 +7,47 @@ import type { SceneDocument } from "../types.js";
 import { exportSceneArchive, importSceneArchive } from "./codec.js";
 import { sha256Hex } from "./hash.js";
 import { exportCanonicalSceneJson, importCanonicalSceneJson } from "./json.js";
-import { buildArchiveManifest } from "./manifest.js";
+import { buildArchiveManifest, parseArchiveManifest } from "./manifest.js";
 import { encodeDeterministicZip } from "./zip.js";
 
 const fixtureUrl = new URL(
   "../../../../specs/001-product-foundation/contracts/scene.example.json",
   import.meta.url,
 );
+const manifestSchemaUrl = new URL(
+  "../../../../specs/001-product-foundation/contracts/archive-manifest.schema.json",
+  import.meta.url,
+);
+const manifestExampleUrl = new URL(
+  "../../../../specs/001-product-foundation/contracts/archive-manifest.example.json",
+  import.meta.url,
+);
+const manifestContractUrl = new URL(
+  "../../../../specs/001-product-foundation/contracts/archive-manifest.md",
+  import.meta.url,
+);
 const createdAt = "2026-07-14T08:00:00Z";
 
 describe("archive codec", () => {
+  it("keeps the canonical manifest SSoT aligned with SceneDocument 1.3", () => {
+    const schema = JSON.parse(readFileSync(manifestSchemaUrl, "utf8")) as {
+      properties: { sceneSchemaVersion: { enum: string[] } };
+    };
+    const example = JSON.parse(readFileSync(manifestExampleUrl, "utf8")) as unknown;
+    const contract = readFileSync(manifestContractUrl, "utf8");
+
+    expect(schema.properties.sceneSchemaVersion.enum).toEqual(["1.0.0", "1.1.0", "1.2.0", "1.3.0"]);
+    expect(parseArchiveManifest(example)).toMatchObject({
+      archiveVersion: "1.0.0",
+      sceneSchemaVersion: "1.3.0",
+    });
+    expect(contract).toContain(
+      "Import accepts raw SceneDocument 1.0.0, 1.1.0, 1.2.0 and 1.3.0 payloads",
+    );
+    expect(contract).toContain("Export accepts and writes only current SceneDocument 1.3.0");
+    expect(contract).toContain("`archiveVersion` remains\n  1.0.0");
+  });
+
   it("round-trips canonical JSON without mutating the document", () => {
     const document = loadLocalFixture();
 
@@ -28,22 +59,22 @@ describe("archive codec", () => {
 
   it("exports only current documents and writes the requested scene schema version", () => {
     const current = loadLocalFixture();
-    const legacy = legacyDocument(current, "1.1.0");
+    const legacy = legacyDocument(current, "1.2.0");
 
     expect(() => exportCanonicalSceneJson(legacy as unknown as SceneDocument)).toThrow();
     const manifest = buildArchiveManifest({
       createdAt,
       sceneBytes: new Uint8Array([1]),
       sceneSha256: "a".repeat(64),
-      sceneSchemaVersion: "1.2.0",
+      sceneSchemaVersion: "1.3.0",
       assets: [],
     });
     expect(manifest.archiveVersion).toBe("1.0.0");
-    expect(manifest.sceneSchemaVersion).toBe("1.2.0");
+    expect(manifest.sceneSchemaVersion).toBe("1.3.0");
 
     const imported = importCanonicalSceneJson(new TextEncoder().encode(JSON.stringify(legacy)));
     expect(imported).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       revision: current.revision,
       environment: {
         backgroundMode: current.environment.backgroundMode,
@@ -70,10 +101,10 @@ describe("archive codec", () => {
     const zip = unzipSync(first);
     const sceneJson = new TextDecoder().decode(zip["scene.json"]!);
     expect(sceneJson).toContain(`"uri": "assets/${document.assets[0]!.sha256}.glb"`);
-    expect(JSON.parse(sceneJson)).toMatchObject({ schemaVersion: "1.2.0" });
+    expect(JSON.parse(sceneJson)).toMatchObject({ schemaVersion: "1.3.0" });
     expect(JSON.parse(new TextDecoder().decode(zip["manifest.json"]!))).toMatchObject({
       archiveVersion: "1.0.0",
-      sceneSchemaVersion: "1.2.0",
+      sceneSchemaVersion: "1.3.0",
     });
   });
 
@@ -175,8 +206,8 @@ describe("archive codec", () => {
     await expect(importSceneArchive(zipFromFiles(files))).rejects.toThrow(/does not match/);
   });
 
-  it.each(["1.0.0", "1.1.0"] as const)(
-    "imports a %s archive as a current 1.2 document",
+  it.each(["1.0.0", "1.1.0", "1.2.0"] as const)(
+    "imports a %s archive as a current 1.3 document",
     async (legacyVersion) => {
       const zip = await exportFixtureArchive();
       const files = unzipSync(zip);
@@ -204,7 +235,7 @@ describe("archive codec", () => {
       const imported = await importSceneArchive(zipFromFiles(files));
       expect(imported.manifest.sceneSchemaVersion).toBe(legacyVersion);
       expect(imported.document).toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         revision: current.revision,
         environment: {
           backgroundMode: legacyVersion === "1.0.0" ? "custom" : current.environment.backgroundMode,
@@ -290,7 +321,9 @@ describe("archive codec", () => {
 });
 
 function loadLocalFixture(): SceneDocument {
-  const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8")) as SceneDocument;
+  const fixture = importCanonicalSceneJson(
+    new TextEncoder().encode(readFileSync(fixtureUrl, "utf8")),
+  );
   return {
     ...fixture,
     assets: fixture.assets.map((asset) => ({
@@ -302,10 +335,10 @@ function loadLocalFixture(): SceneDocument {
 
 function legacyDocument(
   document: SceneDocument,
-  version: "1.0.0" | "1.1.0",
+  version: "1.0.0" | "1.1.0" | "1.2.0",
 ): Record<string, unknown> {
   const environment = { ...document.environment } as Record<string, unknown>;
-  delete environment["lighting"];
+  if (version !== "1.2.0") delete environment["lighting"];
   if (version === "1.0.0") delete environment["backgroundMode"];
   return { ...document, schemaVersion: version, environment };
 }

@@ -444,6 +444,7 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
         (candidate) => candidate.id === event.entityId,
       );
       if (entity === undefined) return;
+      if (entity.type === "light") return;
       const snapshot = stateRef.current.snapshots.find(
         (candidate) => candidate.entityId === event.entityId,
       );
@@ -475,6 +476,11 @@ export function useStudioSceneLayout(options: UseStudioSceneLayoutOptions): Stud
     (entityId: string, before: Transform, after: Transform): StudioCommandOutcome => {
       const current = optionsRef.current;
       if (!current.canEdit || current.mode !== "edit") return { status: "unavailable" };
+      const entity = current.document?.entities.find((candidate) => candidate.id === entityId);
+      if (entity?.type === "light") {
+        fail("selection-unsupported");
+        return { status: "rejected", message: t.layout.reasons["selection-unsupported"] };
+      }
       if (!isFinitePositiveScaleTransform(after)) {
         fail("invalid-transform");
         return { status: "rejected", message: t.layout.reasons["invalid-transform"] };

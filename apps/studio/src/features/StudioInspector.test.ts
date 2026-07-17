@@ -4,7 +4,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SceneDocument } from "@web3d/document";
+import type { LightEntity, SceneDocument } from "@web3d/document";
 
 import { createStudioPreviewState } from "../data-binding/preview-state";
 import { StudioI18nProvider } from "../i18n/I18nProvider";
@@ -84,16 +84,49 @@ describe("StudioInspector", () => {
 
     expect(content.querySelector(".scene-layout-panel")).toBeNull();
   });
+
+  it("gives the Object Inspector ownership of selected-light fields", () => {
+    const light = pointLight();
+    const execute = vi.fn(() => ({ status: "changed" as const, revision: 2 }));
+    act(() => {
+      root.render(
+        createElement(
+          StudioI18nProvider,
+          null,
+          createElement(StudioInspector, {
+            document: scene([light]),
+            projectId: "project",
+            editable: true,
+            entity: light,
+            mode: "edit",
+            preview: createStudioPreviewState(false),
+            selectedEntityId: light.id,
+            targetResolution: { status: "unsupported-entity" },
+            execute,
+            layout: layoutModel(),
+            onFocusTarget: () => undefined,
+            onRename: () => undefined,
+          }),
+        ),
+      );
+    });
+
+    expect(container.querySelector('input[aria-label="Brightness"]')).not.toBeNull();
+    expect(container.querySelector('input[aria-label="Position X"]')).not.toBeNull();
+    expect(container.querySelector('input[aria-label="Rotation (degrees) X"]')).toBeNull();
+    expect(container.querySelector('input[aria-label="Scale X"]')).toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+  });
 });
 
-function scene(): SceneDocument {
+function scene(entities: readonly LightEntity[] = []): SceneDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "scene",
     name: "Scene",
     revision: 1,
     assets: [],
-    entities: [],
+    entities,
     targets: [],
     dataSources: [],
     bindings: [],
@@ -108,6 +141,20 @@ function scene(): SceneDocument {
       upAxis: "Y",
       lighting: standardLighting(),
     },
+  };
+}
+
+function pointLight(): LightEntity {
+  return {
+    id: "light-a",
+    type: "light",
+    parentId: null,
+    name: "Point light 1",
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
   };
 }
 

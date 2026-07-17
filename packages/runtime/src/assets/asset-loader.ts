@@ -5,7 +5,7 @@ import { Group, type Object3D } from "three";
 import { disposeObject3D } from "./dispose-object";
 import {
   describeImportedPunctualLights,
-  removeImportedPunctualLights,
+  replaceImportedPunctualLights,
 } from "./imported-punctual-lights";
 import { diagnostic, diagnosticError } from "../diagnostics";
 import type { AssetResolver, Diagnostic } from "../types";
@@ -97,13 +97,12 @@ export async function loadGltfAsset(
       );
     }
 
+    const punctualLights = replaceImportedPunctualLights(gltf);
     const nodesByIndex = new Map<number, Object3D>();
     gltf.scene.traverse((object) => {
       const nodeIndex = gltf.parser.associations.get(object)?.nodes;
       if (nodeIndex !== undefined) nodesByIndex.set(nodeIndex, object);
     });
-
-    const punctualLights = removeImportedPunctualLights(gltf.scene);
     const diagnostics =
       punctualLights.total === 0
         ? []

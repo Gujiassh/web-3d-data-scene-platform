@@ -1,4 +1,5 @@
-import { DirectionalLight, Light, PointLight, SpotLight, type Object3D } from "three";
+import { DirectionalLight, Light, Object3D, PointLight, SpotLight } from "three";
+import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 
 export interface ImportedPunctualLightSummary {
   readonly total: number;
@@ -26,13 +27,14 @@ export function inspectImportedPunctualLights(root: Object3D): ImportedPunctualL
   });
 }
 
-export function removeImportedPunctualLights(root: Object3D): ImportedPunctualLightSummary {
-  const summary = inspectImportedPunctualLights(root);
+export function replaceImportedPunctualLights(gltf: GLTF): ImportedPunctualLightSummary {
+  const summary = inspectImportedPunctualLights(gltf.scene);
   const importedLights: Light[] = [];
-  root.traverse((object) => {
+  gltf.scene.traverse((object) => {
     if (object instanceof Light) importedLights.push(object);
   });
-  importedLights.forEach((light) => light.removeFromParent());
+  importedLights.forEach((light) => replaceLight(light, gltf.parser.associations));
+  gltf.scene.updateMatrixWorld(true);
   return summary;
 }
 
@@ -42,4 +44,25 @@ export function describeImportedPunctualLights(summary: ImportedPunctualLightSum
 
 function plural(count: number, word: string): string {
   return count === 1 ? word : `${word}s`;
+}
+
+function replaceLight(light: Light, associations: GLTF["parser"]["associations"]): void {
+  const parent = light.parent;
+  if (parent === null) throw new Error("Imported punctual light must belong to the glTF scene.");
+  const parentIndex = parent.children.indexOf(light);
+  const replacement = new Object3D().copy(light, false);
+  [...light.children].forEach((child) => replacement.add(child));
+  const target =
+    light instanceof DirectionalLight || light instanceof SpotLight ? light.target : null;
+  if (target !== null && target.parent !== replacement) replacement.add(target);
+
+  const association = associations.get(light);
+  associations.delete(light);
+  if (association !== undefined) associations.set(replacement, association);
+
+  parent.remove(light);
+  parent.add(replacement);
+  const appendedIndex = parent.children.indexOf(replacement);
+  parent.children.splice(appendedIndex, 1);
+  parent.children.splice(parentIndex, 0, replacement);
 }

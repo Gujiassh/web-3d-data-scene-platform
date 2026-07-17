@@ -55,14 +55,14 @@ describe("StudioToolbar", () => {
     expect(onToggleSmartAlign).not.toHaveBeenCalled();
   });
 
-  it("places scene and app settings beside Help without visible locale or theme shortcuts", () => {
+  it("places Lighting and app settings beside Help without visible locale or theme shortcuts", () => {
     renderToolbar(null);
 
     expect(container.querySelector('button[aria-label="Keyboard shortcuts (?)"]')).not.toBeNull();
-    expect(container.querySelector('button[aria-label="Scene settings"]')).not.toBeNull();
-    expect(
-      container.querySelector('button[aria-label="Scene settings"]')?.hasAttribute("disabled"),
-    ).toBe(true);
+    expect(container.querySelector('button[aria-label="Lighting"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Lighting"]')?.hasAttribute("disabled")).toBe(
+      false,
+    );
     expect(container.querySelector('button[aria-label="Settings"]')).not.toBeNull();
     expect(container.querySelector(".language-switch")).toBeNull();
     expect(container.querySelector(".theme-switch")).toBeNull();
@@ -93,6 +93,11 @@ describe("StudioToolbar", () => {
               duplicateDisabledReason,
               hasSelection: true,
               smartAlignEnabled: true,
+              lightCount: 0,
+              lightingMenuOpen: false,
+              lightAddDisabledReason: "Lighting authoring is disabled in Run mode.",
+              lightSettingsDisabledReason: "Lighting authoring is disabled in Run mode.",
+              toolDisabledReasons: {},
               onOpenProjectMenu: noop,
               onUndo: noop,
               onRedo: noop,
@@ -107,6 +112,9 @@ describe("StudioToolbar", () => {
               onOpenSceneSettings: noop,
               onOpenSettings: noop,
               onToggleSmartAlign,
+              onAddLight: () => false,
+              onLightingMenuOpenChange: noop,
+              onRefreshLightAvailability: noop,
             }),
           ),
         }),

@@ -31,6 +31,11 @@ export function buildDuplicateSubtreeCommand(
   ids: StableIdFactory,
 ): DuplicateSubtreeCommand {
   const entityIds = collectSubtreeIds(document, rootEntityId);
+  if (
+    document.entities.some((entity) => entityIds.includes(entity.id) && entity.type === "light")
+  ) {
+    throw new TypeError("LightEntity must be duplicated through add-light-entity.");
+  }
   const entitySet = new Set(entityIds);
   const entityIdMap = Object.fromEntries(
     entityIds.map((entityId) => [entityId, ids.next("entity", entityId)]),
@@ -104,6 +109,10 @@ export function createBrowserIdFactory(): StableIdFactory {
 }
 
 export function commandEntityId(command: DocumentCommand): string | null {
+  if (command.type === "add-light-entity" || command.type === "update-light-entity") {
+    return command.after.id;
+  }
+  if (command.type === "remove-light-entity") return command.before.id;
   if ("entityId" in command) return command.entityId;
   if (command.type === "duplicate-subtree" || command.type === "delete-subtree") {
     return command.rootEntityId;

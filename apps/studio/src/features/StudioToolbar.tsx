@@ -14,13 +14,14 @@ import {
   Save,
   Scale3d,
   Settings2,
-  SunMedium,
   Trash2,
   Undo2,
   Upload,
 } from "lucide-react";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { LightingMenu } from "../lights/LightingMenu";
+import type { StudioLightKind } from "../lights/model";
 import { detectStudioPlatform, studioCommandShortcut } from "../session/shortcut-registry";
 import type { AuthoringTool, SaveState, StudioMode } from "../session/session-state";
 
@@ -37,6 +38,11 @@ interface StudioToolbarProps {
   readonly duplicateDisabledReason: string | null;
   readonly hasSelection: boolean;
   readonly smartAlignEnabled: boolean;
+  readonly lightCount: number;
+  readonly lightingMenuOpen: boolean;
+  readonly lightAddDisabledReason: string | null;
+  readonly lightSettingsDisabledReason: string | null;
+  readonly toolDisabledReasons: Readonly<Partial<Record<AuthoringTool, string>>>;
   readonly onOpenProjectMenu: () => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
@@ -51,6 +57,9 @@ interface StudioToolbarProps {
   readonly onOpenSceneSettings: () => void;
   readonly onOpenSettings: () => void;
   readonly onToggleSmartAlign: () => void;
+  readonly onAddLight: (kind: StudioLightKind) => boolean;
+  readonly onLightingMenuOpenChange: (open: boolean) => void;
+  readonly onRefreshLightAvailability: () => void;
   readonly helpButtonRef?: React.Ref<HTMLButtonElement>;
   readonly sceneSettingsButtonRef?: React.Ref<HTMLButtonElement>;
   readonly settingsButtonRef?: React.Ref<HTMLButtonElement>;
@@ -132,7 +141,8 @@ export function StudioToolbar(props: StudioToolbarProps) {
         {tools.map(({ value, commandId, icon: Icon }) => (
           <IconCommand
             active={props.tool === value}
-            disabled={!props.canEdit}
+            description={props.toolDisabledReasons[value] ?? null}
+            disabled={!props.canEdit || props.toolDisabledReasons[value] !== undefined}
             icon={<Icon size={16} />}
             key={value}
             label={t.toolbar.tools[value]}
@@ -177,15 +187,18 @@ export function StudioToolbar(props: StudioToolbarProps) {
         shortcut={studioCommandShortcut("help.open", platform)}
         onClick={props.onOpenHelp}
       />
-      <IconCommand
+      <LightingMenu
         {...(props.sceneSettingsButtonRef === undefined
           ? {}
           : { buttonRef: props.sceneSettingsButtonRef })}
-        disabled={!props.canEdit}
-        icon={<SunMedium size={16} />}
-        label={t.toolbar.sceneSettings}
-        testId="scene-settings-button"
-        onClick={props.onOpenSceneSettings}
+        addDisabledReason={props.lightAddDisabledReason}
+        lightCount={props.lightCount}
+        open={props.lightingMenuOpen}
+        settingsDisabledReason={props.lightSettingsDisabledReason}
+        onAdd={props.onAddLight}
+        onOpenChange={props.onLightingMenuOpenChange}
+        onOpenSceneSettings={props.onOpenSceneSettings}
+        onRefreshAvailability={props.onRefreshLightAvailability}
       />
       <IconCommand
         {...(props.settingsButtonRef === undefined ? {} : { buttonRef: props.settingsButtonRef })}

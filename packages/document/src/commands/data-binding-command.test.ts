@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  parseSceneDocument,
   validateSceneDocument,
   type Binding,
   type MockDataSource,
@@ -435,7 +436,7 @@ describe("data-binding document commands", () => {
 });
 
 function loadFixture(): SceneDocument {
-  const result = validateSceneDocument(JSON.parse(readFileSync(fixtureUrl, "utf8")) as unknown);
+  const result = parseSceneDocument(readFileSync(fixtureUrl, "utf8"));
   if (!result.ok) throw new Error(result.diagnostics[0]?.message ?? "Fixture is invalid.");
   return result.value;
 }

@@ -193,7 +193,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     transform: transform([1, 0, 0]),
   };
   const document: SceneDocument = {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "spatial-document",
     name: "Spatial document",
     revision: 7,
@@ -247,6 +247,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     document,
     generation: {
       root,
+      authoredLights: stubAuthoredLights(),
       entities,
       targets: new Map(),
       diagnostics: [],
@@ -254,6 +255,15 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
       targetForObject: vi.fn(),
       dispose: vi.fn(() => root.clear()),
     },
+  };
+}
+
+function stubAuthoredLights(): RuntimeGeneration["authoredLights"] {
+  return {
+    stage: vi.fn(() => ({ commit: vi.fn(), dispose: vi.fn() })),
+    setAuthoringMode: vi.fn(),
+    entityForObject: vi.fn(),
+    dispose: vi.fn(),
   };
 }
 

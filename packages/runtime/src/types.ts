@@ -49,12 +49,15 @@ export type DiagnosticCode =
   | "ASSET_MULTISCENE_UNSUPPORTED"
   | "ASSET_NODE_MISSING"
   | "ASSET_PUNCTUAL_LIGHTS_REMOVED"
+  | "AUTHORED_LIGHT_RECONCILE_FAILED"
   | "DATASOURCE_CONNECTION_FAILED"
   | "DATASOURCE_PATCH_INVALID"
   | "DATASOURCE_PATCH_OUT_OF_ORDER"
   | "DATASOURCE_STREAM_RETIRED"
   | "DATASOURCE_STREAM_UNKNOWN"
   | "DOCUMENT_REFERENCE_INVALID"
+  | "DOCUMENT_REVISION_CONFLICT"
+  | "DOCUMENT_REVISION_STALE"
   | "ENTITY_HIDDEN"
   | "ENTITY_NOT_FOUND"
   | "RENDERER_CONTEXT_LOST"
@@ -143,6 +146,12 @@ export type ViewerEvent =
   | { type: "performance"; sample: PerformanceSample };
 
 export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
+export type AuthoringMode = "edit" | "run";
+
+export interface LightCreationFrame {
+  readonly position: Vec3;
+  readonly target: Vec3;
+}
 
 export interface AuthoringTransformSettings {
   readonly translationSnap: number | null;
@@ -232,6 +241,7 @@ export interface CreateViewerOptions {
 }
 
 export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, "onEvent"> {
+  authoringMode?: AuthoringMode;
   initialTool?: AuthoringTool;
   dataRuntimeEnabled?: boolean;
   onEvent?: (event: AuthoringViewerEvent) => void;
@@ -258,6 +268,7 @@ export interface AuthoringSceneViewer {
   load(source: SceneSource): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
+  setAuthoringMode(mode: AuthoringMode): void;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
@@ -272,6 +283,7 @@ export interface AuthoringSceneViewer {
   setTransformSettings(settings: AuthoringTransformSettings): void;
   setSmartAlignEnabled(enabled: boolean): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
+  getLightCreationFrame(): Readonly<LightCreationFrame> | null;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
   getDiagnostics(): readonly Diagnostic[];

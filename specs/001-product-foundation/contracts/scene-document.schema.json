@@ -21,7 +21,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.2.0"
+      "const": "1.3.0"
     },
     "id": {
       "$ref": "#/$defs/id"
@@ -175,7 +175,7 @@
       "required": ["id", "type", "parentId", "name", "visible", "locked", "transform", "metadata"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "type": { "enum": ["group", "asset"] },
+        "type": { "enum": ["group", "asset", "light"] },
         "parentId": {
           "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }]
         },
@@ -184,6 +184,7 @@
         "locked": { "type": "boolean" },
         "transform": { "$ref": "#/$defs/transform" },
         "assetId": { "$ref": "#/$defs/id" },
+        "light": { "$ref": "#/$defs/lightProperties" },
         "metadata": {
           "type": "object",
           "additionalProperties": {
@@ -206,8 +207,59 @@
           "else": {
             "not": { "required": ["assetId"] }
           }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "light" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["light"],
+            "properties": { "parentId": { "type": "null" } }
+          },
+          "else": {
+            "not": { "required": ["light"] }
+          }
         }
       ]
+    },
+    "lightProperties": {
+      "oneOf": [
+        { "$ref": "#/$defs/pointLightProperties" },
+        { "$ref": "#/$defs/spotLightProperties" }
+      ]
+    },
+    "pointLightProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "color", "intensity", "range"],
+      "properties": {
+        "kind": { "const": "point" },
+        "color": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "range": {
+          "oneOf": [{ "type": "null" }, { "type": "number", "exclusiveMinimum": 0 }]
+        }
+      }
+    },
+    "spotLightProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "color", "intensity", "range", "angleRadians", "penumbra"],
+      "properties": {
+        "kind": { "const": "spot" },
+        "color": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "range": {
+          "oneOf": [{ "type": "null" }, { "type": "number", "exclusiveMinimum": 0 }]
+        },
+        "angleRadians": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.5707963267948966
+        },
+        "penumbra": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
     },
     "target": {
       "type": "object",

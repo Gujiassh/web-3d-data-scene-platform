@@ -42,6 +42,11 @@ export function migrateSceneDocument1_1(value: unknown): unknown {
   };
 }
 
+export function migrateSceneDocument1_2(value: unknown): unknown {
+  const document = requireRecord(value, "Legacy SceneDocument");
+  return { ...document, schemaVersion: "1.3.0" };
+}
+
 function cloneStandardLighting(): SceneLighting {
   return {
     fill: { ...STANDARD_SCENE_LIGHTING.fill },

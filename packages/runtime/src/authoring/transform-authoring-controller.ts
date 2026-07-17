@@ -3,6 +3,7 @@ import { PerspectiveCamera, Vector3, type Camera, type Object3D, type Scene } fr
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 import type {
+  AuthoringMode,
   AuthoringTool,
   AuthoringTransformSettings,
   AuthoringViewerEvent,
@@ -53,6 +54,7 @@ export class TransformAuthoringController {
   readonly #requestRender: () => void;
   readonly #camera: Camera;
   readonly #surface: HTMLElement;
+  readonly #scene: Scene;
   readonly #getSpatialSnapshots: () => readonly EntitySpatialSnapshot[];
   readonly #guideOverlay: SmartAlignGuideOverlay;
 
@@ -60,6 +62,7 @@ export class TransformAuthoringController {
   #selectedEntityId: string | null = null;
   #selectedEntityIds: readonly string[] = [];
   #activeTool: AuthoringTool;
+  #authoringMode: AuthoringMode = "edit";
   #transformSettings: AuthoringTransformSettings = DEFAULT_TRANSFORM_SETTINGS;
   #smartAlignEnabled = true;
   #smartAlignDrag: SmartAlignDrag | null = null;
@@ -76,6 +79,7 @@ export class TransformAuthoringController {
     this.#activeTool = options.initialTool;
     this.#camera = options.camera;
     this.#surface = options.surface;
+    this.#scene = options.scene;
     this.#getSpatialSnapshots = options.getSpatialSnapshots;
     this.#controls = new TransformControls(options.camera, options.surface);
     this.#helper = this.#controls.getHelper();
@@ -114,6 +118,19 @@ export class TransformAuthoringController {
     this.#controls.setScaleSnap(next.scaleSnap);
   }
 
+  setAuthoringMode(mode: AuthoringMode): void {
+    if (this.#authoringMode === mode) return;
+    this.#authoringMode = mode;
+    this.#cancelDrag(true);
+    this.#controls.detach();
+    if (mode === "run") {
+      this.#helper.removeFromParent();
+      return;
+    }
+    if (this.#helper.parent === null) this.#scene.add(this.#helper);
+    this.#attachSelectedEntity();
+  }
+
   setSmartAlignEnabled(enabled: boolean): void {
     if (this.#smartAlignEnabled === enabled) return;
     this.#smartAlignEnabled = enabled;
@@ -121,6 +138,18 @@ export class TransformAuthoringController {
   }
 
   setTool(tool: AuthoringTool): void {
+    if (this.#authoringMode === "run" && tool !== "select") {
+      throw new Error("Transform tools are unavailable in Run mode.");
+    }
+    const selected =
+      this.#selectedEntityId === null ? undefined : this.#entities.get(this.#selectedEntityId);
+    if (selected !== undefined && !supportsAuthoringTool(selected, tool)) {
+      const label =
+        selected.entity.type === "light" && selected.entity.light.kind === "point"
+          ? "Point light"
+          : "Authored light";
+      throw new Error(`${label} ${selected.entity.id} does not support ${tool}.`);
+    }
     if (this.#activeTool === tool) return;
     this.#activeTool = tool;
     this.#controls.detach();
@@ -155,9 +184,21 @@ export class TransformAuthoringController {
   }
 
   #attachSelectedEntity(): void {
-    if (this.#activeTool === "select" || this.#selectedEntityId === null) return;
+    if (
+      this.#authoringMode === "run" ||
+      this.#activeTool === "select" ||
+      this.#selectedEntityId === null
+    ) {
+      return;
+    }
     const runtimeEntity = this.#entities.get(this.#selectedEntityId);
-    if (runtimeEntity === undefined || !isTransformable(runtimeEntity)) return;
+    if (
+      runtimeEntity === undefined ||
+      !isTransformable(runtimeEntity) ||
+      !supportsAuthoringTool(runtimeEntity, this.#activeTool)
+    ) {
+      return;
+    }
     this.#controls.setMode(this.#activeTool);
     this.#controls.attach(runtimeEntity.object);
   }
@@ -180,14 +221,25 @@ export class TransformAuthoringController {
   }
 
   readonly #handleDraggingChanged = (event: Event): void => {
+    if (this.#authoringMode === "run") {
+      this.#orbitControls.enabled = true;
+      return;
+    }
     this.#orbitControls.enabled = !(event as { value?: boolean }).value;
   };
 
   readonly #handleMouseDown = (): void => {
+    if (this.#authoringMode === "run") return;
     const entityId = this.#selectedEntityId;
     if (entityId === null) return;
     const runtimeEntity = this.#entities.get(entityId);
-    if (runtimeEntity === undefined || !isTransformable(runtimeEntity)) return;
+    if (
+      runtimeEntity === undefined ||
+      !isTransformable(runtimeEntity) ||
+      !supportsAuthoringTool(runtimeEntity, this.#activeTool)
+    ) {
+      return;
+    }
     this.#draggingEntityId = entityId;
     this.#dragBefore = readTransform(runtimeEntity.object);
     this.#dragInvalid = false;
@@ -199,17 +251,35 @@ export class TransformAuthoringController {
   };
 
   readonly #handleObjectChange = (): void => {
+    if (this.#authoringMode === "run") return;
     const entityId = this.#draggingEntityId;
     if (entityId === null) return;
     const runtimeEntity = this.#entities.get(entityId);
-    if (runtimeEntity === undefined || this.#controls.object !== runtimeEntity.object) return;
+    if (
+      runtimeEntity === undefined ||
+      this.#controls.object !== runtimeEntity.object ||
+      !supportsAuthoringTool(runtimeEntity, this.#activeTool) ||
+      this.#dragBefore === null
+    ) {
+      return;
+    }
     if (this.#activeTool === "translate") this.#applyTranslationSnap(runtimeEntity.object);
-    const transform = readTransform(runtimeEntity.object);
-    if (this.#activeTool === "scale" && (this.#dragInvalid || !hasValidScale(transform))) {
+    const live = readTransform(runtimeEntity.object);
+    if (this.#activeTool === "scale" && (this.#dragInvalid || !hasValidScale(live))) {
       this.#dragInvalid = true;
       if (this.#dragBefore !== null) applyTransform(runtimeEntity.object, this.#dragBefore);
       this.#requestRender();
       return;
+    }
+    const transform = sanitizeTransformForTool(
+      runtimeEntity,
+      this.#activeTool,
+      this.#dragBefore,
+      live,
+    );
+    if (!sameTransform(live, transform)) {
+      applyTransform(runtimeEntity.object, transform);
+      this.#requestRender();
     }
     this.#emit({
       type: "transform-preview",
@@ -219,6 +289,7 @@ export class TransformAuthoringController {
   };
 
   readonly #handleMouseUp = (): void => {
+    if (this.#authoringMode === "run") return;
     const entityId = this.#draggingEntityId;
     const before = this.#dragBefore;
     const invalid = this.#dragInvalid;
@@ -226,11 +297,26 @@ export class TransformAuthoringController {
       this.#cancelDrag(true);
       return;
     }
-    this.#cancelDrag(false);
-    if (entityId === null || before === null) return;
+    if (entityId === null || before === null) {
+      this.#cancelDrag(true);
+      return;
+    }
     const runtimeEntity = this.#entities.get(entityId);
-    if (runtimeEntity === undefined) return;
-    const after = readTransform(runtimeEntity.object);
+    if (
+      runtimeEntity === undefined ||
+      this.#controls.object !== runtimeEntity.object ||
+      !supportsAuthoringTool(runtimeEntity, this.#activeTool)
+    ) {
+      this.#cancelDrag(true);
+      return;
+    }
+    const live = readTransform(runtimeEntity.object);
+    const after = sanitizeTransformForTool(runtimeEntity, this.#activeTool, before, live);
+    if (!sameTransform(live, after)) {
+      applyTransform(runtimeEntity.object, after);
+      this.#requestRender();
+    }
+    this.#cancelDrag(false);
     if (!sameTransform(before, after)) {
       this.#emit({ type: "transform-commit", entityId, before, after });
     }
@@ -377,6 +463,36 @@ function sameTransformSettings(
 
 function isTransformable(entity: RuntimeEntity): boolean {
   return !entity.entity.locked && isEffectivelyVisible(entity.object);
+}
+
+function supportsAuthoringTool(entity: RuntimeEntity, tool: AuthoringTool): boolean {
+  if (tool === "select" || entity.entity.type !== "light") return true;
+  if (tool === "scale") return false;
+  return entity.entity.light.kind === "spot" || tool === "translate";
+}
+
+function sanitizeTransformForTool(
+  entity: RuntimeEntity,
+  tool: AuthoringTool,
+  before: Transform,
+  live: Transform,
+): Transform {
+  if (entity.entity.type !== "light") return live;
+  if (tool === "translate") {
+    return {
+      position: live.position,
+      rotation: before.rotation,
+      scale: before.scale,
+    };
+  }
+  if (tool === "rotate" && entity.entity.light.kind === "spot") {
+    return {
+      position: before.position,
+      rotation: live.rotation,
+      scale: before.scale,
+    };
+  }
+  return before;
 }
 
 function isEffectivelyVisible(object: Object3D): boolean {

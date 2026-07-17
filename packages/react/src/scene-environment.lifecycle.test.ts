@@ -1,16 +1,18 @@
 // @vitest-environment happy-dom
 
-import { StrictMode, act, createElement } from "react";
+import { StrictMode, act, createElement, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SceneSource } from "@web3d/runtime";
+import type { CreateAuthoringViewerOptions, SceneSource } from "@web3d/runtime";
 import type { SceneLighting } from "@web3d/document";
 
 interface FakeViewer {
   readonly canvas: HTMLCanvasElement;
   readonly dispose: ReturnType<typeof vi.fn>;
   readonly load: ReturnType<typeof vi.fn>;
+  readonly getLightCreationFrame: ReturnType<typeof vi.fn>;
+  readonly setAuthoringMode: ReturnType<typeof vi.fn>;
   readonly setBackgroundPreview: ReturnType<typeof vi.fn>;
   readonly setGridPreview: ReturnType<typeof vi.fn>;
   readonly setLightingPreview: ReturnType<typeof vi.fn>;
@@ -18,6 +20,7 @@ interface FakeViewer {
 }
 
 const runtime = vi.hoisted(() => ({
+  authoringOptions: [] as CreateAuthoringViewerOptions[],
   authoringViewers: [] as FakeViewer[],
   loadImplementation: null as ((source: SceneSource) => Promise<void>) | null,
   readonlyViewers: [] as FakeViewer[],
@@ -35,6 +38,12 @@ vi.mock("@web3d/runtime", () => {
       }),
       getDiagnostics: vi.fn(() => []),
       getEntitySpatialSnapshots: vi.fn(() => []),
+      getLightCreationFrame: vi.fn(() =>
+        Object.freeze({
+          position: Object.freeze([0, 2, 0]),
+          target: Object.freeze([0, 0, 0]),
+        }),
+      ),
       isTransformDragging: vi.fn(() => false),
       getSnapshot: vi.fn(() => ({ lifecycle: "created" })),
       getTool: vi.fn(() => "select"),
@@ -46,6 +55,7 @@ vi.mock("@web3d/runtime", () => {
       selectEntities: vi.fn(),
       selectTarget: vi.fn(),
       setAdapter: vi.fn(() => Promise.resolve()),
+      setAuthoringMode: vi.fn(),
       setBackgroundPreview: vi.fn(),
       setGridPreview: vi.fn(),
       setLightingPreview: vi.fn(),
@@ -60,8 +70,9 @@ vi.mock("@web3d/runtime", () => {
   };
 
   return {
-    createAuthoringSceneViewer(container: HTMLElement) {
+    createAuthoringSceneViewer(container: HTMLElement, options: CreateAuthoringViewerOptions) {
       const viewer = createViewer(container);
+      runtime.authoringOptions.push(options);
       runtime.authoringViewers.push(viewer);
       return viewer;
     },
@@ -74,6 +85,7 @@ vi.mock("@web3d/runtime", () => {
 });
 
 import { AuthoringScene } from "./AuthoringScene";
+import type { AuthoringSceneHandle } from "./AuthoringScene";
 import { SceneViewer } from "./SceneViewer";
 
 describe("React scene environment lifecycle", () => {
@@ -85,6 +97,7 @@ describe("React scene environment lifecycle", () => {
     document.body.append(container);
     root = createRoot(container);
     runtime.authoringViewers.length = 0;
+    runtime.authoringOptions.length = 0;
     runtime.readonlyViewers.length = 0;
     runtime.loadImplementation = null;
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -231,11 +244,39 @@ describe("React scene environment lifecycle", () => {
     expect(viewer.setGridPreview).toHaveBeenLastCalledWith(true);
     expect(viewer.setLightingPreview).toHaveBeenLastCalledWith(previewLighting());
   });
+
+  it("controls authoring mode in place and exposes mode and creation-frame handles", async () => {
+    const source = scene("scene-a");
+    const ref = createRef<AuthoringSceneHandle>();
+    await act(async () => {
+      root.render(createElement(AuthoringScene, { ref, source, authoringMode: "run" }));
+      await Promise.resolve();
+    });
+    const viewer = requiredViewer(runtime.authoringViewers);
+    const canvas = viewer.canvas;
+    expect(runtime.authoringOptions.at(-1)?.authoringMode).toBe("run");
+    expect(viewer.setAuthoringMode).toHaveBeenLastCalledWith("run");
+
+    await act(async () => {
+      root.render(createElement(AuthoringScene, { ref, source, authoringMode: "edit" }));
+      await Promise.resolve();
+    });
+    expect(runtime.authoringViewers).toHaveLength(1);
+    expect(container.querySelector("canvas")).toBe(canvas);
+    expect(viewer.setAuthoringMode).toHaveBeenLastCalledWith("edit");
+
+    ref.current?.setAuthoringMode("run");
+    expect(viewer.setAuthoringMode).toHaveBeenLastCalledWith("run");
+    expect(ref.current?.getLightCreationFrame()).toEqual({
+      position: [0, 2, 0],
+      target: [0, 0, 0],
+    });
+  });
 });
 
 function scene(id: string): SceneSource {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id,
     name: id,
     revision: 0,

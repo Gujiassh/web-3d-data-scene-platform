@@ -38,18 +38,48 @@ describe("createIndexedDbProjectRepository", () => {
     vi.restoreAllMocks();
   });
 
-  it("rewrites stored 1.0 and 1.1 projects to 1.2 while leaving current bytes untouched", async () => {
+  it("rewrites every legacy project to 1.3 in one transaction and leaves current bytes untouched", async () => {
     const dbName = createDbName();
     const original = [
-      legacyStoredProject("legacy-1-0", "Legacy 1.0", "2026-07-10T08:00:00.000Z", 4),
-      legacy1_1StoredProject("legacy-1-1", "Legacy 1.1", "2026-07-11T09:30:00.000Z", 9),
-      currentStoredProject(
-        legacyStoredProject("current", "Current", "2026-07-12T10:45:00.000Z", 12),
-      ),
+      {
+        ...legacyStoredProject("legacy-1-0", "Legacy 1.0", "2026-07-10T08:00:00.000Z", 4),
+        lastExportedRevision: 3,
+      },
+      {
+        ...legacy1_1StoredProject("legacy-1-1", "Legacy 1.1", "2026-07-11T09:30:00.000Z", 9),
+        lastExportedRevision: 8,
+      },
+      {
+        ...legacy1_2StoredProject("legacy-1-2", "Legacy 1.2", "2026-07-12T10:45:00.000Z", 12),
+        lastExportedRevision: 11,
+      },
+      {
+        ...currentStoredProject(
+          legacyStoredProject("current", "Current", "2026-07-13T11:15:00.000Z", 15),
+        ),
+        lastExportedRevision: 14,
+      },
     ];
     await seedStoredProjects(dbName, original);
 
     const rewrittenIds: string[] = [];
+    const migrationTransactions: string[] = [];
+    const originalTransaction = IDBDatabase.prototype.transaction;
+    const transactionSpy = vi
+      .spyOn(IDBDatabase.prototype, "transaction")
+      .mockImplementation(function (
+        this: IDBDatabase,
+        storeNames: string | Iterable<string>,
+        mode?: IDBTransactionMode,
+        options?: IDBTransactionOptions,
+      ): IDBTransaction {
+        if (this.name === dbName && mode === "readwrite") {
+          migrationTransactions.push(
+            typeof storeNames === "string" ? storeNames : [...storeNames].sort().join(","),
+          );
+        }
+        return originalTransaction.call(this, storeNames, mode, options);
+      });
     const originalPut = IDBObjectStore.prototype.put;
     const putSpy = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
       this: IDBObjectStore,
@@ -61,22 +91,33 @@ describe("createIndexedDbProjectRepository", () => {
     });
 
     const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
-    await expect(repository.listRecent()).resolves.toHaveLength(3);
+    await expect(repository.listRecent()).resolves.toHaveLength(4);
     await repository.close();
-    expect(rewrittenIds.sort()).toEqual(["legacy-1-0", "legacy-1-1"]);
+    expect(rewrittenIds.sort()).toEqual(["legacy-1-0", "legacy-1-1", "legacy-1-2"]);
+    expect(migrationTransactions).toEqual(["projects"]);
     putSpy.mockRestore();
+    transactionSpy.mockRestore();
 
     const migrated = await readStoredProjects(dbName);
     expect(migrated.version).toBe(1);
-    expect(migrated.records).toHaveLength(3);
+    expect(migrated.stores).toEqual(["assets", "projects", "settings"]);
+    expect(migrated.records).toHaveLength(4);
     for (const before of original) {
       const after = migrated.records.find((record) => record.id === before.id)!;
-      expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
-      expect(stripStoredDocument(after)).toEqual(stripStoredDocument(before));
       const beforeDocument = storedDocument(before);
+      expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+      expect(Object.keys(after)).toHaveLength(8);
+      if (beforeDocument.schemaVersion === "1.3.0") {
+        expect(after).toEqual(before);
+      } else {
+        expect(stripStoredDocument(after)).toEqual({
+          ...stripStoredDocument(before),
+          lastExportedRevision: null,
+        });
+      }
       const afterDocument = storedDocument(after);
       expect(afterDocument).toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         revision: beforeDocument.revision,
         environment: {
           background: beforeDocument.environment.background,
@@ -95,6 +136,21 @@ describe("createIndexedDbProjectRepository", () => {
       expect(direction?.[1]).toBeCloseTo(0.7580980435789035, 15);
       expect(direction?.[2]).toBeCloseTo(0.5306686305052324, 15);
     }
+
+    const secondRewrites: string[] = [];
+    const idempotentSpy = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ): IDBRequest<IDBValidKey> {
+      if (this.name === "projects" && isStoredProject(value)) secondRewrites.push(value.id);
+      return originalPut.call(this, value, key);
+    });
+    const reopened = createIndexedDbProjectRepository({ dbName, indexedDB });
+    await expect(reopened.listRecent()).resolves.toHaveLength(4);
+    await reopened.close();
+    expect(secondRewrites).toEqual([]);
+    idempotentSpy.mockRestore();
   });
 
   it("rolls back every stored project when one migration rewrite fails", async () => {
@@ -115,7 +171,7 @@ describe("createIndexedDbProjectRepository", () => {
         this.name === "projects" &&
         isStoredProject(value) &&
         value.id === "legacy-b" &&
-        storedDocument(value).schemaVersion === "1.2.0"
+        storedDocument(value).schemaVersion === "1.3.0"
       ) {
         throw new DOMException("migration write failed", "QuotaExceededError");
       }
@@ -569,6 +625,30 @@ function legacy1_1StoredProject(
   };
 }
 
+function legacy1_2StoredProject(
+  id: string,
+  name: string,
+  timestamp: string,
+  revision: number,
+): StoredProject {
+  const legacy = legacy1_1StoredProject(id, name, timestamp, revision);
+  const document = JSON.parse(legacy.documentJson) as Record<string, unknown> & {
+    readonly environment: Record<string, unknown>;
+  };
+  return {
+    ...legacy,
+    documentJson: JSON.stringify({
+      ...document,
+      schemaVersion: "1.2.0",
+      environment: {
+        ...document.environment,
+        background: String(document.environment["background"]).toUpperCase(),
+        lighting: standardLighting(),
+      },
+    }),
+  };
+}
+
 function standardLighting() {
   return {
     fill: { skyColor: "#FFFFFF", groundColor: "#65706A", intensity: 1.8 },
@@ -638,15 +718,17 @@ async function seedStoredProjects(
   db.close();
 }
 
-async function readStoredProjects(
-  dbName: string,
-): Promise<{ readonly version: number; readonly records: readonly StoredProject[] }> {
+async function readStoredProjects(dbName: string): Promise<{
+  readonly version: number;
+  readonly stores: readonly string[];
+  readonly records: readonly StoredProject[];
+}> {
   const db = await openRawDatabase(dbName);
   const tx = db.transaction("projects", "readonly");
   const completed = rawTransactionComplete(tx);
   const records = await rawRequest<StoredProject[]>(tx.objectStore("projects").getAll());
   await completed;
-  const result = { version: db.version, records };
+  const result = { version: db.version, stores: [...db.objectStoreNames].sort(), records };
   db.close();
   return result;
 }

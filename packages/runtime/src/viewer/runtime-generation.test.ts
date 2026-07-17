@@ -1,7 +1,16 @@
 import { readFile } from "node:fs/promises";
 
-import { parseSceneDocument } from "@web3d/document";
-import { BufferGeometry, Color, type Material } from "three";
+import { parseSceneDocument, type LightEntity } from "@web3d/document";
+import {
+  Box3,
+  BufferGeometry,
+  Color,
+  Mesh,
+  MeshStandardMaterial,
+  PointLight,
+  SpotLight,
+  type Material,
+} from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import { applyRuleEffects, resetRuleEffects } from "./effect-projector";
@@ -13,6 +22,14 @@ const sceneUrl = new URL(
 );
 const assetUrl = new URL(
   "../../../../tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+  import.meta.url,
+);
+const pbrSceneUrl = new URL(
+  "../../../../tests/fixtures/006b-light-performance-pbr/public/006b-light-performance-pbr.scene.json",
+  import.meta.url,
+);
+const pbrAssetUrl = new URL(
+  "../../../../tests/fixtures/006b-light-performance-pbr/public/006b-light-performance-pbr.glb",
   import.meta.url,
 );
 
@@ -144,6 +161,83 @@ describe("buildRuntimeGeneration", () => {
       ),
     ).rejects.toMatchObject({ diagnostic: { code: "DOCUMENT_REFERENCE_INVALID" } });
   });
+
+  it("builds authored lights without asset loading and keeps them in entity mappings", async () => {
+    const sceneJson = await readFile(sceneUrl, "utf8");
+    const parsed = parseSceneDocument(sceneJson);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const point = pointLight("point-a");
+    const spot = spotLight("spot-a");
+    const resolve = vi.fn(() => Promise.reject(new Error("Assets must not load.")));
+
+    const generation = await buildRuntimeGeneration(
+      {
+        ...parsed.value,
+        assets: [],
+        entities: [point, spot],
+        targets: [],
+        dataSources: [],
+        bindings: [],
+        ruleSets: [],
+        annotations: [],
+      },
+      { resolve },
+      new AbortController().signal,
+      "edit",
+    );
+
+    expect(resolve).not.toHaveBeenCalled();
+    const pointObject = generation.entities.get(point.id)?.object;
+    const spotObject = generation.entities.get(spot.id)?.object;
+    expect(pointObject?.children.some((object) => object instanceof PointLight)).toBe(true);
+    expect(spotObject?.children.some((object) => object instanceof SpotLight)).toBe(true);
+    const pointProxy = pointObject?.getObjectByName(`light-pick-proxy:${point.id}`);
+    expect(pointProxy).toBeDefined();
+    expect(generation.entityForObject(pointProxy!)).toBe(point.id);
+
+    generation.authoredLights.setAuthoringMode("run");
+    expect(pointObject?.getObjectByName(`light-pick-proxy:${point.id}`)).toBeUndefined();
+    generation.authoredLights.setAuthoringMode("edit");
+    expect(pointObject?.getObjectByName(`light-pick-proxy:${point.id}`)).toBeDefined();
+    generation.dispose();
+  });
+
+  it("loads the deterministic 006B PBR shader-cost fixture with fixed scale and materials", async () => {
+    const [sceneJson, asset] = await Promise.all([
+      readFile(pbrSceneUrl, "utf8"),
+      readFile(pbrAssetUrl),
+    ]);
+    const parsed = parseSceneDocument(sceneJson);
+    expect(parsed.ok, parsed.ok ? "" : JSON.stringify(parsed.diagnostics)).toBe(true);
+    if (!parsed.ok) return;
+
+    const generation = await buildRuntimeGeneration(
+      parsed.value,
+      { resolve: () => Promise.resolve(new Blob([asset])) },
+      new AbortController().signal,
+    );
+    const fixture = generation.entities.get("pbr-fixture-scene")?.object;
+    expect(fixture).toBeDefined();
+    if (fixture === undefined) return;
+    const meshes: Mesh[] = [];
+    fixture.traverse((object) => {
+      if (object instanceof Mesh) meshes.push(object);
+    });
+    const materials = new Set(
+      meshes.flatMap((mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material])),
+    );
+    const bounds = new Box3().setFromObject(fixture);
+
+    expect(meshes).toHaveLength(10);
+    expect(materials).toHaveLength(4);
+    expect([...materials].every((material) => material instanceof MeshStandardMaterial)).toBe(true);
+    expect([bounds.min.x, bounds.min.z]).toEqual([-4, -3]);
+    expect(bounds.min.y).toBeCloseTo(-0.15, 12);
+    expect([bounds.max.x, bounds.max.z]).toEqual([4, 3]);
+    expect(bounds.max.y).toBeCloseTo(2.2, 12);
+    generation.dispose();
+  });
 });
 
 function materialColorHex(material: Material | undefined): string | undefined {
@@ -151,4 +245,42 @@ function materialColorHex(material: Material | undefined): string | undefined {
     return undefined;
   }
   return material.color.getHexString();
+}
+
+function pointLight(id: string): LightEntity {
+  return {
+    ...lightBase(id),
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+  };
+}
+
+function spotLight(id: string): LightEntity {
+  return {
+    ...lightBase(id),
+    light: {
+      kind: "spot",
+      color: "#FFFFFF",
+      intensity: 10,
+      range: null,
+      angleRadians: Math.PI / 4,
+      penumbra: 1 / 3,
+    },
+  };
+}
+
+function lightBase(id: string): Omit<LightEntity, "light"> {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: {
+      position: [0, 2, 0],
+      rotation: [0, 0, 0, 1],
+      scale: [1, 1, 1],
+    },
+    metadata: {},
+  };
 }

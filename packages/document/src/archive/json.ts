@@ -35,8 +35,8 @@ export function readCanonicalSceneSchemaVersion(bytes: Uint8Array): SceneSchemaV
     value !== null && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)["schemaVersion"]
       : undefined;
-  if (version !== "1.0.0" && version !== "1.1.0" && version !== "1.2.0") {
-    throw new Error("SceneDocument schemaVersion must be 1.0.0, 1.1.0 or 1.2.0.");
+  if (version !== "1.0.0" && version !== "1.1.0" && version !== "1.2.0" && version !== "1.3.0") {
+    throw new Error("SceneDocument schemaVersion must be 1.0.0, 1.1.0, 1.2.0 or 1.3.0.");
   }
   return version;
 }

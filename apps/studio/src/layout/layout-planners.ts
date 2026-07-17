@@ -334,6 +334,7 @@ export function planBoundsAnchorSnap(
   if (source.id === targetEntityId) throw new LayoutPlanningError("source-target-same");
   const target = context.document.entities.find((entity) => entity.id === targetEntityId);
   if (target === undefined) throw new LayoutPlanningError("target-required");
+  if (target.type === "light") throw new LayoutPlanningError("target-invalid");
   if (target.locked) throw new LayoutPlanningError("target-locked");
   const sourceSnapshot = snapshotFor(selection.snapshots, source.id);
   const targetSnapshot = snapshotFor(context.snapshots, target.id);
@@ -375,6 +376,9 @@ function requireSelection(
   },
 ): RequiredSelection {
   const capability = getSameParentCapability(context.document.entities, context.selectedEntityIds);
+  if (capability.unsupportedEntityIds.length > 0) {
+    throw new LayoutPlanningError("selection-unsupported");
+  }
   if (capability.rootEntityIds.length < options.minimum) {
     throw new LayoutPlanningError(options.minimumFailure);
   }

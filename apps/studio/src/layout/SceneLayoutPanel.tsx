@@ -248,11 +248,13 @@ export function SceneLayoutPanel({ layout, compact = false }: SceneLayoutPanelPr
                   onChange={(event) => layout.setTargetEntityId(event.target.value || null)}
                 >
                   <option value="">{t.layout.chooseTarget}</option>
-                  {layout.documentEntities.map((entity) => (
-                    <option key={entity.id} value={entity.id}>
-                      {entity.name} [{entity.id}]
-                    </option>
-                  ))}
+                  {layout.documentEntities
+                    .filter((entity) => entity.type !== "light")
+                    .map((entity) => (
+                      <option key={entity.id} value={entity.id}>
+                        {entity.name} [{entity.id}]
+                      </option>
+                    ))}
                 </select>
               </label>
               <label>

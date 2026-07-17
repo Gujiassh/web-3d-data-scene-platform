@@ -89,6 +89,7 @@ function StudioInspectorForProject(props: StudioInspectorProps) {
               authoritativeRevision={props.document.revision}
               editable={props.editable && props.entity !== null && !props.entity.locked}
               entity={props.entity}
+              execute={props.execute}
               onRename={props.onRename}
             />
             <SceneLayoutPanel compact layout={props.layout} />

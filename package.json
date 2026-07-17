@@ -9,6 +9,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "bench:light-006b": "node --experimental-strip-types benchmarks/006b-light-performance/run.mts",
     "bench:smart-align": "node --experimental-strip-types benchmarks/smart-align-500.mts",
     "build": "pnpm -r --if-present build",
     "dev": "pnpm --filter @web3d/studio dev",

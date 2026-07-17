@@ -25,6 +25,7 @@ export type LayoutFailureCode =
   | "selection-missing"
   | "selection-locked"
   | "selection-hidden"
+  | "selection-unsupported"
   | "bounds-unavailable"
   | "snapshot-unavailable"
   | "snapshot-stale"

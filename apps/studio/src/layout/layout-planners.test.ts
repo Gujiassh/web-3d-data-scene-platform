@@ -418,7 +418,7 @@ describe("layout planners", () => {
 
 function scene(entities: readonly SceneEntity[]): SceneDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "scene",
     name: "Scene",
     revision: 7,
@@ -461,7 +461,7 @@ function standardLighting() {
   };
 }
 
-function entity(id: string, x: number): SceneEntity {
+function entity(id: string, x: number): Extract<SceneEntity, { type: "asset" }> {
   return {
     id,
     type: "asset",

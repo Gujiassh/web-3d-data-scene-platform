@@ -55,6 +55,13 @@ export function validateSceneDocumentSemantics(
         message: `Entity parent '${entity.parentId}' does not exist.`,
       });
     }
+    if (entity.parentId !== null && entities.get(entity.parentId)?.type === "light") {
+      diagnostics.push({
+        code: "ENTITY_PARENT_LIGHT",
+        path: `/entities/${index}/parentId`,
+        message: `Entity parent '${entity.parentId}' is a light and cannot own children.`,
+      });
+    }
     if (entity.type === "asset" && !assets.has(entity.assetId)) {
       diagnostics.push({
         code: "ENTITY_ASSET_NOT_FOUND",
@@ -62,7 +69,18 @@ export function validateSceneDocumentSemantics(
         message: `Asset '${entity.assetId}' does not exist.`,
       });
     }
+    if (entity.type === "light") {
+      validateLightTransform(entity, index, diagnostics);
+    }
   });
+  const lightCount = document.entities.filter((entity) => entity.type === "light").length;
+  if (lightCount > 8) {
+    diagnostics.push({
+      code: "LIGHT_ENTITY_LIMIT_EXCEEDED",
+      path: "/entities",
+      message: `SceneDocument contains ${lightCount} lights; at most 8 are allowed.`,
+    });
+  }
   diagnostics.push(...findEntityCycles(document.entities));
 
   document.targets.forEach((target, index) => {
@@ -170,6 +188,47 @@ export function validateSceneDocumentSemantics(
   }
 
   return sortDiagnostics(diagnostics);
+}
+
+const IDENTITY_ROTATION = [0, 0, 0, 1] as const;
+const IDENTITY_SCALE = [1, 1, 1] as const;
+const QUATERNION_NORMALIZATION_TOLERANCE = 1e-6;
+
+function validateLightTransform(
+  entity: Extract<SceneEntity, { readonly type: "light" }>,
+  index: number,
+  diagnostics: DocumentDiagnostic[],
+): void {
+  if (!arraysEqual(entity.transform.scale, IDENTITY_SCALE)) {
+    diagnostics.push({
+      code: "LIGHT_SCALE_NOT_IDENTITY",
+      path: `/entities/${index}/transform/scale`,
+      message: "Light scale must be exact identity [1, 1, 1].",
+    });
+  }
+  if (entity.light.kind === "point") {
+    if (!arraysEqual(entity.transform.rotation, IDENTITY_ROTATION)) {
+      diagnostics.push({
+        code: "LIGHT_POINT_ROTATION_NOT_IDENTITY",
+        path: `/entities/${index}/transform/rotation`,
+        message: "Point light rotation must be exact identity [0, 0, 0, 1].",
+      });
+    }
+    return;
+  }
+
+  const length = Math.hypot(...entity.transform.rotation);
+  if (!Number.isFinite(length) || Math.abs(length - 1) > QUATERNION_NORMALIZATION_TOLERANCE) {
+    diagnostics.push({
+      code: "LIGHT_ROTATION_NOT_NORMALIZED",
+      path: `/entities/${index}/transform/rotation`,
+      message: "Spot light rotation must be a finite normalized quaternion within 1e-6.",
+    });
+  }
+}
+
+function arraysEqual(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 const ALLOWED_LABEL_TOKENS = new Set(["value", "quality", "connection", "sourceTime"]);

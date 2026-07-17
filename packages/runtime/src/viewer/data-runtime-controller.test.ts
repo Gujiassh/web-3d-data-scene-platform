@@ -108,6 +108,49 @@ describe("ViewerDataRuntimeController", () => {
     ]);
     material.dispose();
   });
+
+  it("refreshes document authority without resetting live binding state", () => {
+    const events: string[] = [];
+    const material = new MeshBasicMaterial({ color: "#9CA8A1" });
+    const target: RuntimeTarget = {
+      object: new Mesh(undefined, material),
+      materials: [material],
+      baseline: { visible: true, colors: [material.color.clone()] },
+    };
+    const controller = createController(events, [], () => 0);
+    const initial = document();
+    const runtimeGeneration = generation(target);
+    controller.attach(initial, runtimeGeneration);
+    controller.enable();
+    controller.acceptEnvelope({
+      kind: "snapshot",
+      sourceId: "source-1",
+      streamId: "stream-1",
+      sequence: 1,
+      quality: "good",
+      value: { status: "fault" },
+    });
+    const before = controller.getSnapshot();
+    events.length = 0;
+
+    controller.refreshDocumentAuthority(
+      { ...initial, revision: initial.revision + 1 },
+      runtimeGeneration,
+    );
+
+    expect(controller.getSnapshot()).toEqual(before);
+    expect(events).toEqual([]);
+    controller.acceptEnvelope({
+      kind: "snapshot",
+      sourceId: "source-1",
+      streamId: "stream-1",
+      sequence: 2,
+      quality: "good",
+      value: { status: "running" },
+    });
+    expect(controller.getSnapshot().bindingStates[0]?.ruleId).toBe("status-running");
+    material.dispose();
+  });
 });
 
 function createController(
@@ -138,7 +181,7 @@ function viewerEvent(event: Extract<ViewerEvent, { type: "alarm" | "connection-c
 
 function document(): SceneDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "scene-1",
     name: "Scene",
     revision: 0,
@@ -221,6 +264,12 @@ function document(): SceneDocument {
 function generation(target: RuntimeTarget): RuntimeGeneration {
   return {
     root: new Group(),
+    authoredLights: {
+      stage: vi.fn(() => ({ commit: vi.fn(), dispose: vi.fn() })),
+      setAuthoringMode: vi.fn(),
+      entityForObject: vi.fn(),
+      dispose: vi.fn(),
+    },
     entities: new Map(),
     targets: new Map([["target-1", target]]),
     diagnostics: [],

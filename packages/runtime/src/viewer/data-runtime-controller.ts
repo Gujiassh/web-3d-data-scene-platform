@@ -63,6 +63,11 @@ export class ViewerDataRuntimeController {
     this.#bindingStates.clear();
   }
 
+  refreshDocumentAuthority(document: SceneDocument, generation: RuntimeGeneration): void {
+    this.#document = document;
+    this.#generation = generation;
+  }
+
   detach(): void {
     this.#enabled = false;
     this.#clearTransientState();

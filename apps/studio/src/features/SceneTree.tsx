@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
-import { Box, Boxes, Eye, EyeOff, Lock, Unlock } from "lucide-react";
+import { Box, Boxes, Eye, EyeOff, Lightbulb, Lock, Unlock, Zap } from "lucide-react";
 
 import type { SceneEntity } from "@web3d/document";
 
@@ -64,7 +64,14 @@ export function SceneTree(props: SceneTreeProps) {
     const { entity } = node;
     const selected = props.selectedEntityIds.includes(entity.id);
     const primary = props.primaryEntityId === entity.id;
-    const EntityIcon = entity.type === "group" ? Boxes : Box;
+    const EntityIcon =
+      entity.type === "group"
+        ? Boxes
+        : entity.type === "light"
+          ? entity.light.kind === "point"
+            ? Lightbulb
+            : Zap
+          : Box;
     return (
       <div
         aria-expanded={node.children.length > 0 ? true : undefined}
@@ -72,6 +79,7 @@ export function SceneTree(props: SceneTreeProps) {
         aria-level={node.level}
         aria-selected={selected}
         data-entity-id={entity.id}
+        data-entity-type={entity.type === "light" ? entity.light.kind : entity.type}
         data-testid={`tree-${entity.id}`}
         key={entity.id}
         ref={(item) => {

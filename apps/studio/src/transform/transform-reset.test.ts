@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { SceneDocument, SceneEntity } from "@web3d/document";
+import type { LightEntity, SceneDocument, SceneEntity } from "@web3d/document";
 
 import {
   canEditEntityTransform,
@@ -66,6 +66,17 @@ describe("transform reset planning", () => {
     expect(canEditEntityTransform(document, "child", true)).toBe(true);
     expect(canEditEntityTransform(document, "locked-parent", true)).toBe(false);
   });
+
+  it("rejects authored lights before a generic reset or transform route is built", () => {
+    const light = pointLight("light");
+    const document = scene([light]);
+    expectResetError(document, [light.id], "selection-unsupported");
+    expect(getTransformResetCapability(document, [light.id], true)).toEqual({
+      enabled: false,
+      reason: "selection-unsupported",
+    });
+    expect(canEditEntityTransform(document, light.id, true)).toBe(false);
+  });
 });
 
 function expectResetError(
@@ -80,6 +91,20 @@ function expectResetError(
     expect(error).toBeInstanceOf(TransformResetError);
     expect((error as TransformResetError).code).toBe(code);
   }
+}
+
+function pointLight(id: string): LightEntity {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+  };
 }
 
 function entity(
@@ -105,7 +130,7 @@ function entity(
 
 function scene(entities: readonly SceneEntity[]): SceneDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "scene",
     name: "Scene",
     revision: 1,

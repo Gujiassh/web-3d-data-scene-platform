@@ -1,8 +1,13 @@
 import { readFile } from "node:fs/promises";
 
-import { parseSceneDocument, type SceneDocument } from "@web3d/document";
-import type { Camera, Material, Object3D } from "three";
-import { Color, LineSegments, Mesh, Raycaster, Vector3 } from "three";
+import {
+  parseSceneDocument,
+  type LightEntity,
+  type SceneDocument,
+  type Transform,
+} from "@web3d/document";
+import type { Camera, Material, Object3D, Scene } from "three";
+import { BoxHelper, Color, LineSegments, Mesh, Raycaster, Vector3 } from "three";
 import type * as ThreeModule from "three";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -14,13 +19,14 @@ import {
   type GltfInspectionSummary,
 } from "../index";
 import type { AuthoringViewerEvent, DataAdapter, DataEnvelope } from "../types";
+import { AuthoredLightController } from "../viewer/authored-light-controller";
 
 const runtime = vi.hoisted(() => ({
   canvases: [] as ReturnType<typeof fakeCanvas>[],
   dispose: vi.fn(),
   frames: [] as FrameRequestCallback[],
   reportError: vi.fn(),
-  scenes: [] as Array<{ background: unknown; getObjectByName(name: string): Object3D | undefined }>,
+  scenes: [] as Scene[],
   transformControls: [] as FakeTransformControls[],
   views: [] as FakeView[],
 }));
@@ -251,6 +257,402 @@ describe("createAuthoringSceneViewer", () => {
       before: { position: [2, 0, 0] },
       after: { position: [5, 0, 0] },
     });
+    await viewer.dispose();
+  });
+
+  it("synchronously reverts an active drag and suppresses authoring surfaces in Run", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(scene);
+    viewer.selectEntity("factory-cell");
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    const helper = controls.helper;
+    controls.emit("mouseDown", { mode: "translate" });
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    const draggedObject = controls.object;
+    draggedObject.position.x = 4;
+    draggedObject.updateMatrixWorld(true);
+    controls.emit("objectChange");
+    expect(draggedObject.position.x).toBe(4);
+    const previewCount = events.filter((event) => event.type === "transform-preview").length;
+
+    viewer.setAuthoringMode("run");
+    expect(draggedObject.position.x).toBe(0);
+    expect(viewer.isTransformDragging()).toBe(false);
+    expect(controls.object).toBeUndefined();
+    expect(helper.parent).toBeNull();
+    expect(viewer.getSnapshot()).toMatchObject({
+      selectedEntityId: "factory-cell",
+      selectedEntityIds: ["factory-cell"],
+    });
+
+    controls.emit("objectChange");
+    controls.emit("mouseUp", { mode: "translate" });
+    expect(events.filter((event) => event.type === "transform-preview")).toHaveLength(previewCount);
+    expect(events.filter((event) => event.type === "transform-commit")).toHaveLength(0);
+
+    viewer.setAuthoringMode("edit");
+    expect(helper.parent).not.toBeNull();
+    expect(controls.object).toBe(draggedObject);
+    await viewer.dispose();
+  });
+
+  it("exposes a deeply immutable finite creation frame only while ready", async () => {
+    const { asset, scene } = await fixture();
+    const replacement = deferred<Blob>();
+    let loadCount = 0;
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: {
+        resolve: () => {
+          loadCount += 1;
+          if (loadCount === 1) return Promise.resolve(new Blob([asset]));
+          return replacement.promise;
+        },
+      },
+    });
+
+    expect(viewer.getLightCreationFrame()).toBeNull();
+    await viewer.load(scene);
+    const frame = viewer.getLightCreationFrame();
+    const target = new Vector3(0, 0.75, 0);
+    const camera = new Vector3(7.5, 5.5, 8.5);
+    const offsetY = Math.min(5, Math.max(0.5, camera.distanceTo(target) * 0.2));
+    expect(frame).toEqual({
+      position: [0, 0.75 + offsetY, 0],
+      target: [0, 0.75, 0],
+    });
+    expect(Object.isFrozen(frame)).toBe(true);
+    expect(Object.isFrozen(frame?.position)).toBe(true);
+    expect(Object.isFrozen(frame?.target)).toBe(true);
+
+    const loading = viewer.load({ ...scene, revision: scene.revision + 1 });
+    await vi.waitFor(() => expect(viewer.getSnapshot().lifecycle).toBe("loading"));
+    expect(viewer.getLightCreationFrame()).toBeNull();
+    replacement.resolve(new Blob([asset]));
+    await loading;
+    expect(viewer.getLightCreationFrame()).not.toBeNull();
+
+    await viewer.dispose();
+    expect(viewer.getLightCreationFrame()).toBeNull();
+  });
+
+  it("never fabricates a creation frame after an initial load failure", async () => {
+    const { asset, scene } = await fixture();
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+
+    await expect(
+      viewer.load({
+        ...scene,
+        assets: scene.assets.map((candidate) => ({
+          ...candidate,
+          sha256: "0".repeat(64),
+        })),
+        targets: scene.targets.map((target) => ({
+          ...target,
+          assetHash: "0".repeat(64),
+        })),
+      }),
+    ).rejects.toMatchObject({ diagnostic: { code: "ASSET_HASH_MISMATCH" } });
+
+    expect(viewer.getSnapshot().lifecycle).toBe("created");
+    expect(viewer.getLightCreationFrame()).toBeNull();
+    await viewer.dispose();
+  });
+
+  it("enforces light tool capabilities and removes light picks in Run", async () => {
+    const { asset, scene } = await fixture();
+    const point = pointLight("point-a");
+    const spot = spotLight("spot-a");
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(withLights(scene, [point, spot], scene.revision + 1));
+
+    viewer.selectEntity(point.id);
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    expect(controls.object?.name).toBe(point.id);
+    expect(() => viewer.setTool("rotate")).toThrow(/Point light.*rotate/u);
+    expect(() => viewer.setTool("scale")).toThrow(/light.*scale/u);
+    expect(viewer.getTool()).toBe("translate");
+
+    viewer.selectEntity(spot.id);
+    viewer.setTool("rotate");
+    expect(controls.object?.name).toBe(spot.id);
+    expect(() => viewer.setTool("scale")).toThrow(/light.*scale/u);
+
+    const sceneRoot = runtime.scenes.at(-1);
+    expect(sceneRoot?.getObjectByName(`light-helper:${point.id}`)).toBeDefined();
+    expect(sceneRoot?.getObjectByName(`light-pick-proxy:${spot.id}`)).toBeDefined();
+    expect(sceneRoot?.children.filter((object) => object instanceof BoxHelper)).toHaveLength(1);
+    viewer.setAuthoringMode("run");
+    expect(() => viewer.setTool("translate")).toThrow(/Run/u);
+    expect(sceneRoot?.getObjectByName(`light-helper:${point.id}`)).toBeUndefined();
+    expect(sceneRoot?.getObjectByName(`light-pick-proxy:${spot.id}`)).toBeUndefined();
+    expect(sceneRoot?.children.filter((object) => object instanceof BoxHelper)).toHaveLength(0);
+
+    viewer.selectEntity(point.id);
+    expect(viewer.getSnapshot().selectedEntityId).toBe(point.id);
+    const selectedPoint = sceneRoot?.getObjectByName(point.id);
+    if (selectedPoint === undefined) throw new Error("Point runtime object is missing.");
+    vi.spyOn(Raycaster.prototype, "intersectObject").mockReturnValue([
+      { object: selectedPoint } as ReturnType<Raycaster["intersectObject"]>[number],
+    ]);
+    const canvas = runtime.canvases.at(-1);
+    if (canvas === undefined) throw new Error("Canvas not created.");
+    canvas.dispatch("pointerdown", { clientX: 100, clientY: 100 });
+    canvas.dispatch("pointerup", { clientX: 100, clientY: 100 });
+    expect(viewer.getSnapshot().selectedEntityId).toBe(point.id);
+
+    viewer.setAuthoringMode("edit");
+    expect(sceneRoot?.getObjectByName(`light-pick-proxy:${point.id}`)).toBeDefined();
+    expect(sceneRoot?.children.filter((object) => object instanceof BoxHelper)).toHaveLength(1);
+    expect(controls.object).toBeUndefined();
+    viewer.setTool("translate");
+    expect(controls.object?.name).toBe(point.id);
+    await viewer.dispose();
+  });
+
+  it.each([
+    {
+      label: "Point translate",
+      entity: pointLight("point-sanitize"),
+      tool: "translate" as const,
+      allowed: { position: [4, 5, 6] as const },
+      forbidden: {
+        rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2] as const,
+        scale: [2, 3, 4] as const,
+      },
+    },
+    {
+      label: "Spot translate",
+      entity: spotLight("spot-translate-sanitize"),
+      tool: "translate" as const,
+      allowed: { position: [4, 5, 6] as const },
+      forbidden: {
+        rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2] as const,
+        scale: [2, 3, 4] as const,
+      },
+    },
+    {
+      label: "Spot rotate",
+      entity: spotLight("spot-rotate-sanitize"),
+      tool: "rotate" as const,
+      allowed: { rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2] as const },
+      forbidden: {
+        position: [4, 5, 6] as const,
+        scale: [2, 3, 4] as const,
+      },
+    },
+  ])("restores unsupported TRS before $label preview and commit", async (caseData) => {
+    const { asset, scene } = await fixture();
+    const authored =
+      caseData.entity.light.kind === "spot"
+        ? {
+            ...caseData.entity,
+            transform: {
+              ...caseData.entity.transform,
+              rotation: [Math.SQRT1_2, 0, 0, Math.SQRT1_2] as const,
+            },
+          }
+        : caseData.entity;
+    const events: AuthoringViewerEvent[] = [];
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withLights(scene, [authored], scene.revision + 1));
+    viewer.selectEntity(authored.id);
+    viewer.setTool(caseData.tool);
+    const controls = requiredControls();
+    controls.emit("mouseDown", { mode: caseData.tool });
+    if (controls.object === undefined) throw new Error("TransformControls did not attach.");
+    if (caseData.allowed.position !== undefined) {
+      controls.object.position.fromArray(caseData.allowed.position);
+    }
+    if (caseData.allowed.rotation !== undefined) {
+      controls.object.quaternion.fromArray(caseData.allowed.rotation);
+    }
+    if (caseData.forbidden.position !== undefined) {
+      controls.object.position.fromArray(caseData.forbidden.position);
+    }
+    if (caseData.forbidden.rotation !== undefined) {
+      controls.object.quaternion.fromArray(caseData.forbidden.rotation);
+    }
+    controls.object.scale.fromArray(caseData.forbidden.scale);
+    controls.object.updateMatrixWorld(true);
+    controls.emit("objectChange");
+
+    const expected = {
+      position:
+        caseData.tool === "translate" ? caseData.allowed.position : authored.transform.position,
+      rotation:
+        caseData.tool === "rotate" ? caseData.allowed.rotation : authored.transform.rotation,
+      scale: authored.transform.scale,
+    };
+    expect(readObjectTransform(controls.object)).toEqual(expected);
+    expect(transformEvents(events, "transform-preview").at(-1)?.transform).toEqual(expected);
+
+    controls.object.scale.set(7, 8, 9);
+    if (caseData.tool === "translate") controls.object.quaternion.set(0, 0, 1, 0);
+    else controls.object.position.set(7, 8, 9);
+    controls.emit("mouseUp", { mode: caseData.tool });
+
+    expect(readObjectTransform(controls.object)).toEqual(expected);
+    const commit = transformEvents(events, "transform-commit").at(-1);
+    expect(commit?.before).toEqual(authored.transform);
+    expect(commit?.after).toEqual(expected);
+    await viewer.dispose();
+  });
+
+  it("retains authoring identity and controlled selection across light-only revisions", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const point = pointLight("point-a");
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withLights(scene, [point], 10));
+    viewer.selectEntity(point.id);
+    viewer.setTool("translate");
+    const canvas = runtime.canvases.at(-1);
+    const controls = requiredControls();
+    const firstObject = controls.object;
+    const helper = controls.helper;
+    const selectionEventsBefore = selectionEvents(events).length;
+
+    const updated = {
+      ...point,
+      light: { ...point.light, intensity: 50 },
+    } satisfies LightEntity;
+    await viewer.load(withLights(scene, [updated], 11));
+
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(requiredControls()).toBe(controls);
+    expect(controls.helper).toBe(helper);
+    expect(controls.object).not.toBe(firstObject);
+    expect(controls.object?.name).toBe(point.id);
+    expect(viewer.getSnapshot()).toMatchObject({
+      revision: 11,
+      selectedEntityId: point.id,
+      selectedEntityIds: [point.id],
+      activeTool: "translate",
+    });
+    expect(selectionEvents(events)).toHaveLength(selectionEventsBefore);
+
+    await viewer.load(withLights(scene, [], 12));
+    expect(viewer.getSnapshot().selectedEntityId).toBeNull();
+    expect(controls.object).toBeUndefined();
+    expect(selectionEvents(events).at(-1)).toMatchObject({ entityId: null, origin: "api" });
+    await viewer.dispose();
+  });
+
+  it("keeps Run authoritative when mode changes after a light-only stage", async () => {
+    const { asset, scene } = await fixture();
+    const events: AuthoringViewerEvent[] = [];
+    const point = pointLight("point-mode-race");
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load(withLights(scene, [point], 20));
+    viewer.selectEntity(point.id);
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    const canvas = runtime.canvases.at(-1);
+    const sceneRoot = runtime.scenes.at(-1);
+    if (canvas === undefined || sceneRoot === undefined) throw new Error("Viewport not created.");
+    const stageReached = deferred<void>();
+    const originalStage = AuthoredLightController.prototype.stage;
+    vi.spyOn(AuthoredLightController.prototype, "stage").mockImplementation(function (
+      this: AuthoredLightController,
+      lights,
+    ) {
+      const staged = originalStage.call(this, lights);
+      stageReached.resolve();
+      return staged;
+    });
+    const intersect = vi.spyOn(Raycaster.prototype, "intersectObject");
+    const selectionEventCount = selectionEvents(events).length;
+    const loading = viewer.load(
+      withLights(scene, [{ ...point, light: { ...point.light, intensity: 75 } }], 21),
+    );
+
+    await stageReached.promise;
+    viewer.setAuthoringMode("run");
+    await loading;
+
+    expect(viewer.getSnapshot()).toMatchObject({
+      revision: 21,
+      selectedEntityId: point.id,
+      selectedEntityIds: [point.id],
+    });
+    expect(requiredControls()).toBe(controls);
+    expect(controls.object).toBeUndefined();
+    expect(controls.helper.parent).toBeNull();
+    expect(sceneRoot.getObjectsByProperty("name", `light-helper:${point.id}`)).toHaveLength(0);
+    expect(sceneRoot.getObjectsByProperty("name", `light-pick-proxy:${point.id}`)).toHaveLength(0);
+    expect(sceneRoot.children.filter((object) => object instanceof BoxHelper)).toHaveLength(0);
+    canvas.dispatch("pointerdown", { clientX: 100, clientY: 100 });
+    canvas.dispatch("pointerup", { clientX: 100, clientY: 100 });
+    expect(intersect).not.toHaveBeenCalled();
+    expect(selectionEvents(events)).toHaveLength(selectionEventCount);
+    await viewer.dispose();
+  });
+
+  it("keeps Edit authoritative when mode changes after a light-only stage", async () => {
+    const { asset, scene } = await fixture();
+    const point = pointLight("point-mode-race");
+    const viewer = createAuthoringSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+    });
+    await viewer.load(withLights(scene, [point], 30));
+    viewer.selectEntity(point.id);
+    viewer.setTool("translate");
+    const controls = requiredControls();
+    const previousObject = controls.object;
+    const sceneRoot = runtime.scenes.at(-1);
+    if (sceneRoot === undefined) throw new Error("Scene not created.");
+    viewer.setAuthoringMode("run");
+    const stageReached = deferred<void>();
+    const originalStage = AuthoredLightController.prototype.stage;
+    vi.spyOn(AuthoredLightController.prototype, "stage").mockImplementation(function (
+      this: AuthoredLightController,
+      lights,
+    ) {
+      const staged = originalStage.call(this, lights);
+      stageReached.resolve();
+      return staged;
+    });
+    const loading = viewer.load(
+      withLights(scene, [{ ...point, light: { ...point.light, intensity: 100 } }], 31),
+    );
+
+    await stageReached.promise;
+    viewer.setAuthoringMode("edit");
+    await loading;
+
+    expect(viewer.getSnapshot()).toMatchObject({
+      revision: 31,
+      selectedEntityId: point.id,
+      selectedEntityIds: [point.id],
+      activeTool: "translate",
+    });
+    expect(requiredControls()).toBe(controls);
+    expect(controls.object).not.toBe(previousObject);
+    expect(controls.object?.name).toBe(point.id);
+    expect(controls.helper.parent).not.toBeNull();
+    expect(sceneRoot.getObjectsByProperty("name", `light-helper:${point.id}`)).toHaveLength(1);
+    expect(sceneRoot.getObjectsByProperty("name", `light-pick-proxy:${point.id}`)).toHaveLength(1);
+    expect(sceneRoot.children.filter((object) => object instanceof BoxHelper)).toHaveLength(1);
     await viewer.dispose();
   });
 
@@ -1275,7 +1677,9 @@ function withParentState(
         metadata: {},
       },
       ...scene.entities.map((entity) =>
-        entity.id === "factory-cell" ? { ...entity, parentId: "fixture-parent" } : entity,
+        entity.id === "factory-cell" && entity.type !== "light"
+          ? { ...entity, parentId: "fixture-parent" }
+          : entity,
       ),
     ],
   };
@@ -1287,6 +1691,56 @@ function withoutEntities(scene: SceneDocument): SceneDocument {
     entities: [],
     targets: [],
     bindings: [],
+  };
+}
+
+function withLights(
+  scene: SceneDocument,
+  lights: readonly LightEntity[],
+  revision: number,
+): SceneDocument {
+  return {
+    ...scene,
+    revision,
+    entities: [...scene.entities.filter((entity) => entity.type !== "light"), ...lights],
+  };
+}
+
+function pointLight(id: string): LightEntity {
+  return {
+    ...lightBase(id),
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+  };
+}
+
+function spotLight(id: string): LightEntity {
+  return {
+    ...lightBase(id),
+    light: {
+      kind: "spot",
+      color: "#FFFFFF",
+      intensity: 10,
+      range: null,
+      angleRadians: Math.PI / 4,
+      penumbra: 1 / 3,
+    },
+  };
+}
+
+function lightBase(id: string): Omit<LightEntity, "light"> {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: {
+      position: [0, 2, 0],
+      rotation: [0, 0, 0, 1],
+      scale: [1, 1, 1],
+    },
+    metadata: {},
   };
 }
 
@@ -1529,6 +1983,14 @@ function transformEvents<T extends "transform-preview" | "transform-commit">(
   return events.filter(
     (event): event is Extract<AuthoringViewerEvent, { type: T }> => event.type === type,
   );
+}
+
+function readObjectTransform(object: Object3D): Transform {
+  return {
+    position: object.position.toArray(),
+    rotation: object.quaternion.toArray(),
+    scale: object.scale.toArray(),
+  };
 }
 
 function fakeCanvas() {

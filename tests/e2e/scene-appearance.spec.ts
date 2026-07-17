@@ -16,7 +16,7 @@ const assetSha256 = "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b960
 const artifact = (name: string) => `artifacts/e2e/${name}`;
 
 test.describe("Scene appearance and lighting", () => {
-  test("previews and persists one concrete 1.2 environment without recreating the Viewer", async ({
+  test("previews and persists one concrete 1.3 environment without recreating the Viewer", async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -33,7 +33,7 @@ test.describe("Scene appearance and lighting", () => {
     await expectRevision(page, 1);
     const storedBefore = await activeStoredDocument(page);
     expect(storedBefore).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       revision: 1,
       environment: {
         backgroundMode: "custom",
@@ -70,7 +70,7 @@ test.describe("Scene appearance and lighting", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         revision: 2,
         environment: concreteEnvironment(),
       });
@@ -94,7 +94,7 @@ test.describe("Scene appearance and lighting", () => {
     await jsonDownload.saveAs(jsonPath);
     const jsonDocument = JSON.parse(await readFile(jsonPath, "utf8")) as SceneDocument;
     expect(jsonDocument).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       revision: 4,
       environment: concreteEnvironment(),
     });
@@ -108,10 +108,10 @@ test.describe("Scene appearance and lighting", () => {
     const archive = await importSceneArchive(new Uint8Array(await readFile(archivePath)));
     expect(archive.manifest).toMatchObject({
       archiveVersion: "1.0.0",
-      sceneSchemaVersion: "1.2.0",
+      sceneSchemaVersion: "1.3.0",
     });
     expect(archive.document).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       revision: 4,
       environment: concreteEnvironment(),
     });
@@ -120,7 +120,7 @@ test.describe("Scene appearance and lighting", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         revision: 4,
         environment: concreteEnvironment(),
       });
@@ -144,7 +144,7 @@ async function importAppearanceArchive(page: Page): Promise<Locator> {
     ),
   );
   const archive = await exportSceneArchive({
-    document: JSON.parse(sceneJson) as SceneDocument,
+    document: currentLayoutDocument(sceneJson),
     createdAt: "2026-07-16T00:00:00.000Z",
     resolveAssetBytes: new Map([[assetSha256, assetBytes]]),
   });
@@ -159,9 +159,17 @@ async function importAppearanceArchive(page: Page): Promise<Locator> {
   return canvas;
 }
 
+function currentLayoutDocument(sceneJson: string): SceneDocument {
+  const fixture = JSON.parse(sceneJson) as Omit<SceneDocument, "schemaVersion"> & {
+    readonly schemaVersion: "1.2.0";
+  };
+  return { ...fixture, schemaVersion: "1.3.0" };
+}
+
 async function openSceneSettings(page: Page): Promise<void> {
-  await page.getByTestId("scene-settings-button").click();
-  await expect(page.getByRole("dialog", { name: "Scene settings" })).toBeVisible();
+  await page.getByTestId("lighting-menu-trigger").click();
+  await page.getByRole("menuitem", { name: /Scene lighting settings|场景灯光设置/ }).click();
+  await expect(page.getByRole("dialog", { name: /Scene settings|场景设置/ })).toBeVisible();
 }
 
 async function openProjectMenu(page: Page): Promise<void> {

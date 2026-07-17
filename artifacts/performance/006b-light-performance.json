@@ -1,0 +1,160 @@
+{
+  "generatedAt": "2026-07-17T03:19:31.496Z",
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "protocol": {
+    "warmupEvents": 30,
+    "measuredEvents": 300,
+    "p95LimitMs": 33.3
+  },
+  "fixtures": [
+    {
+      "fixture": "006-overhead",
+      "states": [
+        {
+          "state": "zero",
+          "compileTransition": {
+            "renderDurationMs": 1,
+            "drawCalls": 0,
+            "triangles": 0
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.19999992847442627,
+          "p95Ms": 0.2999999523162842,
+          "maxMs": 0.5,
+          "drawCalls": 9,
+          "triangles": 96
+        },
+        {
+          "state": "point-25",
+          "compileTransition": {
+            "renderDurationMs": 0.2999999523162842,
+            "drawCalls": 9,
+            "triangles": 96
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.10000002384185791,
+          "p95Ms": 0.20000004768371582,
+          "maxMs": 0.3999999761581421,
+          "drawCalls": 9,
+          "triangles": 96
+        },
+        {
+          "state": "spot-10",
+          "compileTransition": {
+            "renderDurationMs": 0.3999999761581421,
+            "drawCalls": 9,
+            "triangles": 96
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.10000002384185791,
+          "p95Ms": 0.20000004768371582,
+          "maxMs": 0.5,
+          "drawCalls": 9,
+          "triangles": 96
+        },
+        {
+          "state": "mixed-8",
+          "compileTransition": {
+            "renderDurationMs": 0.30000007152557373,
+            "drawCalls": 9,
+            "triangles": 96
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.19999992847442627,
+          "p95Ms": 0.20000004768371582,
+          "maxMs": 0.6000000238418579,
+          "drawCalls": 9,
+          "triangles": 96
+        }
+      ],
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "distinctColors": 15
+      }
+    },
+    {
+      "fixture": "006b-pbr",
+      "states": [
+        {
+          "state": "zero",
+          "compileTransition": {
+            "renderDurationMs": 0.2999999523162842,
+            "drawCalls": 0,
+            "triangles": 0
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.20000004768371582,
+          "p95Ms": 0.30000007152557373,
+          "maxMs": 0.6000000238418579,
+          "drawCalls": 11,
+          "triangles": 120
+        },
+        {
+          "state": "point-25",
+          "compileTransition": {
+            "renderDurationMs": 41.700000047683716,
+            "drawCalls": 11,
+            "triangles": 120
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.20000004768371582,
+          "p95Ms": 0.30000007152557373,
+          "maxMs": 0.6999999284744263,
+          "drawCalls": 11,
+          "triangles": 120
+        },
+        {
+          "state": "spot-10",
+          "compileTransition": {
+            "renderDurationMs": 36.60000002384186,
+            "drawCalls": 11,
+            "triangles": 120
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.20000004768371582,
+          "p95Ms": 0.30000007152557373,
+          "maxMs": 0.6000000238418579,
+          "drawCalls": 11,
+          "triangles": 120
+        },
+        {
+          "state": "mixed-8",
+          "compileTransition": {
+            "renderDurationMs": 109,
+            "drawCalls": 11,
+            "triangles": 120
+          },
+          "warmupCount": 30,
+          "measuredCount": 300,
+          "medianMs": 0.20000004768371582,
+          "p95Ms": 0.30000007152557373,
+          "maxMs": 1,
+          "drawCalls": 11,
+          "triangles": 120
+        }
+      ],
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "distinctColors": 108
+      }
+    }
+  ]
+}

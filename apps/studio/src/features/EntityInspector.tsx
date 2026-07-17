@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Box, Lock } from "lucide-react";
 
-import type { SceneEntity } from "@web3d/document";
+import type { DocumentCommand, SceneEntity } from "@web3d/document";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { LightInspector } from "../lights/LightInspector";
+import type { StudioCommandOutcome } from "../workspace/command-outcome";
 
 interface EntityInspectorProps {
   readonly entity: SceneEntity | null;
   readonly authoritativeRevision: number;
   readonly editable: boolean;
+  readonly execute: (command: DocumentCommand) => StudioCommandOutcome;
   readonly onRename: (entityId: string, name: string) => void;
 }
 
@@ -23,6 +26,17 @@ export function EntityInspector(props: EntityInspectorProps) {
     );
   }
 
+  if (props.entity.type === "light") {
+    return (
+      <LightInspector
+        editable={props.editable && !props.entity.locked}
+        entity={props.entity}
+        execute={props.execute}
+        key={entityEditorKey(props.entity, props.authoritativeRevision)}
+      />
+    );
+  }
+
   return (
     <EntityInspectorForm
       {...props}
@@ -33,7 +47,9 @@ export function EntityInspector(props: EntityInspectorProps) {
 }
 
 function EntityInspectorForm(
-  props: Omit<EntityInspectorProps, "entity"> & { readonly entity: SceneEntity },
+  props: Omit<EntityInspectorProps, "entity"> & {
+    readonly entity: Exclude<SceneEntity, { type: "light" }>;
+  },
 ) {
   const { t } = useStudioI18n();
   const [name, setName] = useState(props.entity.name);

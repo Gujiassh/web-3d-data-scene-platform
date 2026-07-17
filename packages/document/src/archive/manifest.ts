@@ -224,8 +224,8 @@ export function assertByteLength(value: unknown): asserts value is number {
 }
 
 export function assertSceneSchemaVersion(value: unknown): asserts value is SceneSchemaVersion {
-  if (value !== "1.0.0" && value !== "1.1.0" && value !== "1.2.0") {
-    throw new Error("SceneDocument schemaVersion must be 1.0.0, 1.1.0 or 1.2.0.");
+  if (value !== "1.0.0" && value !== "1.1.0" && value !== "1.2.0" && value !== "1.3.0") {
+    throw new Error("SceneDocument schemaVersion must be 1.0.0, 1.1.0, 1.2.0 or 1.3.0.");
   }
 }
 

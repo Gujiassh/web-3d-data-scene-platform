@@ -22,8 +22,11 @@ export class ObjectPicker<Id extends string> {
       -((options.clientY - bounds.top) / bounds.height) * 2 + 1,
     );
     this.#raycaster.setFromCamera(this.#pointer, options.camera);
-    const hit = this.#raycaster.intersectObject(options.root, true)[0];
-    return hit === undefined ? null : (options.resolveId(hit.object) ?? null);
+    for (const hit of this.#raycaster.intersectObject(options.root, true)) {
+      const id = options.resolveId(hit.object);
+      if (id !== undefined) return id;
+    }
+    return null;
   }
 
   static isClick(

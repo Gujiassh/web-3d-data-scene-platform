@@ -266,13 +266,20 @@ async function usabilityArchive(): Promise<Uint8Array> {
         ),
       );
       return exportSceneArchive({
-        document: JSON.parse(sceneJson) as SceneDocument,
+        document: currentLayoutDocument(sceneJson),
         createdAt: "2026-07-16T00:00:00.000Z",
         resolveAssetBytes: new Map([[assetSha256, bytes]]),
       });
     },
   );
   return archivePromise;
+}
+
+function currentLayoutDocument(sceneJson: string): SceneDocument {
+  const fixture = JSON.parse(sceneJson) as Omit<SceneDocument, "schemaVersion"> & {
+    readonly schemaVersion: "1.2.0";
+  };
+  return { ...fixture, schemaVersion: "1.3.0" };
 }
 
 async function importUsabilityArchive(page: Page): Promise<Locator> {

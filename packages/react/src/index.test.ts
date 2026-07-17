@@ -12,7 +12,7 @@ import {
 } from "./index";
 
 const source = {
-  schemaVersion: "1.2.0",
+  schemaVersion: "1.3.0",
   id: "scene-1",
   name: "Scene",
   revision: 0,
@@ -57,6 +57,7 @@ describe("react runtime wrappers", () => {
           canvasLabel: "Authoring 3D scene",
           className: "authoring",
           dataRuntimeEnabled: true,
+          authoringMode: "edit",
           initialTool: "rotate",
           selectedEntityIds: ["asset-b", "asset-a"],
           primaryEntityId: "asset-b",
@@ -83,6 +84,8 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneHandle["setSmartAlignEnabled"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["isTransformDragging"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["getEntitySpatialSnapshots"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["setAuthoringMode"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["getLightCreationFrame"]>().toBeFunction();
     expectTypeOf<
       ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]
     >().toHaveProperty("documentRevision");
@@ -94,6 +97,7 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("backgroundPreview");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("gridPreview");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("lightingPreview");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("authoringMode");
     expectTypeOf<SceneViewerHandle["setThemeBackground"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setBackgroundPreview"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setGridPreview"]>().toBeFunction();

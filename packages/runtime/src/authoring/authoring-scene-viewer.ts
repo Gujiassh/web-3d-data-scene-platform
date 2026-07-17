@@ -7,9 +7,10 @@ export function createAuthoringSceneViewer(
   container: HTMLElement,
   options: CreateAuthoringViewerOptions = {},
 ): AuthoringSceneViewer {
-  const { dataRuntimeEnabled, initialTool, onEvent, ...viewerOptions } = options;
+  const { authoringMode, dataRuntimeEnabled, initialTool, onEvent, ...viewerOptions } = options;
   return createThreeSceneViewport(container, viewerOptions, {
     enabled: true,
+    initialMode: authoringMode ?? "edit",
     dataRuntimeEnabled: dataRuntimeEnabled ?? false,
     initialTool: initialTool ?? "select",
     onEvent,

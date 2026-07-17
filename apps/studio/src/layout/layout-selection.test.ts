@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { SceneEntity } from "@web3d/document";
+import type { LightEntity, SceneEntity } from "@web3d/document";
 
 import {
   LAYOUT_ANCHORS,
@@ -64,6 +64,14 @@ describe("layout selection", () => {
     expect(capability.canUseBounds).toBe(false);
   });
 
+  it("marks authored lights as unsupported layout roots", () => {
+    const light = pointLight("light");
+    const capability = getSameParentCapability([...entities, light], ["light"]);
+    expect(capability.unsupportedEntityIds).toEqual(["light"]);
+    expect(capability.canEditHierarchy).toBe(false);
+    expect(capability.canUseBounds).toBe(false);
+  });
+
   it("defines the fixed layout axes and anchors", () => {
     expect(LAYOUT_AXES).toEqual(["x", "y", "z"]);
     expect(LAYOUT_ANCHORS).toEqual(["min", "center", "max"]);
@@ -95,4 +103,18 @@ function entity(
   return options.type === "group"
     ? { ...common, type: "group" }
     : { ...common, type: "asset", assetId: "asset" };
+}
+
+function pointLight(id: string): LightEntity {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
+  };
 }

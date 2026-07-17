@@ -15,6 +15,7 @@ import { ShortcutHelpDialog } from "./help/ShortcutHelpDialog";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
+import { useStudioLightAuthoring } from "./lights/useStudioLightAuthoring";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
 import { useStudioShortcuts, type StudioShortcutActions } from "./session/useStudioShortcuts";
 import { useSmartAlignPreference } from "./smart-align/preference";
@@ -60,6 +61,7 @@ export function App() {
   );
   const [helpOpen, setHelpOpen] = useState(false);
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [lightingMenuOpen, setLightingMenuOpen] = useState(false);
   const [smartAlignEnabled, toggleSmartAlign] = useSmartAlignPreference();
   const [sceneSettingsPreview, setSceneSettingsPreview] =
     useState<SceneSettingsPreviewState | null>(null);
@@ -105,6 +107,16 @@ export function App() {
     selectEntities: workspace.selectEntities,
     addDiagnostic: workspace.addDiagnostic,
   });
+  const lightAuthoring = useStudioLightAuthoring({
+    document: project?.document ?? null,
+    mode: session?.mode ?? "edit",
+    canEdit: workspace.canEdit,
+    selectedEntityIds: session?.selectedEntityIds ?? [],
+    primaryEntityId: selectedEntityId,
+    viewerRef,
+    execute: workspace.execute,
+    selectEntity: workspace.selectEntity,
+  });
   const openModelPicker = (): void => modelInputRef.current?.click();
   const closeSceneNameDialog = (): void => {
     setSceneNameDialogMode(null);
@@ -142,6 +154,7 @@ export function App() {
     setProjectMenuOpen(false);
     setHelpOpen(false);
     setAppSettingsOpen(false);
+    setLightingMenuOpen(false);
     setSceneSettingsDraftValue(sceneSettingsDraft(project.document.environment));
     setSceneSettingsKey(projectDocumentKey);
   };
@@ -166,25 +179,41 @@ export function App() {
   };
   const deleteSelection = (): void => {
     if (selectedEntityId === null) return;
+    if (lightAuthoring.deleteSelection()) return;
     workspace.deleteEntity(selectedEntityId);
     workspace.selectEntity(null);
   };
   const changeMode = (mode: "edit" | "run"): void => {
+    viewerRef.current?.setAuthoringMode(mode);
     if (mode === "run") viewerRef.current?.setTool("select");
+    setLightingMenuOpen(false);
     workspace.setMode(mode);
+  };
+  const duplicateSelection = (): void => {
+    if (lightAuthoring.selectionContainsLight) {
+      lightAuthoring.duplicateSelection();
+      return;
+    }
+    sceneLayout.duplicateSelection();
   };
   const shortcutActions: StudioShortcutActions = {
     "tool.select": () => workspace.setTool("select"),
-    "tool.translate": () => workspace.setTool("translate"),
-    "tool.rotate": () => workspace.setTool("rotate"),
-    "tool.scale": () => workspace.setTool("scale"),
+    "tool.translate": () => {
+      if (lightAuthoring.canUseTool("translate")) workspace.setTool("translate");
+    },
+    "tool.rotate": () => {
+      if (lightAuthoring.canUseTool("rotate")) workspace.setTool("rotate");
+    },
+    "tool.scale": () => {
+      if (lightAuthoring.canUseTool("scale")) workspace.setTool("scale");
+    },
     "smart-align.toggle": toggleSmartAlign,
     "reset.position": () => void sceneLayout.resetSelection("position"),
     "reset.rotation": () => void sceneLayout.resetSelection("rotation"),
     "reset.scale": () => void sceneLayout.resetSelection("scale"),
     "history.undo": workspace.undo,
     "history.redo": workspace.redo,
-    "selection.duplicate": sceneLayout.duplicateSelection,
+    "selection.duplicate": duplicateSelection,
     "selection.delete": deleteSelection,
     "selection.clear": () => workspace.selectEntity(null),
     "project.save": () => void workspace.save().catch(() => undefined),
@@ -199,6 +228,7 @@ export function App() {
     modalOpen:
       helpOpen ||
       appSettingsOpen ||
+      lightingMenuOpen ||
       workspace.importState !== null ||
       sceneNameDialogMode !== null ||
       sceneSettingsOpen,
@@ -223,13 +253,23 @@ export function App() {
         sceneSettingsButtonRef={sceneSettingsButtonRef}
         settingsButtonRef={settingsButtonRef}
         canEdit={workspace.canEdit}
-        canDuplicate={sceneLayout.capabilities.duplicate.enabled}
+        canDuplicate={
+          lightAuthoring.selectionContainsLight
+            ? lightAuthoring.duplicateEnabled
+            : sceneLayout.capabilities.duplicate.enabled
+        }
         canRedo={historyCapabilities.canRedo}
         canUndo={historyCapabilities.canUndo}
         duplicateDisabledReason={
-          sceneLayout.capabilities.duplicate.reason === null
-            ? null
-            : t.layout.reasons[sceneLayout.capabilities.duplicate.reason]
+          lightAuthoring.selectionContainsLight
+            ? lightAuthoring.duplicateDisabledReason === "limit"
+              ? t.lights.menu.reasons.limit
+              : lightAuthoring.duplicateDisabledReason === "mixed-selection"
+                ? t.lights.menu.reasons.mixedSelection
+                : null
+            : sceneLayout.capabilities.duplicate.reason === null
+              ? null
+              : t.layout.reasons[sceneLayout.capabilities.duplicate.reason]
         }
         exportOutdated={workspace.exportOutdated}
         hasSelection={selectedEntityId !== null}
@@ -237,33 +277,58 @@ export function App() {
         projectName={project?.record.name ?? t.app.openingProject}
         save={session?.save ?? { status: "saving", revision: 0 }}
         smartAlignEnabled={smartAlignEnabled}
+        lightCount={lightAuthoring.lightCount}
+        lightingMenuOpen={lightingMenuOpen}
+        lightAddDisabledReason={
+          lightAuthoring.addDisabledReason === null
+            ? null
+            : lightAuthoring.addDisabledReason === "not-ready"
+              ? t.lights.menu.reasons.notReady
+              : t.lights.menu.reasons[lightAuthoring.addDisabledReason]
+        }
+        lightSettingsDisabledReason={
+          lightAuthoring.settingsDisabled ? t.lights.menu.reasons.run : null
+        }
+        toolDisabledReasons={Object.fromEntries(
+          (["translate", "rotate", "scale"] as const)
+            .filter((tool) => !lightAuthoring.canUseTool(tool))
+            .map((tool) => [tool, t.lights.menu.reasons.unsupportedTool]),
+        )}
         tool={activeTool}
         onDelete={deleteSelection}
-        onDuplicate={() => {
-          if (selectedEntityId !== null) sceneLayout.duplicateSelection();
-        }}
+        onDuplicate={duplicateSelection}
         onExport={() => void workspace.exportArchive()}
         onImport={openModelPicker}
         onModeChange={changeMode}
-        onOpenProjectMenu={() => setProjectMenuOpen((open) => !open)}
+        onOpenProjectMenu={() => {
+          setLightingMenuOpen(false);
+          setProjectMenuOpen((open) => !open);
+        }}
         onOpenHelp={() => {
           setProjectMenuOpen(false);
           setAppSettingsOpen(false);
+          setLightingMenuOpen(false);
           setHelpOpen(true);
         }}
         onOpenSceneSettings={openSceneSettings}
         onOpenSettings={() => {
           setProjectMenuOpen(false);
           setHelpOpen(false);
+          setLightingMenuOpen(false);
           setSceneSettingsKey(null);
           setSceneSettingsDraftValue(null);
           setSceneSettingsPreview(closeSceneSettingsDraftPreview);
           setAppSettingsOpen(true);
         }}
         onToggleSmartAlign={toggleSmartAlign}
+        onAddLight={lightAuthoring.add}
+        onLightingMenuOpenChange={setLightingMenuOpen}
+        onRefreshLightAvailability={lightAuthoring.refreshCreationAvailability}
         onRedo={workspace.redo}
         onSave={() => void workspace.save().catch(() => undefined)}
-        onToolChange={workspace.setTool}
+        onToolChange={(tool) => {
+          if (lightAuthoring.canUseTool(tool)) workspace.setTool(tool);
+        }}
         onUndo={workspace.undo}
       />
 
@@ -331,10 +396,12 @@ export function App() {
               primaryEntityId={session?.primaryEntityId ?? null}
               selectedEntityIds={session?.selectedEntityIds ?? []}
               onLockChange={(entityId, locked) =>
+                lightAuthoring.updateLock(entityId, locked) ||
                 workspace.execute({ type: "set-entity-lock", entityId, locked })
               }
               onSelect={sceneLayout.selectFromTree}
               onVisibilityChange={(entityId, visible) =>
+                lightAuthoring.updateVisibility(entityId, visible) ||
                 workspace.execute({ type: "set-entity-visibility", entityId, visible })
               }
             />
@@ -371,6 +438,7 @@ export function App() {
               ref={viewerRef}
               adapters={dataBinding.adapters}
               backgroundPreview={resolvedSceneSettingsPreview?.background ?? null}
+              authoringMode={session?.mode ?? "edit"}
               dataRuntimeEnabled={session?.mode === "run"}
               canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
@@ -400,11 +468,20 @@ export function App() {
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
                 viewer.setTool(activeTool);
+                lightAuthoring.refreshCreationAvailability();
                 sceneLayout.handleReady();
               }}
               onSelectionChange={sceneLayout.handleSelectionChange}
-              onTransformPreview={sceneLayout.handleTransformPreview}
-              onTransformCommit={sceneLayout.handleTransformCommit}
+              onTransformPreview={(event) => {
+                if (!lightAuthoring.handleTransformPreview(event)) {
+                  sceneLayout.handleTransformPreview(event);
+                }
+              }}
+              onTransformCommit={(event) => {
+                if (!lightAuthoring.handleTransformCommit(event)) {
+                  sceneLayout.handleTransformCommit(event);
+                }
+              }}
             />
           )}
           <div className="viewport-mode mono" data-testid="viewport-mode">

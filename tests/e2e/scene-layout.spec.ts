@@ -135,12 +135,19 @@ async function layoutArchive(): Promise<Uint8Array> {
   archivePromise ??= Promise.all([readFile(scenePath, "utf8"), readFile(assetPath)]).then(
     async ([sceneJson, buffer]) =>
       exportSceneArchive({
-        document: JSON.parse(sceneJson) as SceneDocument,
+        document: currentLayoutDocument(sceneJson),
         createdAt: "2026-07-16T00:00:00.000Z",
         resolveAssetBytes: new Map([[assetSha256, new Uint8Array(buffer)]]),
       }),
   );
   return archivePromise;
+}
+
+function currentLayoutDocument(sceneJson: string): SceneDocument {
+  const fixture = JSON.parse(sceneJson) as Omit<SceneDocument, "schemaVersion"> & {
+    readonly schemaVersion: "1.2.0";
+  };
+  return { ...fixture, schemaVersion: "1.3.0" };
 }
 
 async function importLayoutArchive(page: Page): Promise<Locator> {

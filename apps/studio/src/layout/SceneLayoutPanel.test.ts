@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import type { LightEntity } from "@web3d/document";
+
 import { StudioI18nProvider } from "../i18n/I18nProvider";
 import { SceneLayoutPanel } from "./SceneLayoutPanel";
 import { DISABLED_TRANSFORM_SETTINGS } from "./types";
@@ -76,6 +78,23 @@ describe("SceneLayoutPanel", () => {
     );
     expect(html).not.toContain("0.000 / 0.000 / 0.000");
     expect(html).toContain("Unavailable");
+  });
+
+  it("never offers an authored light as a hierarchy or anchor destination", () => {
+    const model = layoutModel();
+    const light = pointLight();
+    const html = renderToStaticMarkup(
+      createElement(
+        StudioI18nProvider,
+        null,
+        createElement(SceneLayoutPanel, {
+          layout: { ...model, documentEntities: [...model.documentEntities, light] },
+        }),
+      ),
+    );
+
+    expect(html).not.toContain(`value="${light.id}"`);
+    expect(html).not.toContain(light.name);
   });
 });
 
@@ -162,5 +181,19 @@ function layoutModel(): StudioSceneLayout {
     handleReady: () => undefined,
     handleTransformPreview: () => undefined,
     handleTransformCommit: () => undefined,
+  };
+}
+
+function pointLight(): LightEntity {
+  return {
+    id: "light-a",
+    type: "light",
+    parentId: null,
+    name: "Point light 1",
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
   };
 }

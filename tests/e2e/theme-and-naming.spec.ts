@@ -187,7 +187,7 @@ test.describe("Theme and scene naming", () => {
     const revision = await page.getByTestId("document-revision").getAttribute("data-revision");
     const before = await activeStoredDocument(page);
     expect(before).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       environment: {
         backgroundMode: "theme",
         background: "#F4F6F5",
@@ -208,9 +208,8 @@ test.describe("Theme and scene naming", () => {
     expect(await activeStoredDocument(page)).toEqual(before);
     expect(await page.evaluate((key) => localStorage.getItem(key), studioThemeKey)).toBe("light");
 
-    await page.getByTestId("scene-settings-button").click();
+    await openSceneSettings(page);
     const dialog = page.getByRole("dialog", { name: "Scene settings" });
-    await expect(dialog).toBeVisible();
     await dialog.getByRole("tab", { name: "Appearance" }).click();
     await expect(dialog.getByRole("radio", { name: "Follow interface theme" })).toBeChecked();
     await expect(page.locator(".studio-toolbar")).toHaveAttribute("inert", "");
@@ -231,9 +230,9 @@ test.describe("Theme and scene naming", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expectCanvasBackground(page, canvas, [244, 246, 245]);
-    await expect(page.getByTestId("scene-settings-button")).toBeFocused();
+    await expect(page.getByTestId("lighting-menu-trigger")).toBeFocused();
 
-    await page.getByTestId("scene-settings-button").click();
+    await openSceneSettings(page);
     const applyDialog = page.getByRole("dialog", { name: "Scene settings" });
     await applyDialog.getByRole("tab", { name: "Appearance" }).click();
     await applyDialog.getByText("Custom color", { exact: true }).click();
@@ -249,7 +248,7 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         revision: 3,
         environment: { backgroundMode: "custom", background: "#336699" },
       });
@@ -259,7 +258,7 @@ test.describe("Theme and scene naming", () => {
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
     expect(await isRememberedCanvas(page, canvas)).toBe(true);
 
-    await page.getByTestId("scene-settings-button").click();
+    await openSceneSettings(page);
     const followPreviewDialog = page.getByRole("dialog", { name: "Scene settings" });
     await followPreviewDialog.getByRole("tab", { name: "Appearance" }).click();
     await followPreviewDialog.getByText("Follow interface theme", { exact: true }).click();
@@ -269,7 +268,7 @@ test.describe("Theme and scene naming", () => {
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await setInterfacePreferences(page, { locale: "zh-CN" });
-    await page.getByTestId("scene-settings-button").click();
+    await openSceneSettings(page);
     await expect(page.locator(".scene-settings-dialog")).toBeVisible();
     await expectNoPageOverflow(page);
     await page.screenshot({
@@ -286,7 +285,7 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
 
@@ -297,7 +296,7 @@ test.describe("Theme and scene naming", () => {
     const jsonPath = test.info().outputPath("scene-background.scene.json");
     await jsonDownload.saveAs(jsonPath);
     expect(JSON.parse(await readFile(jsonPath, "utf8"))).toMatchObject({
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       environment: { backgroundMode: "custom", background: "#336699" },
     });
     await rememberCanvas(page, reloadedCanvas);
@@ -317,13 +316,13 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.2.0",
+        schemaVersion: "1.3.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("rewrites mixed stored 1.0 and 1.1 projects to persisted 1.2 data", async ({ page }) => {
+  test("rewrites mixed stored 1.0 and 1.1 projects to persisted 1.3 data", async ({ page }) => {
     await useEnglish(page, studioLocaleKey);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(studioUrl);
@@ -353,7 +352,7 @@ test.describe("Theme and scene naming", () => {
       expect(withoutDocumentJson(record)).toEqual(withoutDocumentJson(legacy!));
       const before = JSON.parse(legacy!.documentJson) as LegacySceneDocument;
       const after = JSON.parse(record.documentJson) as CurrentSceneDocument;
-      expect(after.schemaVersion).toBe("1.2.0");
+      expect(after.schemaVersion).toBe("1.3.0");
       expect(after.revision).toBe(before.revision);
       expect(after.environment).toEqual({
         ...before.environment,
@@ -367,6 +366,12 @@ test.describe("Theme and scene naming", () => {
 
 async function useEnglish(page: Page, key: string): Promise<void> {
   await page.addInitScript((storageKey) => localStorage.setItem(storageKey, "en"), key);
+}
+
+async function openSceneSettings(page: Page): Promise<void> {
+  await page.getByTestId("lighting-menu-trigger").click();
+  await page.getByRole("menuitem", { name: /Scene lighting settings|场景灯光设置/ }).click();
+  await expect(page.getByRole("dialog", { name: /Scene settings|场景设置/ })).toBeVisible();
 }
 
 async function openProjectMenu(page: Page): Promise<void> {
@@ -565,7 +570,7 @@ interface LegacySceneDocument {
 }
 
 interface CurrentSceneDocument {
-  readonly schemaVersion: "1.2.0";
+  readonly schemaVersion: "1.3.0";
   readonly revision: number;
   readonly environment: LegacySceneDocument["environment"] & {
     readonly backgroundMode: "theme" | "custom";

@@ -114,6 +114,40 @@ describe("loadGltfAsset", () => {
       });
 
       expect(importedLights).toHaveLength(0);
+      const directionalReplacement = loaded.nodesByIndex.get(0);
+      const pointReplacement = loaded.nodesByIndex.get(1);
+      const spotReplacement = loaded.nodesByIndex.get(2);
+      const retainedChild = loaded.nodesByIndex.get(3);
+      const beforeSibling = loaded.nodesByIndex.get(4);
+      const afterSibling = loaded.nodesByIndex.get(5);
+      expect(directionalReplacement).toBeDefined();
+      expect(directionalReplacement).not.toBeInstanceOf(Light);
+      expect(directionalReplacement?.parent).toBe(loaded.root);
+      expect(directionalReplacement?.position.toArray()).toEqual([1, 2, 3]);
+      expect(directionalReplacement?.userData).toMatchObject({ marker: "point-node" });
+      expect(pointReplacement?.children).toHaveLength(0);
+      expect(directionalReplacement?.children).toHaveLength(2);
+      const directionalTarget = directionalReplacement?.children.find(
+        (child) => child !== retainedChild,
+      );
+      expect(directionalTarget?.parent).toBe(directionalReplacement);
+      expect(directionalTarget?.position.toArray()).toEqual([0, 0, -1]);
+      expect(spotReplacement?.children).toHaveLength(1);
+      expect(spotReplacement?.children[0]?.parent).toBe(spotReplacement);
+      expect(spotReplacement?.children[0]?.position.toArray()).toEqual([0, 0, -1]);
+      expect(retainedChild?.parent).toBe(directionalReplacement);
+      expect(retainedChild?.position.toArray()).toEqual([4, 5, 6]);
+      expect(loaded.gltf.parser.associations.get(directionalReplacement!)?.nodes).toBe(0);
+      expect(loaded.gltf.parser.associations.has(retainedChild!)).toBe(true);
+      expect(loaded.root.children.indexOf(directionalReplacement!)).toBe(
+        loaded.root.children.indexOf(beforeSibling!) + 1,
+      );
+      expect(loaded.root.children.indexOf(afterSibling!)).toBe(
+        loaded.root.children.indexOf(directionalReplacement!) + 1,
+      );
+      expect([...loaded.nodesByIndex.keys()].sort((left, right) => left - right)).toEqual([
+        0, 1, 2, 3, 4, 5,
+      ]);
       expect(loaded.diagnostics).toEqual([
         {
           code: "ASSET_PUNCTUAL_LIGHTS_REMOVED",
@@ -155,11 +189,22 @@ function punctualLightsGltf(): Record<string, unknown> {
         lights: [{ type: "directional" }, { type: "point" }, { type: "spot" }],
       },
     },
-    scenes: [{ nodes: [0, 1, 2] }],
+    scenes: [{ nodes: [4, 0, 5, 1, 2] }],
     scene: 0,
-    nodes: [0, 1, 2].map((light) => ({
-      extensions: { KHR_lights_punctual: { light } },
-    })),
+    nodes: [
+      {
+        name: "Point light node",
+        translation: [1, 2, 3],
+        extras: { marker: "point-node" },
+        children: [3],
+        extensions: { KHR_lights_punctual: { light: 0 } },
+      },
+      { extensions: { KHR_lights_punctual: { light: 1 } } },
+      { extensions: { KHR_lights_punctual: { light: 2 } } },
+      { name: "Retained child", translation: [4, 5, 6] },
+      { name: "Before sibling" },
+      { name: "After sibling" },
+    ],
   };
 }
 

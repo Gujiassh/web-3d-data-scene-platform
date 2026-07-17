@@ -13,6 +13,7 @@ export interface SameParentCapability {
   readonly parentId: string | null;
   readonly lockedEntityIds: readonly string[];
   readonly hiddenEntityIds: readonly string[];
+  readonly unsupportedEntityIds: readonly string[];
   readonly canEditHierarchy: boolean;
   readonly canUseBounds: boolean;
 }
@@ -56,8 +57,14 @@ export function getSameParentCapability(
     roots.length > 0 && roots.every((entity) => entity.parentId === firstParentId);
   const lockedEntityIds = roots.filter((entity) => entity.locked).map((entity) => entity.id);
   const hiddenEntityIds = roots.filter((entity) => !entity.visible).map((entity) => entity.id);
+  const unsupportedEntityIds = roots
+    .filter((entity) => entity.type === "light")
+    .map((entity) => entity.id);
   const hasValidSelection =
-    rootEntityIds.length > 0 && missingEntityIds.length === 0 && hasSameParent;
+    rootEntityIds.length > 0 &&
+    missingEntityIds.length === 0 &&
+    hasSameParent &&
+    unsupportedEntityIds.length === 0;
 
   return {
     rootEntityIds,
@@ -66,6 +73,7 @@ export function getSameParentCapability(
     parentId: hasSameParent ? firstParentId : null,
     lockedEntityIds,
     hiddenEntityIds,
+    unsupportedEntityIds,
     canEditHierarchy: hasValidSelection && lockedEntityIds.length === 0,
     canUseBounds: hasValidSelection && lockedEntityIds.length === 0 && hiddenEntityIds.length === 0,
   };

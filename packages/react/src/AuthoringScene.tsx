@@ -10,6 +10,7 @@ import {
 import {
   createAuthoringSceneViewer,
   type AssetResolver,
+  type AuthoringMode,
   type AuthoringSceneViewer as RuntimeAuthoringViewer,
   type AuthoringTool,
   type AuthoringTransformSettings,
@@ -18,6 +19,7 @@ import {
   type DataAdapter,
   type Diagnostic,
   type EntitySpatialSnapshot,
+  type LightCreationFrame,
   type SceneSource,
 } from "@web3d/runtime";
 import type { SceneLighting } from "@web3d/document";
@@ -47,10 +49,12 @@ export interface AuthoringSceneHandle {
   setSmartAlignEnabled(enabled: boolean): void;
   getEntitySpatialSnapshots(entityIds: readonly string[]): readonly EntitySpatialSnapshot[];
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
+  setAuthoringMode(mode: AuthoringMode): void;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
   setLightingPreview(lighting: SceneLighting | null): void;
+  getLightCreationFrame(): Readonly<LightCreationFrame> | null;
   setView(viewId: string): Promise<void>;
   getSnapshot(): AuthoringViewerSnapshot;
 }
@@ -65,6 +69,7 @@ export interface AuthoringSceneProps {
   readonly pixelRatio?: number;
   readonly reducedMotion?: boolean;
   readonly initialTool?: AuthoringTool;
+  readonly authoringMode?: AuthoringMode;
   readonly dataRuntimeEnabled?: boolean;
   readonly themeBackground?: string | null;
   readonly backgroundPreview?: string | null;
@@ -93,6 +98,7 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     const runtimeReconciliationRef = useRef(0);
     const initialOptionsRef = useRef({
       assetResolver: props.assetResolver,
+      authoringMode: props.authoringMode,
       canvasLabel: props.canvasLabel,
       dataRuntimeEnabled: props.dataRuntimeEnabled,
       initialTool: props.initialTool,
@@ -108,6 +114,7 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
       const viewer = createAuthoringSceneViewer(container, {
         ...(options.assetResolver === undefined ? {} : { assetResolver: options.assetResolver }),
         ...(options.canvasLabel === undefined ? {} : { canvasLabel: options.canvasLabel }),
+        ...(options.authoringMode === undefined ? {} : { authoringMode: options.authoringMode }),
         ...(options.dataRuntimeEnabled === undefined
           ? {}
           : { dataRuntimeEnabled: options.dataRuntimeEnabled }),
@@ -159,6 +166,10 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
     useEffect(() => {
       viewerRef.current?.setLightingPreview(props.lightingPreview ?? null);
     }, [props.lightingPreview]);
+
+    useEffect(() => {
+      viewerRef.current?.setAuthoringMode(props.authoringMode ?? "edit");
+    }, [props.authoringMode]);
 
     useEffect(() => {
       const viewer = viewerRef.current;
@@ -249,6 +260,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         setDataRuntimeEnabled(enabled) {
           return requiredViewer(viewerRef).setDataRuntimeEnabled(enabled);
         },
+        setAuthoringMode(mode) {
+          requiredViewer(viewerRef).setAuthoringMode(mode);
+        },
         setThemeBackground(color) {
           requiredViewer(viewerRef).setThemeBackground(color);
         },
@@ -260,6 +274,9 @@ export const AuthoringScene = /* @__PURE__ */ forwardRef<AuthoringSceneHandle, A
         },
         setLightingPreview(lighting) {
           requiredViewer(viewerRef).setLightingPreview(lighting);
+        },
+        getLightCreationFrame() {
+          return requiredViewer(viewerRef).getLightCreationFrame();
         },
         setView(viewId) {
           return requiredViewer(viewerRef).setView(viewId);

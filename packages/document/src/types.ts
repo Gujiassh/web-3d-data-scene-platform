@@ -28,7 +28,7 @@ export interface SceneAsset {
   readonly stats?: AssetStats;
 }
 
-interface EntityBase {
+export interface EntityBase {
   readonly id: string;
   readonly parentId: string | null;
   readonly name: string;
@@ -47,7 +47,29 @@ export interface AssetEntity extends EntityBase {
   readonly assetId: string;
 }
 
-export type SceneEntity = GroupEntity | AssetEntity;
+export interface PointLightProperties {
+  readonly kind: "point";
+  readonly color: string;
+  readonly intensity: number;
+  readonly range: number | null;
+}
+
+export interface SpotLightProperties {
+  readonly kind: "spot";
+  readonly color: string;
+  readonly intensity: number;
+  readonly range: number | null;
+  readonly angleRadians: number;
+  readonly penumbra: number;
+}
+
+export interface LightEntity extends EntityBase {
+  readonly type: "light";
+  readonly parentId: null;
+  readonly light: PointLightProperties | SpotLightProperties;
+}
+
+export type SceneEntity = GroupEntity | AssetEntity | LightEntity;
 
 export interface SceneTarget {
   readonly id: string;
@@ -200,7 +222,7 @@ export interface SceneLighting {
 }
 
 export interface SceneDocument {
-  readonly schemaVersion: "1.2.0";
+  readonly schemaVersion: "1.3.0";
   readonly id: string;
   readonly name: string;
   readonly revision: number;

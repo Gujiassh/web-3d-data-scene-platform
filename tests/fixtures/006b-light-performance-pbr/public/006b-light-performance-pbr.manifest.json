@@ -1,0 +1,21 @@
+{
+  "fixtureVersion": 1,
+  "assetPath": "/006b-light-performance-pbr.glb",
+  "byteLength": 3200,
+  "mediaType": "model/gltf-binary",
+  "sha256": "9a0dcc3641f98f5f6ac9efa8993f3d103228c6a170b0fc36b6ca75a1eb6b901d",
+  "sceneCount": 1,
+  "nodeCount": 10,
+  "meshCount": 4,
+  "materialCount": 4,
+  "declaredTriangleCount": 48,
+  "renderedInstanceTriangleCount": 120,
+  "camera": { "position": [7.5, 5.5, 8.5], "target": [0, 0.75, 0], "fov": 42 },
+  "sceneBounds": { "min": [-4, -0.15, -3], "max": [4, 2.2, 3] },
+  "performanceStates": [
+    { "id": "zero", "pointCount": 0, "spotCount": 0 },
+    { "id": "point-25", "pointCount": 1, "spotCount": 0, "intensity": 25 },
+    { "id": "spot-10", "pointCount": 0, "spotCount": 1, "intensity": 10 },
+    { "id": "eight-4-plus-4", "pointCount": 4, "spotCount": 4 }
+  ]
+}

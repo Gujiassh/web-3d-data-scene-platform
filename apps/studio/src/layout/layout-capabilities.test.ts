@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { SceneDocument, SceneEntity } from "@web3d/document";
+import type { LightEntity, SceneDocument, SceneEntity } from "@web3d/document";
 import type { EntitySpatialSnapshot } from "@web3d/runtime";
 
 import { deriveLayoutCapabilities } from "./layout-capabilities";
@@ -69,6 +69,32 @@ describe("deriveLayoutCapabilities", () => {
     const capabilities = deriveLayoutCapabilities(input);
     expect(capabilities.duplicate).toEqual({ enabled: false, reason: "invalid-offset" });
   });
+
+  it("disables every generic layout route for an authored light", () => {
+    const document = scene([pointLight("light")]);
+    const capabilities = derive(document, ["light"], "light");
+    expect(
+      Object.values(capabilities).every((item) => item.reason === "selection-unsupported"),
+    ).toBe(true);
+  });
+
+  it("rejects an authored light as an anchor destination before planning", () => {
+    const source = entity("source", 0);
+    const light = pointLight("light");
+    const document = scene([source, light]);
+    const capabilities = deriveLayoutCapabilities({
+      document,
+      selectedEntityIds: [source.id],
+      primaryEntityId: source.id,
+      snapshots: document.entities.map(snapshot),
+      editable: true,
+      reparentTargetId: null,
+      anchorTargetId: light.id,
+      duplicateOffsetValid: true,
+    });
+
+    expect(capabilities.anchorSnap).toEqual({ enabled: false, reason: "target-invalid" });
+  });
 });
 
 function derive(document: SceneDocument, selected: readonly string[], primary: string) {
@@ -86,7 +112,7 @@ function derive(document: SceneDocument, selected: readonly string[], primary: s
 
 function scene(entities: readonly SceneEntity[]): SceneDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: "scene",
     name: "Scene",
     revision: 3,
@@ -131,6 +157,20 @@ function entity(id: string, x: number): SceneEntity {
     locked: false,
     transform: { position: [x, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
     metadata: {},
+  };
+}
+
+function pointLight(id: string): LightEntity {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
   };
 }
 

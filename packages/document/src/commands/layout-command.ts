@@ -90,6 +90,9 @@ function transformEntities(
   const entitiesById = new Map(document.entities.map((entity) => [entity.id, entity]));
   for (const change of command.changes) {
     const entity = requireEntity(entitiesById, change.entityId);
+    if (entity.type === "light") {
+      throw new Error(`LightEntity '${change.entityId}' cannot use generic transform-entities.`);
+    }
     if (entity.locked) throw new Error(`Locked entity '${change.entityId}' cannot be transformed.`);
     assertTransformInvariant(change.before, `Transform before '${change.entityId}'`);
     assertTransformInvariant(change.after, `Transform after '${change.entityId}'`);
@@ -156,6 +159,9 @@ function planDuplicateSubtrees(
   const entitiesById = new Map(document.entities.map((entity) => [entity.id, entity]));
   const roots = items.map((item) => {
     const root = requireEntity(entitiesById, item.rootEntityId);
+    if (root.type === "light") {
+      throw new Error(`LightEntity '${root.id}' cannot use generic duplicate-subtree.`);
+    }
     if (requireRootPlacement && item.rootPlacement === undefined) {
       throw new Error(`Duplicate root placement is required for '${root.id}'.`);
     }
@@ -180,6 +186,9 @@ function planDuplicateSubtrees(
 
     for (const sourceId of subtreeIds) {
       const source = requireEntity(entitiesById, sourceId);
+      if (source.type === "light") {
+        throw new Error(`LightEntity '${source.id}' cannot use generic duplicate-subtree.`);
+      }
       const nextId = requireMappedId(item.entityIdMap, sourceId, "entity");
       claimDuplicateId(usedIds, nextId, "entity");
       const nextParentId =
@@ -273,6 +282,9 @@ function preflightPlacementChanges(
   const entitiesById = new Map(document.entities.map((entity) => [entity.id, entity]));
   for (const change of changes) {
     const entity = requireEntity(entitiesById, change.entityId);
+    if (entity.type === "light") {
+      throw new Error(`LightEntity '${change.entityId}' cannot use generic layout commands.`);
+    }
     if (entity.locked) throw new Error(`Locked entity '${change.entityId}' cannot be reparented.`);
     assertFinitePlacement(change.before, `Placement before '${change.entityId}'`);
     assertFinitePlacement(change.after, `Placement after '${change.entityId}'`);
@@ -285,6 +297,11 @@ function preflightPlacementChanges(
       !additionalParentIds.has(change.after.parentId)
     ) {
       throw new Error(`Parent entity '${change.after.parentId}' does not exist.`);
+    }
+    for (const parentId of [change.before.parentId, change.after.parentId]) {
+      if (parentId !== null && entitiesById.get(parentId)?.type === "light") {
+        throw new Error(`LightEntity '${parentId}' cannot be a layout destination.`);
+      }
     }
   }
 }
@@ -339,9 +356,15 @@ function placementsEqual(left: EntityPlacement, right: EntityPlacement): boolean
 }
 
 function applyPlacement(entity: SceneEntity, placement: EntityPlacement | undefined): SceneEntity {
-  return placement === undefined
-    ? entity
-    : { ...entity, parentId: placement.parentId, transform: cloneTransform(placement.transform) };
+  if (placement === undefined) return entity;
+  if (entity.type === "light") {
+    throw new Error(`LightEntity '${entity.id}' cannot use generic layout commands.`);
+  }
+  return {
+    ...entity,
+    parentId: placement.parentId,
+    transform: cloneTransform(placement.transform),
+  };
 }
 
 function collectSubtreeEntityIds(entities: readonly SceneEntity[], rootEntityId: string): string[] {
@@ -427,6 +450,9 @@ function assertUnlockedGroupDestination(
   if (parentId === null) return;
   const parent = entities.find((entity) => entity.id === parentId);
   if (parent === undefined) throw new Error(`Parent entity '${parentId}' does not exist.`);
+  if (parent.type === "light") {
+    throw new Error(`LightEntity '${parentId}' cannot be a group or reparent destination.`);
+  }
   if (parent.type !== "group") throw new Error(`Destination entity '${parentId}' must be a group.`);
   if (parent.locked) throw new Error(`Destination group '${parentId}' must be unlocked.`);
 }
@@ -436,6 +462,9 @@ function cloneEntityForDuplicate(
   nextId: string,
   nextParentId: string | null,
 ): SceneEntity {
+  if (entity.type === "light") {
+    throw new Error(`LightEntity '${entity.id}' cannot use generic duplicate-subtree.`);
+  }
   return entity.type === "asset"
     ? {
         ...entity,

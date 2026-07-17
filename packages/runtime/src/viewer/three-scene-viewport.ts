@@ -1,4 +1,9 @@
-import { validateSceneDocument, type SceneDocument, type SceneLighting } from "@web3d/document";
+import {
+  serializeSceneDocument,
+  validateSceneDocument,
+  type SceneDocument,
+  type SceneLighting,
+} from "@web3d/document";
 import {
   Box3,
   Color,
@@ -28,6 +33,7 @@ import { defaultAssetResolver } from "../assets/asset-loader";
 import { diagnostic, diagnosticError, RuntimeDiagnosticError } from "../diagnostics";
 import { AnimationFrameSlot } from "../lifecycle/idempotent-disposer";
 import type {
+  AuthoringMode,
   AuthoringSceneViewer,
   AuthoringTool,
   AuthoringTransformSettings,
@@ -39,13 +45,19 @@ import type {
   Diagnostic,
   EntitySpatialSnapshot,
   FocusOptions,
+  LightCreationFrame,
   SceneViewer,
   ViewerEvent,
   ViewerLifecycle,
   ViewerSnapshot,
 } from "../types";
 import { ViewerAdapterRuntime } from "./adapter-runtime";
+import type { StagedAuthoredLights } from "./authored-light-controller";
 import { ViewerDataRuntimeController } from "./data-runtime-controller";
+import {
+  classifyLightOnlySourceUpdate,
+  type LightOnlySourceUpdate,
+} from "./light-only-source-update";
 import { ObjectPicker } from "./object-picker";
 import {
   buildRuntimeGeneration,
@@ -58,6 +70,7 @@ import { SceneLightingController } from "./scene-lighting-controller";
 
 export interface AuthoringViewportOptions {
   readonly enabled: true;
+  readonly initialMode: AuthoringMode;
   readonly dataRuntimeEnabled: boolean;
   readonly initialTool: AuthoringTool;
   readonly onEvent: ((event: AuthoringViewerEvent) => void) | undefined;
@@ -66,6 +79,7 @@ export interface AuthoringViewportOptions {
 
 interface ReadonlyViewportOptions {
   readonly enabled: false;
+  readonly initialMode: "run";
   readonly dataRuntimeEnabled: true;
   readonly initialTool: "select";
   readonly onEvent: undefined;
@@ -108,6 +122,7 @@ class ThreeSceneViewport {
   #document: SceneDocument | null = null;
   #themeBackground: Color | null = null;
   #backgroundPreview: Color | null = null;
+  #authoringMode: AuthoringMode;
   #dataRuntimeEnabled: boolean;
   #lifecycle: ViewerLifecycle = "created";
   #selectedTargetId: string | null = null;
@@ -117,6 +132,7 @@ class ThreeSceneViewport {
   #grid: GridHelper | null = null;
   #loadBarrier: Promise<void> = Promise.resolve();
   #loadController: AbortController | null = null;
+  #loadOwnsAdapterLifecycle = false;
   #focusFrame: number | null = null;
   #focusResolve: (() => void) | null = null;
   #disposePromise: Promise<void> | null = null;
@@ -131,10 +147,12 @@ class ThreeSceneViewport {
     this.#onViewerEvent = options.onEvent;
     this.#authoring = options.authoring ?? {
       enabled: false,
+      initialMode: "run",
       dataRuntimeEnabled: true,
       initialTool: "select",
       onEvent: undefined,
     };
+    this.#authoringMode = this.#authoring.initialMode;
     this.#dataRuntimeEnabled = this.#authoring.dataRuntimeEnabled;
     this.#reducedMotion = options.reducedMotion ?? false;
 
@@ -173,6 +191,7 @@ class ThreeSceneViewport {
           getSpatialSnapshots: () => this.#allEntitySpatialSnapshots(),
         })
       : null;
+    this.#transformAuthoring?.setAuthoringMode(this.#authoringMode);
 
     this.#dataRuntime = new ViewerDataRuntimeController({
       emitAuthoring: (event) => this.#emitAuthoring(event),
@@ -227,18 +246,56 @@ class ThreeSceneViewport {
       return Promise.reject(diagnosticError(value));
     }
 
+    const current = this.#document;
+    if (current?.id === validation.value.id) {
+      if (validation.value.revision < current.revision) {
+        const value = diagnostic(
+          "DOCUMENT_REVISION_STALE",
+          "document",
+          "error",
+          `SceneDocument revision ${validation.value.revision} is older than accepted revision ${current.revision}.`,
+        );
+        this.#recordDiagnostic(value);
+        return Promise.reject(diagnosticError(value));
+      }
+      if (validation.value.revision === current.revision) {
+        if (serializeSceneDocument(validation.value, 0) === serializeSceneDocument(current, 0)) {
+          return Promise.resolve();
+        }
+        const value = diagnostic(
+          "DOCUMENT_REVISION_CONFLICT",
+          "document",
+          "error",
+          `SceneDocument revision ${validation.value.revision} conflicts with the accepted document.`,
+        );
+        this.#recordDiagnostic(value);
+        return Promise.reject(diagnosticError(value));
+      }
+    }
+
+    const lightOnlyUpdate =
+      current === null ? null : classifyLightOnlySourceUpdate(current, validation.value);
     const supersededController = this.#loadController;
-    const supersededAdapters =
-      supersededController === null ? Promise.resolve() : this.#adapterRuntime.stopAll();
+    const restoreAdapters = supersededController !== null && this.#loadOwnsAdapterLifecycle;
+    const supersededAdapters = restoreAdapters ? this.#adapterRuntime.stopAll() : Promise.resolve();
     supersededController?.abort();
     const controller = new AbortController();
     this.#loadController = controller;
+    this.#loadOwnsAdapterLifecycle = lightOnlyUpdate === null || restoreAdapters;
     if (this.#pendingEntitySelection?.controller === supersededController) {
       this.#pendingEntitySelection = { ...this.#pendingEntitySelection, controller };
     }
     const operation = this.#loadBarrier.then(async () => {
       await supersededAdapters;
-      await this.#performLoad(validation.value, controller);
+      if (lightOnlyUpdate === null) await this.#performLoad(validation.value, controller);
+      else {
+        await this.#performLightOnlyLoad(
+          validation.value,
+          lightOnlyUpdate,
+          controller,
+          restoreAdapters,
+        );
+      }
     });
     this.#loadBarrier = operation.catch(() => undefined);
     return operation;
@@ -253,7 +310,13 @@ class ThreeSceneViewport {
     let committed = false;
 
     try {
-      candidate = await buildRuntimeGeneration(source, this.#assetResolver, controller.signal);
+      candidate = await buildRuntimeGeneration(
+        source,
+        this.#assetResolver,
+        controller.signal,
+        this.#authoringMode,
+        this.#requestRender,
+      );
       this.#pendingGenerations.add(candidate);
       controller.signal.throwIfAborted();
       const next = candidate;
@@ -284,6 +347,7 @@ class ThreeSceneViewport {
       }
       if (!committed && this.#loadController === controller && !this.#disposing) {
         this.#lifecycle = previousLifecycle;
+        if (this.#generation !== null) await this.#adapterRuntime.applyDocumentAdapters();
       }
       if (!isAbortError(error)) {
         const value =
@@ -294,7 +358,85 @@ class ThreeSceneViewport {
       }
       throw error;
     } finally {
-      if (this.#loadController === controller) this.#loadController = null;
+      if (this.#loadController === controller) {
+        this.#loadController = null;
+        this.#loadOwnsAdapterLifecycle = false;
+      }
+    }
+  }
+
+  async #performLightOnlyLoad(
+    source: SceneDocument,
+    update: LightOnlySourceUpdate,
+    controller: AbortController,
+    restoreAdapters: boolean,
+  ): Promise<void> {
+    if (this.#disposing) throw abortError();
+    controller.signal.throwIfAborted();
+    const generation = this.#generation;
+    if (generation === null || this.#document === null) throw abortError();
+    const previousLifecycle = this.#lifecycle;
+    this.#lifecycle = "updating";
+    let staged: StagedAuthoredLights | null = null;
+    let committed = false;
+
+    try {
+      staged = generation.authoredLights.stage(update.lights);
+      await Promise.resolve();
+      controller.signal.throwIfAborted();
+      if (this.#disposing || this.#loadController !== controller) throw abortError();
+      if (restoreAdapters) await this.#adapterRuntime.applyDocumentAdapters();
+      controller.signal.throwIfAborted();
+      if (this.#disposing || this.#loadController !== controller) throw abortError();
+
+      const previousSelection = this.#entitySelection;
+      const nextSelection = retainEntitySelection(previousSelection, (entityId) =>
+        source.entities.some((entity) => entity.id === entityId),
+      );
+      this.#transformAuthoring?.sync(null, [], previousSelection.primaryEntityId);
+      this.#selectionOverlay.clear();
+      staged.commit(this.#authoringMode);
+      committed = true;
+      this.#document = source;
+      this.#dataRuntime.refreshDocumentAuthority(source, generation);
+      this.#entitySelection = nextSelection;
+      this.#syncSelectionOverlay();
+      this.#transformAuthoring?.sync(
+        generation,
+        nextSelection.entityIds,
+        nextSelection.primaryEntityId,
+      );
+      if (previousSelection.primaryEntityId !== nextSelection.primaryEntityId) {
+        this.#emitAuthoring({
+          type: "entity-selection-change",
+          entityId: nextSelection.primaryEntityId,
+          origin: "api",
+        });
+      }
+
+      this.#lifecycle = "ready";
+      this.#emitViewer({ type: "ready", documentId: source.id, revision: source.revision });
+      this.#requestRender();
+    } catch (error) {
+      if (!committed) staged?.dispose();
+      if (this.#loadController === controller && !this.#disposing) {
+        this.#lifecycle = previousLifecycle;
+      }
+      if (!isAbortError(error)) {
+        const value = diagnostic(
+          "AUTHORED_LIGHT_RECONCILE_FAILED",
+          "viewer",
+          "error",
+          "Authored light reconciliation failed.",
+        );
+        this.#recordDiagnostic(value);
+      }
+      throw error;
+    } finally {
+      if (this.#loadController === controller) {
+        this.#loadController = null;
+        this.#loadOwnsAdapterLifecycle = false;
+      }
     }
   }
 
@@ -306,7 +448,8 @@ class ThreeSceneViewport {
   ): Promise<void> {
     controller.signal.throwIfAborted();
     await this.#adapterRuntime.stopAll();
-    if (this.#disposing) throw abortError();
+    controller.signal.throwIfAborted();
+    if (this.#disposing || this.#loadController !== controller) throw abortError();
 
     const previousDocumentId = this.#document?.id ?? null;
     const previousSelection = this.#entitySelection;
@@ -373,6 +516,18 @@ class ThreeSceneViewport {
 
     this.#dataRuntime.enable();
     await this.#adapterRuntime.reconcileDocumentAdapters(true);
+  }
+
+  setAuthoringMode(mode: AuthoringMode): void {
+    this.#ensureActive();
+    if (!this.#authoring.enabled || this.#authoringMode === mode) return;
+    this.#authoringMode = mode;
+    this.#pointerStart = null;
+    this.#transformAuthoring?.setAuthoringMode(mode);
+    this.#generation?.authoredLights.setAuthoringMode(mode);
+    if (mode === "run") this.#selectionOverlay.clear();
+    else this.#syncSelectionOverlay();
+    this.#requestRender();
   }
 
   setCanvasLabel(label: string): void {
@@ -490,6 +645,29 @@ class ThreeSceneViewport {
       throw new Error("Entity spatial snapshots require a loaded authoring scene.");
     }
     return createEntitySpatialSnapshots(this.#document, this.#generation, entityIds);
+  }
+
+  getLightCreationFrame(): Readonly<LightCreationFrame> | null {
+    if (this.#disposing || this.#lifecycle !== "ready") return null;
+    const values = [
+      this.#camera.position.x,
+      this.#camera.position.y,
+      this.#camera.position.z,
+      this.#controls.target.x,
+      this.#controls.target.y,
+      this.#controls.target.z,
+    ];
+    if (!values.every(Number.isFinite)) return null;
+    const distance = this.#camera.position.distanceTo(this.#controls.target);
+    if (!Number.isFinite(distance)) return null;
+    const offsetY = Math.min(5, Math.max(0.5, distance * 0.2));
+    const position = Object.freeze([
+      this.#controls.target.x,
+      this.#controls.target.y + offsetY,
+      this.#controls.target.z,
+    ]) as LightCreationFrame["position"];
+    const target = Object.freeze(this.#controls.target.toArray()) as LightCreationFrame["target"];
+    return Object.freeze({ position, target });
   }
 
   #allEntitySpatialSnapshots(): readonly EntitySpatialSnapshot[] {
@@ -680,6 +858,10 @@ class ThreeSceneViewport {
 
   #syncSelectionOverlay(): void {
     if (this.#authoring.enabled) {
+      if (this.#authoringMode === "run") {
+        this.#selectionOverlay.clear();
+        return;
+      }
       this.#selectionOverlay.setMany(
         this.#entitySelection.entityIds.flatMap((entityId) => {
           const object = this.#generation?.entities.get(entityId)?.object;
@@ -837,6 +1019,7 @@ class ThreeSceneViewport {
     const generation = this.#generation;
     if (generation === null) return;
     if (this.#authoring.enabled) {
+      if (this.#authoringMode === "run") return;
       const entityId = this.#picker.pick({
         camera: this.#camera,
         clientX: event.clientX,

@@ -1,19 +1,28 @@
 import { readFile } from "node:fs/promises";
 
-import { parseSceneDocument, type SceneDocument, type SceneLighting } from "@web3d/document";
+import {
+  parseSceneDocument,
+  type LightEntity,
+  type SceneDocument,
+  type SceneLighting,
+} from "@web3d/document";
 import {
   BufferGeometry,
   Color,
   DirectionalLight,
   GridHelper,
   HemisphereLight,
+  PointLight,
+  SpotLight,
   type Scene,
+  type Vector3,
 } from "three";
 import type * as ThreeModule from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataAdapter } from "../types";
+import { AuthoredLightController } from "./authored-light-controller";
 import type * as RuntimeGenerationModule from "./runtime-generation";
 import { SelectionOverlay } from "./selection-overlay";
 
@@ -21,7 +30,9 @@ const runtime = vi.hoisted(() => ({
   canvases: [] as ReturnType<typeof fakeCanvas>[],
   dispose: vi.fn(),
   frames: [] as FrameRequestCallback[],
+  generations: [] as RuntimeGenerationModule.RuntimeGeneration[],
   generationDisposals: [] as Array<ReturnType<typeof vi.fn>>,
+  orbitControls: [] as Array<{ readonly target: Vector3 }>,
   reportError: vi.fn(),
   scenes: [] as Scene[],
 }));
@@ -62,6 +73,10 @@ vi.mock("three/addons/controls/OrbitControls.js", async () => {
       readonly target = new Vector3();
       enableDamping = false;
 
+      constructor() {
+        runtime.orbitControls.push(this);
+      }
+
       addEventListener(): void {}
       dispose(): void {}
       removeEventListener(): void {}
@@ -78,7 +93,9 @@ vi.mock("./runtime-generation", async (importOriginal) => {
       const generation = await actual.buildRuntimeGeneration(...args);
       const dispose = vi.fn(generation.dispose);
       runtime.generationDisposals.push(dispose);
-      return { ...generation, dispose };
+      const instrumented = { ...generation, dispose };
+      runtime.generations.push(instrumented);
+      return instrumented;
     },
   };
 });
@@ -99,7 +116,9 @@ describe("SceneViewer lifecycle", () => {
     runtime.canvases.length = 0;
     runtime.dispose.mockClear();
     runtime.frames.length = 0;
+    runtime.generations.length = 0;
     runtime.generationDisposals.length = 0;
+    runtime.orbitControls.length = 0;
     runtime.reportError.mockClear();
     runtime.scenes.length = 0;
     vi.stubGlobal(
@@ -389,6 +408,344 @@ describe("SceneViewer lifecycle", () => {
     await viewer.dispose();
   });
 
+  it("validates before load classification and preserves the accepted Runtime", async () => {
+    const { asset, scene } = await fixture();
+    const resolve = vi.fn(() => Promise.resolve(new Blob([asset])));
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve },
+      onEvent: (event) => events.push(event),
+    });
+    await viewer.load({ ...scene, revision: 5 });
+    const accepted = viewer.getSnapshot();
+    const readyCount = events.filter((event) => event.type === "ready").length;
+    const resolveCount = resolve.mock.calls.length;
+    const generationDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+    const invalid = {
+      ...scene,
+      revision: 6,
+      environment: { ...scene.environment, grid: "invalid" },
+    } as unknown as SceneDocument;
+
+    await expect(viewer.load(invalid)).rejects.toMatchObject({
+      diagnostic: { code: "DOCUMENT_REFERENCE_INVALID" },
+    });
+    expect(viewer.getSnapshot()).toEqual(accepted);
+    expect(resolve).toHaveBeenCalledTimes(resolveCount);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(readyCount);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      generationDisposals,
+    );
+    await viewer.dispose();
+  });
+
+  it("enforces same-document revision authority before fast or full loading", async () => {
+    const { asset, scene } = await fixture();
+    const resolve = vi.fn(() => Promise.resolve(new Blob([asset])));
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve },
+      onEvent: (event) => events.push(event),
+    });
+    const accepted = { ...scene, revision: 5 };
+    await viewer.load(accepted);
+    const canvas = runtime.canvases.at(-1);
+    const acceptedSnapshot = viewer.getSnapshot();
+    const acceptedReadyCount = events.filter((event) => event.type === "ready").length;
+    const acceptedResolveCount = resolve.mock.calls.length;
+    const acceptedDisposals = runtime.generationDisposals.map(
+      (dispose) => dispose.mock.calls.length,
+    );
+
+    await expect(viewer.load({ ...accepted, revision: 4 })).rejects.toMatchObject({
+      diagnostic: { code: "DOCUMENT_REVISION_STALE" },
+    });
+    await expect(viewer.load({ ...accepted, name: "Conflict" })).rejects.toMatchObject({
+      diagnostic: { code: "DOCUMENT_REVISION_CONFLICT" },
+    });
+    await expect(viewer.load(structuredClone(accepted))).resolves.toBeUndefined();
+
+    expect(viewer.getSnapshot()).toEqual(acceptedSnapshot);
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(resolve).toHaveBeenCalledTimes(acceptedResolveCount);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(acceptedReadyCount);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      acceptedDisposals,
+    );
+
+    await viewer.load({ ...accepted, id: "independent-document", revision: 1 });
+    expect(viewer.getSnapshot()).toMatchObject({
+      documentId: "independent-document",
+      revision: 1,
+      lifecycle: "ready",
+    });
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(acceptedReadyCount + 1);
+    await viewer.dispose();
+  });
+
+  it("atomically reconciles light-only revisions without replacing viewer resources", async () => {
+    const { asset, scene } = await fixture();
+    const resolve = vi.fn(() => Promise.resolve(new Blob([asset])));
+    const active = adapter("light-only");
+    const events: Array<{ type: string; revision?: number }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve },
+      onEvent: (event) => events.push(event),
+    });
+    const point = pointLight("point-a", 25);
+    const initial = withLights(scene, [point], 10);
+    await viewer.load(initial);
+    viewer.selectTarget("press-01");
+
+    const canvas = runtime.canvases.at(-1);
+    const generation = runtime.generations.at(-1);
+    const root = generation?.root;
+    const target = runtime.orbitControls.at(-1)?.target;
+    target?.set(3, 4, 5);
+    const fill = sceneFill();
+    const key = sceneKey();
+    const resolveCount = resolve.mock.calls.length;
+    const disposals = runtime.generationDisposals.map((dispose) => dispose.mock.calls.length);
+
+    const updatedPoint = pointLight("point-a", 50);
+    await viewer.load(withLights(scene, [updatedPoint], 11));
+    expect(scenePoint("point-a").intensity).toBe(50);
+
+    await viewer.load(withLights(scene, [point], 12));
+    expect(scenePoint("point-a").intensity).toBe(25);
+    await viewer.load(withLights(scene, [updatedPoint], 13));
+    expect(scenePoint("point-a").intensity).toBe(50);
+
+    const spot = spotLight("spot-a", 10);
+    await viewer.load(withLights(scene, [updatedPoint, spot], 14));
+    expect(sceneSpot("spot-a").intensity).toBe(10);
+
+    await viewer.load(withLights(scene, [spot], 15));
+    expect(root?.getObjectByName("point-a")).toBeUndefined();
+    expect(viewer.getSnapshot()).toMatchObject({
+      lifecycle: "ready",
+      revision: 15,
+      selectedTargetId: "press-01",
+    });
+    expect(events.filter((event) => event.type === "ready").map((event) => event.revision)).toEqual(
+      [10, 11, 12, 13, 14, 15],
+    );
+    expect(runtime.canvases.at(-1)).toBe(canvas);
+    expect(runtime.generations).toHaveLength(1);
+    expect(runtime.generations.at(-1)).toBe(generation);
+    expect(resolve).toHaveBeenCalledTimes(resolveCount);
+    expect(active.start).toHaveBeenCalledOnce();
+    expect(runtime.orbitControls.at(-1)?.target).toBe(target);
+    expect(target?.toArray()).toEqual([3, 4, 5]);
+    expect(sceneFill()).toBe(fill);
+    expect(sceneKey()).toBe(key);
+    expect(runtime.generationDisposals.map((dispose) => dispose.mock.calls.length)).toEqual(
+      disposals,
+    );
+    await viewer.dispose();
+  });
+
+  it("retains old authority when light staging fails", async () => {
+    const { asset, scene } = await fixture();
+    const events: Array<{ type: string }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const point = pointLight("point-a", 25);
+    await viewer.load(withLights(scene, [point], 10));
+    const generation = runtime.generations.at(-1);
+    const readyCount = events.filter((event) => event.type === "ready").length;
+    const stage = vi
+      .spyOn(AuthoredLightController.prototype, "stage")
+      .mockImplementationOnce(() => {
+        throw new Error("staging failed");
+      });
+
+    await expect(viewer.load(withLights(scene, [pointLight("point-a", 50)], 11))).rejects.toThrow(
+      "staging failed",
+    );
+
+    expect(viewer.getSnapshot()).toMatchObject({ lifecycle: "ready", revision: 10 });
+    expect(scenePoint("point-a").intensity).toBe(25);
+    expect(runtime.generations.at(-1)).toBe(generation);
+    expect(events.filter((event) => event.type === "ready")).toHaveLength(readyCount);
+    expect(viewer.getDiagnostics().at(-1)?.code).toBe("AUTHORED_LIGHT_RECONCILE_FAILED");
+    stage.mockRestore();
+    await viewer.dispose();
+  });
+
+  it("disposes a staged light update when a newer revision supersedes it", async () => {
+    const { asset, scene } = await fixture();
+    const events: Array<{ type: string; revision?: number }> = [];
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const point = pointLight("point-a", 25);
+    await viewer.load(withLights(scene, [point], 10));
+    const generation = runtime.generations.at(-1);
+    const latestStarted = deferred<void>();
+    let latestLoad: Promise<void> = Promise.reject(new Error("Latest load did not start."));
+    void latestLoad.catch(() => undefined);
+    const originalStage = AuthoredLightController.prototype.stage;
+    const stagedDispose = vi.fn();
+    const stage = vi
+      .spyOn(AuthoredLightController.prototype, "stage")
+      .mockImplementationOnce(function (this: AuthoredLightController, lights) {
+        const staged = originalStage.call(this, lights);
+        queueMicrotask(() => {
+          latestLoad = viewer.load(withLights(scene, [pointLight("point-a", 75)], 12));
+          latestStarted.resolve();
+        });
+        return {
+          commit: staged.commit,
+          dispose: () => {
+            stagedDispose();
+            staged.dispose();
+          },
+        };
+      });
+
+    const superseded = viewer.load(withLights(scene, [pointLight("point-a", 50)], 11));
+    await latestStarted.promise;
+    await expect(superseded).rejects.toMatchObject({ name: "AbortError" });
+    await latestLoad;
+
+    expect(stagedDispose).toHaveBeenCalledOnce();
+    expect(viewer.getSnapshot()).toMatchObject({ lifecycle: "ready", revision: 12 });
+    expect(scenePoint("point-a").intensity).toBe(75);
+    expect(runtime.generations.at(-1)).toBe(generation);
+    expect(events.filter((event) => event.type === "ready").map((event) => event.revision)).toEqual(
+      [10, 12],
+    );
+    stage.mockRestore();
+    await viewer.dispose();
+  });
+
+  it("lets a light-only revision safely supersede a full load blocked in adapter stop", async () => {
+    const { asset, scene } = await fixture();
+    const events: Array<{ type: string; revision?: number }> = [];
+    const active = adapter("superseded-full");
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const point = pointLight("point-a", 25);
+    const initial = withLights(scene, [point], 10);
+    await viewer.load(initial);
+    const initialGeneration = runtime.generations.at(-1);
+    const initialGrid = sceneGrid();
+    const stopping = deferred<void>();
+    active.stop.mockImplementationOnce(() => stopping.promise);
+
+    const full = viewer.load({
+      ...initial,
+      revision: 11,
+      environment: { ...initial.environment, grid: !initial.environment.grid },
+    });
+    await vi.waitFor(() => expect(active.stop).toHaveBeenCalledOnce());
+    const lightOnly = viewer.load(withLights(scene, [pointLight("point-a", 50)], 12));
+    stopping.resolve();
+
+    await expect(full).rejects.toMatchObject({ name: "AbortError" });
+    await lightOnly;
+
+    expect(viewer.getSnapshot()).toMatchObject({ lifecycle: "ready", revision: 12 });
+    expect(scenePoint("point-a").intensity).toBe(50);
+    expect(sceneGrid()).toBe(initialGrid);
+    expect(initialGeneration?.root.parent).not.toBeNull();
+    expect(runtime.generationDisposals.at(-1)).toHaveBeenCalledOnce();
+    expect(active.start).toHaveBeenCalledTimes(2);
+    expect(active.stop).toHaveBeenCalledOnce();
+    expect(events.filter((event) => event.type === "ready").map((event) => event.revision)).toEqual(
+      [10, 12],
+    );
+    await viewer.dispose();
+  });
+
+  it("lets a newer light-only revision supersede adapter recovery from a full load", async () => {
+    const { asset, scene } = await fixture();
+    const events: Array<{ type: string; revision?: number }> = [];
+    const active = adapter("adapter-recovery");
+    const viewer = createSceneViewer(fakeContainer(), {
+      adapters: { "factory-telemetry": active.value },
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      onEvent: (event) => events.push(event),
+    });
+    const point = pointLight("point-a", 25);
+    const initial = withLights(scene, [point], 10);
+    await viewer.load(initial);
+    const stopping = deferred<void>();
+    const recovering = deferred<void>();
+    active.stop.mockImplementationOnce(() => stopping.promise);
+    active.start.mockImplementationOnce(() => recovering.promise);
+
+    const full = viewer.load({
+      ...initial,
+      revision: 11,
+      environment: { ...initial.environment, grid: !initial.environment.grid },
+    });
+    await vi.waitFor(() => expect(active.stop).toHaveBeenCalledOnce());
+    const firstLightOnly = viewer.load(withLights(scene, [pointLight("point-a", 50)], 12));
+    stopping.resolve();
+    await expect(full).rejects.toMatchObject({ name: "AbortError" });
+    await vi.waitFor(() => expect(active.start).toHaveBeenCalledTimes(2));
+
+    const latest = viewer.load(withLights(scene, [pointLight("point-a", 75)], 13));
+    await expect(firstLightOnly).rejects.toMatchObject({ name: "AbortError" });
+    await latest;
+
+    expect(viewer.getSnapshot()).toMatchObject({ lifecycle: "ready", revision: 13 });
+    expect(scenePoint("point-a").intensity).toBe(75);
+    expect(active.start).toHaveBeenCalledTimes(3);
+    expect(active.stop).toHaveBeenCalledTimes(2);
+    expect(events.filter((event) => event.type === "ready").map((event) => event.revision)).toEqual(
+      [10, 13],
+    );
+    recovering.resolve();
+    await viewer.dispose();
+  });
+
+  it("uses full loading for non-light changes and retained-entity reordering", async () => {
+    const { asset, scene } = await fixture();
+    const resolve = vi.fn(() => Promise.resolve(new Blob([asset])));
+    const viewer = createSceneViewer(fakeContainer(), { assetResolver: { resolve } });
+    const point = pointLight("point-a", 25);
+    const initial = withLights(scene, [point], 10);
+    await viewer.load(initial);
+    const initialGeneration = runtime.generations.at(-1);
+    const initialResolveCount = resolve.mock.calls.length;
+
+    await viewer.load({
+      ...initial,
+      revision: 11,
+      environment: { ...initial.environment, grid: !initial.environment.grid },
+    });
+    expect(runtime.generations).toHaveLength(2);
+    expect(runtime.generations.at(-1)).not.toBe(initialGeneration);
+    expect(resolve.mock.calls.length).toBeGreaterThan(initialResolveCount);
+
+    const current = withLights(
+      { ...scene, environment: { ...scene.environment, grid: !scene.environment.grid } },
+      [point],
+      11,
+    );
+    const currentAsset = current.entities.find((entity) => entity.type === "asset");
+    expect(currentAsset).toBeDefined();
+    if (currentAsset === undefined) return;
+    const beforeReorderGeneration = runtime.generations.at(-1);
+    const beforeReorderResolveCount = resolve.mock.calls.length;
+    await viewer.load({ ...current, revision: 12, entities: [point, currentAsset] });
+    expect(runtime.generations.at(-1)).not.toBe(beforeReorderGeneration);
+    expect(resolve.mock.calls.length).toBeGreaterThan(beforeReorderResolveCount);
+    await viewer.dispose();
+  });
+
   it("does not expose authoring state from the readonly snapshot object", async () => {
     const { asset, scene } = await fixture();
     const viewer = createSceneViewer(fakeContainer(), {
@@ -445,7 +802,7 @@ describe("SceneViewer lifecycle", () => {
     await viewer.dispose();
   });
 
-  it("finishes an adapter commit before a newer failed load", async () => {
+  it("keeps old authority and restores adapters when a newer load supersedes then fails", async () => {
     const { asset, scene } = await fixture();
     const viewer = createSceneViewer(fakeContainer(), {
       assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
@@ -464,7 +821,7 @@ describe("SceneViewer lifecycle", () => {
     await vi.waitFor(() => expect(active.stop).toHaveBeenCalledOnce());
     const failed = viewer.load(invalidHash(scene, 3));
     stopped.resolve();
-    await replacement;
+    await expect(replacement).rejects.toMatchObject({ name: "AbortError" });
     await expect(failed).rejects.toMatchObject({
       diagnostic: { code: "ASSET_HASH_MISMATCH" },
     });
@@ -472,7 +829,7 @@ describe("SceneViewer lifecycle", () => {
     expect(viewer.getSnapshot()).toMatchObject({
       documentId: scene.id,
       lifecycle: "ready",
-      revision: 2,
+      revision: scene.revision,
     });
     expect(active.start).toHaveBeenCalledTimes(2);
     await viewer.dispose();
@@ -753,6 +1110,56 @@ function withGrid(scene: SceneDocument, grid: boolean, revision = scene.revision
   };
 }
 
+function withLights(
+  scene: SceneDocument,
+  lights: readonly LightEntity[],
+  revision: number,
+): SceneDocument {
+  return {
+    ...scene,
+    revision,
+    entities: [...scene.entities.filter((entity) => entity.type !== "light"), ...lights],
+  };
+}
+
+function pointLight(id: string, intensity: number): LightEntity {
+  return {
+    ...lightBase(id),
+    light: { kind: "point", color: "#FFFFFF", intensity, range: null },
+  };
+}
+
+function spotLight(id: string, intensity: number): LightEntity {
+  return {
+    ...lightBase(id),
+    light: {
+      kind: "spot",
+      color: "#FFFFFF",
+      intensity,
+      range: null,
+      angleRadians: Math.PI / 4,
+      penumbra: 1 / 3,
+    },
+  };
+}
+
+function lightBase(id: string): Omit<LightEntity, "light"> {
+  return {
+    id,
+    type: "light",
+    parentId: null,
+    name: id,
+    visible: true,
+    locked: false,
+    transform: {
+      position: [0, 2, 0],
+      rotation: [0, 0, 0, 1],
+      scale: [1, 1, 1],
+    },
+    metadata: {},
+  };
+}
+
 function lighting(
   skyColor: string,
   groundColor: string,
@@ -777,6 +1184,18 @@ function sceneKey(): DirectionalLight {
   const key = runtime.scenes.at(-1)?.children.find((object) => object instanceof DirectionalLight);
   if (!(key instanceof DirectionalLight)) throw new Error("Scene key light is missing.");
   return key;
+}
+
+function scenePoint(entityId: string): PointLight {
+  const light = runtime.scenes.at(-1)?.getObjectByName(`authored-point:${entityId}`);
+  if (!(light instanceof PointLight)) throw new Error(`Point light ${entityId} is missing.`);
+  return light;
+}
+
+function sceneSpot(entityId: string): SpotLight {
+  const light = runtime.scenes.at(-1)?.getObjectByName(`authored-spot:${entityId}`);
+  if (!(light instanceof SpotLight)) throw new Error(`Spot light ${entityId} is missing.`);
+  return light;
 }
 
 function sceneGrid(): GridHelper | null {

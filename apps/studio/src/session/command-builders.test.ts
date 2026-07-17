@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { executeDocumentCommand, type SceneDocument } from "@web3d/document";
+import {
+  executeDocumentCommand,
+  type DocumentCommand,
+  type LightEntity,
+  type SceneDocument,
+} from "@web3d/document";
 
 import {
   buildDuplicateSubtreeCommand,
   buildImportAssetCommand,
+  commandEntityId,
   type StableIdFactory,
 } from "./command-builders";
 import { createNewStudioProject } from "./new-project";
@@ -23,6 +29,28 @@ describe("Studio command builders", () => {
     const next = executeDocumentCommand(document, command);
     expect(next.entities.map((entity) => entity.id)).toContain("entity-2-asset-a");
     expect(next.targets.at(-1)?.businessId).toBeUndefined();
+  });
+
+  it("rejects LightEntity before allocating generic subtree IDs", () => {
+    const light = pointLight();
+    const document = { ...createEmptyDocument(), entities: [light] };
+    const ids = sequentialIds();
+
+    expect(() => buildDuplicateSubtreeCommand(document, light.id, ids)).toThrow(
+      "LightEntity must be duplicated through add-light-entity",
+    );
+    expect(ids.next("entity")).toBe("entity-1");
+  });
+
+  it("resolves light command entity IDs from their complete snapshots", () => {
+    const light = pointLight();
+    const commands: readonly DocumentCommand[] = [
+      { type: "add-light-entity", after: light },
+      { type: "update-light-entity", before: light, after: { ...light, name: "Updated" } },
+      { type: "remove-light-entity", before: light },
+    ];
+
+    expect(commands.map(commandEntityId)).toEqual([light.id, light.id, light.id]);
   });
 
   it("creates an import command and explicitly reuses one matching asset", () => {
@@ -127,6 +155,8 @@ function documentWithSubtree(): SceneDocument {
     buildImportAssetCommand(empty, descriptor, sequentialIds()),
   );
   const asset = imported.assets[0]!;
+  const importedEntity = imported.entities[0];
+  if (importedEntity?.type !== "asset") throw new TypeError("Expected imported asset entity.");
   return {
     ...imported,
     entities: [
@@ -144,7 +174,7 @@ function documentWithSubtree(): SceneDocument {
         },
         metadata: {},
       },
-      { ...imported.entities[0]!, id: "asset-a", parentId: "group-a" },
+      { ...importedEntity, id: "asset-a", parentId: "group-a" },
     ],
     targets: [
       {
@@ -155,5 +185,27 @@ function documentWithSubtree(): SceneDocument {
         businessId: "EXTERNAL-A",
       },
     ],
+  };
+}
+
+function createEmptyDocument(): SceneDocument {
+  return createNewStudioProject({
+    id: "project",
+    name: "Project",
+    createdAt: "2026-07-14T10:00:00Z",
+  }).document;
+}
+
+function pointLight(): LightEntity {
+  return {
+    id: "light-a",
+    type: "light",
+    parentId: null,
+    name: "Point light 1",
+    visible: true,
+    locked: false,
+    transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    metadata: {},
+    light: { kind: "point", color: "#FFFFFF", intensity: 25, range: null },
   };
 }

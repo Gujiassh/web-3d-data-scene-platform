@@ -10,7 +10,11 @@ import { normalizeSelectedRoots } from "../layout/layout-selection";
 export type TransformResetComponent = "position" | "rotation" | "scale" | "all";
 
 export type TransformResetFailure =
-  "selection-required" | "selection-missing" | "selection-locked" | "selection-hidden";
+  | "selection-required"
+  | "selection-missing"
+  | "selection-locked"
+  | "selection-hidden"
+  | "selection-unsupported";
 
 export class TransformResetError extends Error {
   constructor(readonly code: TransformResetFailure) {
@@ -47,7 +51,12 @@ export function canEditEntityTransform(
   if (!editable || document === null || entityId === null) return false;
   const byId = new Map(document.entities.map((entity) => [entity.id, entity]));
   const entity = byId.get(entityId);
-  return entity !== undefined && !entity.locked && isEffectivelyVisible(entity, byId);
+  return (
+    entity !== undefined &&
+    entity.type !== "light" &&
+    !entity.locked &&
+    isEffectivelyVisible(entity, byId)
+  );
 }
 
 export function planTransformReset(
@@ -89,6 +98,9 @@ function requireResetRoots(
   const rootIds = normalizeSelectedRoots(document.entities, selectedEntityIds);
   if (rootIds.length === 0) throw new TransformResetError("selection-required");
   const roots = rootIds.map((entityId) => byId.get(entityId)!);
+  if (roots.some((entity) => entity.type === "light")) {
+    throw new TransformResetError("selection-unsupported");
+  }
   if (roots.some((entity) => entity.locked)) throw new TransformResetError("selection-locked");
   if (roots.some((entity) => !isEffectivelyVisible(entity, byId))) {
     throw new TransformResetError("selection-hidden");

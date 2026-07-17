@@ -26,23 +26,23 @@ describe("SceneDocument", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.id).toBe("factory-demo");
-      expect(result.value.schemaVersion).toBe("1.2.0");
+      expect(result.value.schemaVersion).toBe("1.3.0");
     }
   });
 
   it("validates the generated M0 factory fixture", () => {
     const generated = JSON.parse(readFileSync(m0FixtureUrl, "utf8")) as Record<string, unknown>;
-    const result = validateSceneDocument(generated);
+    const result = parseSceneDocument(JSON.stringify(generated));
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.schemaVersion).toBe("1.2.0");
+      expect(result.value.schemaVersion).toBe("1.3.0");
       expect(result.value.environment.lighting).toEqual(standardLighting());
       expect(result.value.targets.map((target) => target.id)).toEqual(["press-01", "conveyor-01"]);
     }
   });
 
-  it("migrates a valid 1.1 document to 1.2 without changing revision or authored fields", () => {
+  it("migrates a valid 1.1 document to 1.3 without changing revision or authored fields", () => {
     const current = loadFixture();
     const legacy = loadLegacy1_1Fixture();
     const result = parseSceneDocument(JSON.stringify(legacy));
@@ -52,7 +52,7 @@ describe("SceneDocument", () => {
     if (!result.ok) return;
     expect(result.value).toEqual({
       ...legacy,
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       environment: {
         ...(legacy["environment"] as Record<string, unknown>),
         lighting: standardLighting(),
@@ -258,7 +258,9 @@ describe("SceneDocument", () => {
 });
 
 function loadFixture(): Record<string, unknown> {
-  return JSON.parse(readFileSync(fixtureUrl, "utf8")) as Record<string, unknown>;
+  const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8")) as Record<string, unknown>;
+  fixture["schemaVersion"] = "1.3.0";
+  return fixture;
 }
 
 function loadLegacyFixture(): Record<string, unknown> {

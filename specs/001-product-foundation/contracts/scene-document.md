@@ -2,8 +2,8 @@
 
 > Status: MVP v1 design
 > Machine-readable schema: `scene-document.schema.json`
-> Current version: `1.2.0`; immutable legacy schemas: `scene-document-1.0.schema.json` and
-> `scene-document-1.1.schema.json`
+> Current version: `1.3.0`; immutable legacy schemas: `scene-document-1.0.schema.json`,
+> `scene-document-1.1.schema.json` and `scene-document-1.2.schema.json`
 
 ## Purpose
 
@@ -23,6 +23,7 @@ selection, runtime alarms, or host application state.
 
 - `group`: authored hierarchy without a model asset.
 - `asset`: one scene instance of an imported GLB/GLTF asset.
+- `light`: one root Point or Spot light with unitless authored intensity and no children.
 - `target`: a selectable and bindable business target under an entity. A target may represent the
   whole entity or one glTF node from that asset instance.
 
@@ -58,8 +59,9 @@ unit vector within `1e-6`. Preset names and editor previews are not persisted.
 - The serializer sorts top-level arrays by ID before hashing/export to produce deterministic output.
 - Unknown fields are rejected in MVP rather than silently ignored.
 - `schemaVersion` uses semantic versioning. Major changes require explicit migration or rejection.
-- Valid 1.0.0 documents migrate deterministically through 1.1.0/custom; valid 1.1.0 documents add the
-  approved Standard concrete lighting values. Both paths finish as validated 1.2.0 documents without
+- Valid 1.0.0 documents migrate deterministically through every frozen intermediate validator. Valid
+  1.1.0 documents add the approved Standard concrete environment lighting values; valid 1.2.0
+  documents change only `schemaVersion`. Every path finishes as a validated 1.3.0 document without
   changing revision or other authored fields. Persisted stores and exports write only current data.
 - Runtime values are never written back by Viewer.
 

@@ -58,7 +58,7 @@ function entity(
   id: string,
   name: string,
   parentId: string | null,
-  type: SceneEntity["type"] = "asset",
+  type: "group" | "asset" = "asset",
 ): SceneEntity {
   const common = {
     id,
