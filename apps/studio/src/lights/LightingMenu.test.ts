@@ -39,15 +39,14 @@ describe("LightingMenu", () => {
     expect(items.map((item) => item.querySelector("strong")?.textContent)).toEqual([
       "Add point",
       "Add spot",
-      "Scene lighting settings",
     ]);
     expect(menu().textContent).toContain("3/8");
     expect(callbacks.onRefreshAvailability).toHaveBeenCalledOnce();
 
     act(() => items[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
-    expect(document.activeElement).toBe(items[2]);
+    expect(document.activeElement).toBe(items[1]);
     act(() =>
-      items[2]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+      items[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
     );
     expect(document.activeElement).toBe(items[0]);
     act(() =>
@@ -72,38 +71,29 @@ describe("LightingMenu", () => {
     root = createRoot(container);
     renderMenu({
       addDisabledReason: "The scene already has 8 authored lights.",
-      settingsDisabledReason: "Lighting authoring is disabled in Run mode.",
       lightCount: 8,
     });
     act(() => trigger().click());
     expect(menuItems()[0]!.textContent).toContain("8 authored lights");
-    expect(menuItems()[2]!.textContent).toContain("disabled in Run mode");
     expect(menu().textContent).toContain("8/8");
   });
 
-  it("closes after successful Add and transfers settings ownership without reopening the menu", () => {
+  it("closes after successful Add", () => {
     const callbacks = renderMenu();
     act(() => trigger().click());
     act(() => menuItems()[1]!.click());
     expect(callbacks.onAdd).toHaveBeenCalledWith("spot");
-    expect(container.querySelector('[role="menu"]')).toBeNull();
-
-    act(() => trigger().click());
-    act(() => menuItems()[2]!.click());
-    expect(callbacks.onOpenSceneSettings).toHaveBeenCalledOnce();
     expect(container.querySelector('[role="menu"]')).toBeNull();
   });
 
   function renderMenu(
     overrides: Partial<{
       addDisabledReason: string | null;
-      settingsDisabledReason: string | null;
       lightCount: number;
     }> = {},
   ) {
     const callbacks = {
       onAdd: vi.fn(() => true),
-      onOpenSceneSettings: vi.fn(),
       onRefreshAvailability: vi.fn(),
     };
     function Harness() {
@@ -112,10 +102,8 @@ describe("LightingMenu", () => {
         open,
         lightCount: overrides.lightCount ?? 3,
         addDisabledReason: overrides.addDisabledReason ?? null,
-        settingsDisabledReason: overrides.settingsDisabledReason ?? null,
         onAdd: callbacks.onAdd,
         onOpenChange: setOpen,
-        onOpenSceneSettings: callbacks.onOpenSceneSettings,
         onRefreshAvailability: callbacks.onRefreshAvailability,
       });
     }

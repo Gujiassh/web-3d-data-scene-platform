@@ -68,6 +68,15 @@ describe("StudioToolbar", () => {
     expect(container.querySelector(".theme-switch")).toBeNull();
   });
 
+  it("uses the Offset Datum mark as the project-menu identity", () => {
+    renderToolbar(null);
+
+    const mark = container.querySelector<SVGElement>(".project-menu-trigger > .project-symbol");
+    expect(mark?.getAttribute("viewBox")).toBe("0 0 24 24");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(mark?.querySelector('path[fill="#4CC4BA"]')).not.toBeNull();
+  });
+
   function renderToolbar(
     duplicateDisabledReason: string | null,
     onToggleSmartAlign: () => void = () => undefined,
@@ -96,7 +105,6 @@ describe("StudioToolbar", () => {
               lightCount: 0,
               lightingMenuOpen: false,
               lightAddDisabledReason: "Lighting authoring is disabled in Run mode.",
-              lightSettingsDisabledReason: "Lighting authoring is disabled in Run mode.",
               toolDisabledReasons: {},
               onOpenProjectMenu: noop,
               onUndo: noop,
@@ -109,7 +117,6 @@ describe("StudioToolbar", () => {
               onDuplicate: noop,
               onDelete: noop,
               onOpenHelp: noop,
-              onOpenSceneSettings: noop,
               onOpenSettings: noop,
               onToggleSmartAlign,
               onAddLight: () => false,

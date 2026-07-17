@@ -4,7 +4,9 @@
 
 **Created**: 2026-07-16
 
-**Status**: Approved on 2026-07-16; includes `SceneDocument 1.1.0 -> 1.2.0` and real stored-data migration
+**Status**: Approved on 2026-07-16; 007a non-contract unified Settings/branding follow-up accepted on
+2026-07-17; 007b Critical direct-save timing approved and accepted on 2026-07-17;
+includes `SceneDocument 1.1.0 -> 1.2.0` and real stored-data migration
 
 **Input**: Make everyday scene editing simple to discover and fast to operate by exposing keyboard
 shortcuts, reset actions, smart alignment guides, scene-grid controls and an authored lighting workflow
@@ -125,8 +127,13 @@ behavior.
 
 ### Scene Settings
 
-The existing Scene settings dialog becomes one flat two-tab dialog rather than a collection of nested
-cards.
+> Historical 006A.3 acceptance: the standalone Scene settings dialog described below and the separate
+> application Settings surface introduced later were superseded by 007a. The scene-environment controls and
+> mutation semantics remain requirements; the current entry point is the unified Application/Scene/Lighting
+> Settings modal defined at the end of this specification.
+
+For 006A.3, the existing Scene settings dialog became one flat two-tab dialog rather than a collection of
+nested cards.
 
 - **Appearance** retains theme/custom background controls and adds a Show grid switch backed by the
   existing authored grid field.
@@ -363,3 +370,97 @@ decision.
   accepted lighting/grid changes deep-equal after IndexedDB, JSON and ZIP round trips.
 - **SC-006**: Runtime verification retains one Canvas/Viewer/controls/adapters instance through snap,
   preview, Apply, Cancel, Undo, theme and Edit/Run cycles.
+
+## 2026-07-17 Studio Shell Follow-up 007a: Unified Settings And Branding
+
+The user approved a non-contract shell refinement after 006B acceptance. It changes entry points and product identity,
+not SceneDocument, commands, preview, save or Runtime semantics.
+
+The historical 006B Lighting menu containing Scene lighting settings and the separate `AppSettingsDialog`
+are acceptance history only. The requirements below are the current 007a product state and supersede those
+entry-point/component descriptions.
+
+- **SHELL-FR-001**: The toolbar MUST expose exactly one Settings button beside Help. Language, interface theme, scene
+  appearance and scene-wide lighting MUST be reachable from that one modal.
+- **SHELL-FR-002**: The unified modal MUST use flat peer sections for Application, Scene and Lighting. It MUST NOT open
+  a second dialog, nest cards or duplicate the same setting in another menu.
+- **SHELL-FR-003 (007a historical; superseded by 007b)**: Application language/theme changes remain immediate
+  persisted preferences. The 007a Scene/Lighting complete draft, Cancel restoration and one-command Apply behavior
+  is retained only as acceptance history; 007b defines the current direct-save timing.
+- **SHELL-FR-004**: Scene and Lighting sections MUST be unavailable with a localized reason in Run or without an
+  editable project; Application settings remain available.
+- **SHELL-FR-005**: The Lighting menu MUST retain Add point, Add spot and the authored-light count, but MUST NOT retain
+  the Scene lighting settings entry.
+- **SHELL-FR-006**: Studio MUST use one custom Web3D brand mark in the project control and browser favicon. The mark
+  MUST remain identifiable at 16px and 24px, work in light/dark browser chrome, and MUST NOT be a generic Lucide cube or
+  gear.
+- **SHELL-FR-007**: Browser metadata MUST include the branded favicon and light/dark theme colors without adding a
+  separate landing/product surface.
+- **SHELL-FR-008**: Offset Datum brand geometry MUST use dark tile `#111715`, light rails `#F4F6F5` and teal datum
+  `#4CC4BA`; application theme changes MUST synchronize the host `theme-color` metadata.
+- **SHELL-NFR-001**: The unified modal MUST retain dialog focus trap, Escape/outside cancellation, initiating Settings
+  button focus restoration, tab keyboard behavior and bilingual key parity.
+- **SHELL-NFR-002**: Existing scene environment command payload, revision/Undo count, held preview until matching ready,
+  Viewer identity and local app preference keys MUST remain unchanged.
+- **SHELL-SC-001**: At 1280x720 and 1440x900, English/Chinese and light/dark themes show one non-overlapping Settings
+  modal with Application, Scene and Lighting sections and no remaining scene-settings menu item.
+- **SHELL-SC-002 (007a historical; superseded by 007b)**: Unit/integration/browser tests proved immediate app
+  preferences, the then-current scene Apply/Cancel behavior, Settings focus restoration, branded toolbar mark and
+  requested favicon metadata. Those tests do not establish 007b save timing.
+
+## 2026-07-17 Studio Settings Follow-up 007b: Direct Manipulation Save Timing
+
+The user explicitly approved this Critical authoring-timing change. 007b supersedes only 007a wording and
+acceptance behavior for Scene/Lighting Apply, Discard/Cancel rollback, held draft and commit timing. The unified
+Settings entry, Application/Scene/Lighting tabs, Run/no-project availability, Lighting menu and Offset Datum
+branding remain current.
+
+### Acceptance scenarios
+
+1. **Given** editable Scene or Lighting settings, **When** the author changes background mode/color, grid,
+   lighting preset/direction or an advanced color, **Then** one complete `set-scene-environment` command commits
+   immediately and the Settings dialog remains open.
+2. **Given** a range slider, **When** the author drags through intermediate values, **Then** the Canvas previews
+   those values transiently with no document command; pointer release commits only the final value once.
+3. **Given** a focused range slider, **When** keyboard adjustment completes or the control blurs, **Then** only
+   the final value commits once and duplicate completion signals cannot create another command.
+4. **Given** one accepted operation, **When** persistence settles, **Then** exactly one revision and one Undo entry
+   correspond to that operation; the accepted revision enters the existing debounced autosave scheduler, which may
+   coalesce rapid operations into one write of the latest snapshot.
+5. **Given** previously committed changes, **When** the author presses Escape, closes the dialog or clicks the
+   backdrop, **Then** Settings closes without rolling back any committed operation.
+6. **Given** a rejected, stale or invalid command, **When** the failure is returned, **Then** controls and preview
+   restore the last authoritative environment and an accessible error is exposed.
+
+### Current requirements
+
+- **SHELL7B-FR-001**: Scene and Lighting MUST NOT expose Apply or Discard controls. Closing Settings by Escape,
+  close button or backdrop MUST close only and MUST NOT undo committed operations.
+- **SHELL7B-FR-002**: Background mode, background color, grid, lighting preset, direction and advanced colors
+  MUST each execute one complete existing `set-scene-environment` command immediately after one complete control
+  operation.
+- **SHELL7B-FR-003**: Range sliders MUST use transient live preview while an interaction is active and MUST commit
+  only the final value once on pointer release, completed keyboard interaction or blur fallback. `pointercancel`
+  MUST clear preview without committing.
+- **SHELL7B-FR-004**: One complete discrete operation or range gesture MUST create at most one revision and one Undo
+  entry and MUST schedule the accepted revision through the existing debounced autosave controller. Intermediate
+  preview and duplicate end signals MUST create no revision, history entry or autosave schedule.
+- **SHELL7B-FR-005**: Accepted operations MUST leave Settings open. Exact unchanged final values remain no-ops.
+- **SHELL7B-FR-006**: Rejected, stale, invalid or unavailable commits MUST clear the affected transient preview,
+  restore the last authoritative environment and expose an accessible localized error.
+- **SHELL7B-FR-007**: Application preference timing, Run/no-project gates, Viewer identity and every 007a entry,
+  menu and branding requirement not explicitly superseded here MUST remain unchanged.
+- **SHELL7B-NFR-001**: SceneDocument, ProjectRecord, IndexedDB, archive and
+  `set-scene-environment` payload schema/save meaning MUST remain byte- and semantically compatible with the
+  approved current contracts.
+- **SHELL7B-NFR-002**: Tests MUST distinguish transient range preview from persistent document state and prove
+  pointer, keyboard, blur, duplicate-end, rejection, Undo and debounced latest-snapshot autosave timing without
+  relying only on render shape.
+- **SHELL7B-NFR-003**: Every Undo entry point MUST cancel active range/color gestures through controller-owned
+  generation. A later `pointerup`, `change` or `blur` from the invalidated generation MUST produce zero commit.
+
+007b acceptance closed after focused 22/22, post-generation-fix full unit 92 files / 551 tests, full typecheck,
+all static/build gates, key WebGL 4/4 and final full Chromium/WebGL E2E 22/22.
+Independent Critical review first found the active-range Undo race; controller-owned cancellation generation now
+invalidates every late pointerup/change/blur after Undo, while pointercancel never commits. The same reviewer returned final
+PASS after regression rework.

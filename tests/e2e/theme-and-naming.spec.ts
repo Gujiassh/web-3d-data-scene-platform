@@ -209,8 +209,8 @@ test.describe("Theme and scene naming", () => {
     expect(await page.evaluate((key) => localStorage.getItem(key), studioThemeKey)).toBe("light");
 
     await openSceneSettings(page);
-    const dialog = page.getByRole("dialog", { name: "Scene settings" });
-    await dialog.getByRole("tab", { name: "Appearance" }).click();
+    const dialog = page.getByRole("dialog", { name: "Settings" });
+    await dialog.getByRole("tab", { name: "Scene" }).click();
     await expect(dialog.getByRole("radio", { name: "Follow interface theme" })).toBeChecked();
     await expect(page.locator(".studio-toolbar")).toHaveAttribute("inert", "");
     await page.screenshot({
@@ -222,36 +222,25 @@ test.describe("Theme and scene naming", () => {
     const colorInput = dialog.getByLabel("Background color", { exact: true });
     await setColorInput(colorInput, "#336699");
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
-    await expect(page.getByTestId("document-revision")).toHaveAttribute(
-      "data-revision",
-      revision ?? "",
-    );
-    expect(await activeStoredDocument(page)).toEqual(before);
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    await expectCanvasBackground(page, canvas, [244, 246, 245]);
-    await expect(page.getByTestId("lighting-menu-trigger")).toBeFocused();
-
-    await openSceneSettings(page);
-    const applyDialog = page.getByRole("dialog", { name: "Scene settings" });
-    await applyDialog.getByRole("tab", { name: "Appearance" }).click();
-    await applyDialog.getByText("Custom color", { exact: true }).click();
-    await setColorInput(applyDialog.getByLabel("Background color", { exact: true }), "#336699");
-    await applyDialog.getByRole("button", { name: "Apply", exact: true }).click();
-    await page.getByRole("button", { name: "Undo" }).click();
-    await expect(applyDialog).toBeHidden();
     await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "2");
-    await expectCanvasBackground(page, canvas, [244, 246, 245]);
-    await page.getByRole("button", { name: "Redo" }).click();
-    await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "3");
-    await expectCanvasBackground(page, canvas, [51, 102, 153]);
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.3.0",
-        revision: 3,
+        revision: 2,
         environment: { backgroundMode: "custom", background: "#336699" },
       });
+
+    await page.keyboard.press("Control+z");
+    await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "3");
+    await expectCanvasBackground(page, canvas, [244, 246, 245]);
+    await page.keyboard.press("Control+Shift+z");
+    await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "4");
+    await expectCanvasBackground(page, canvas, [51, 102, 153]);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expectCanvasBackground(page, canvas, [51, 102, 153]);
+    await expect(page.getByTestId("app-settings-button")).toBeFocused();
 
     await setInterfacePreferences(page, { theme: "dark" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -259,17 +248,20 @@ test.describe("Theme and scene naming", () => {
     expect(await isRememberedCanvas(page, canvas)).toBe(true);
 
     await openSceneSettings(page);
-    const followPreviewDialog = page.getByRole("dialog", { name: "Scene settings" });
-    await followPreviewDialog.getByRole("tab", { name: "Appearance" }).click();
+    const followPreviewDialog = page.getByRole("dialog", { name: "Settings" });
+    await followPreviewDialog.getByRole("tab", { name: "Scene" }).click();
     await followPreviewDialog.getByText("Follow interface theme", { exact: true }).click();
     await expectCanvasBackground(page, canvas, [17, 23, 21]);
-    await followPreviewDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "5");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByTestId("document-revision")).toHaveAttribute("data-revision", "6");
     await expectCanvasBackground(page, canvas, [51, 102, 153]);
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await setInterfacePreferences(page, { locale: "zh-CN" });
     await openSceneSettings(page);
-    await expect(page.locator(".scene-settings-dialog")).toBeVisible();
+    await expect(page.locator(".studio-settings-dialog")).toBeVisible();
     await expectNoPageOverflow(page);
     await page.screenshot({
       path: artifact("studio-scene-settings-dark-zh-1280x720.png"),
@@ -369,9 +361,8 @@ async function useEnglish(page: Page, key: string): Promise<void> {
 }
 
 async function openSceneSettings(page: Page): Promise<void> {
-  await page.getByTestId("lighting-menu-trigger").click();
-  await page.getByRole("menuitem", { name: /Scene lighting settings|场景灯光设置/ }).click();
-  await expect(page.getByRole("dialog", { name: /Scene settings|场景设置/ })).toBeVisible();
+  await page.getByTestId("app-settings-button").click();
+  await expect(page.getByRole("dialog", { name: /Settings|设置/ })).toBeVisible();
 }
 
 async function openProjectMenu(page: Page): Promise<void> {

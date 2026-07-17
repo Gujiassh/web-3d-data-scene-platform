@@ -4,6 +4,7 @@ import { lightingForPreset, type SceneSettingsDraft } from "./model";
 import {
   closeSceneSettingsDraftPreview,
   createSceneSettingsDraftPreview,
+  EMPTY_SCENE_SETTINGS_PREVIEW,
   holdSceneSettingsPreviewUntilReady,
   releaseSceneSettingsPreviewOnReady,
   resolveSceneSettingsPreview,
@@ -11,46 +12,45 @@ import {
 
 describe("scene settings preview state", () => {
   const key = "project-a\u0000scene-a";
-  const settings: SceneSettingsDraft = {
+  const applied: SceneSettingsDraft = {
     backgroundMode: "custom",
     background: "#336699",
     grid: false,
     lighting: lightingForPreset("contrast"),
   };
+  const nextDraft: SceneSettingsDraft = {
+    ...applied,
+    background: "#123456",
+    lighting: lightingForPreset("soft"),
+  };
 
-  it("resolves one transient environment and releases it only for the matching ready revision", () => {
-    const draft = createSceneSettingsDraftPreview(key, settings);
-    const awaiting = holdSceneSettingsPreviewUntilReady(key, settings, 8);
+  it("resolves a draft over a held preview and reveals the held value after cancel", () => {
+    const held = holdSceneSettingsPreviewUntilReady(EMPTY_SCENE_SETTINGS_PREVIEW, key, applied, 8);
+    const layered = createSceneSettingsDraftPreview(held, key, nextDraft);
 
-    expect(resolveSceneSettingsPreview(draft, key, "#111715")).toEqual({
-      background: "#336699",
-      grid: false,
-      lighting: settings.lighting,
-    });
-    expect(releaseSceneSettingsPreviewOnReady(awaiting, key, 7)).toBe(awaiting);
-    expect(releaseSceneSettingsPreviewOnReady(awaiting, "project-b\u0000scene-a", 8)).toBe(
-      awaiting,
-    );
-    expect(releaseSceneSettingsPreviewOnReady(awaiting, key, 8)).toBeNull();
+    expect(resolveSceneSettingsPreview(layered, key, "#111715")?.background).toBe("#123456");
+    const cancelled = closeSceneSettingsDraftPreview(layered);
+    expect(resolveSceneSettingsPreview(cancelled, key, "#111715")?.background).toBe("#336699");
+    expect(cancelled.awaitingReady).toBe(held.awaitingReady);
   });
 
-  it("does not leak previews across project-document identity", () => {
-    const draft = createSceneSettingsDraftPreview(key, {
-      ...settings,
-      backgroundMode: "theme",
-    });
+  it("releases only a matching held revision without disturbing a newer draft", () => {
+    const held = holdSceneSettingsPreviewUntilReady(EMPTY_SCENE_SETTINGS_PREVIEW, key, applied, 8);
+    const layered = createSceneSettingsDraftPreview(held, key, nextDraft);
 
-    expect(resolveSceneSettingsPreview(draft, key, "#111715")?.background).toBe("#111715");
-    expect(resolveSceneSettingsPreview(draft, "project-b\u0000scene-a", "#111715")).toBeNull();
-    expect(resolveSceneSettingsPreview(null, key, "#111715")).toBeNull();
+    expect(releaseSceneSettingsPreviewOnReady(layered, key, 7)).toBe(layered);
+    expect(releaseSceneSettingsPreviewOnReady(layered, "project-b\u0000scene-a", 8)).toBe(layered);
+    const released = releaseSceneSettingsPreviewOnReady(layered, key, 8);
+    expect(released.awaitingReady).toBeNull();
+    expect(released.draft).toBe(layered.draft);
+    expect(resolveSceneSettingsPreview(released, key, "#111715")?.background).toBe("#123456");
   });
 
-  it("closes only an open draft and preserves an applied preview until ready", () => {
-    const draft = createSceneSettingsDraftPreview(key, settings);
-    const awaiting = holdSceneSettingsPreviewUntilReady(key, settings, 8);
+  it("does not resolve either layer across project-document identity", () => {
+    const held = holdSceneSettingsPreviewUntilReady(EMPTY_SCENE_SETTINGS_PREVIEW, key, applied, 8);
+    const layered = createSceneSettingsDraftPreview(held, key, nextDraft);
 
-    expect(closeSceneSettingsDraftPreview(draft)).toBeNull();
-    expect(closeSceneSettingsDraftPreview(awaiting)).toBe(awaiting);
-    expect(closeSceneSettingsDraftPreview(null)).toBeNull();
+    expect(resolveSceneSettingsPreview(layered, "project-b\u0000scene-a", "#111715")).toBeNull();
+    expect(resolveSceneSettingsPreview(EMPTY_SCENE_SETTINGS_PREVIEW, key, "#111715")).toBeNull();
   });
 });

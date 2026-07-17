@@ -152,11 +152,14 @@ roll back; appearance preview/apply/cancel/undo round-trips as current 1.2 witho
 - [x] T036 Update `docs/ssot/` and all 006A acceptance/task evidence
 - [x] T037 Run unit, typecheck, lint, build, i18n, design, topology, format and full Playwright gates
 - [x] T038 Run reverse Critical review for migration/save/runtime lifecycle and close all findings
-- [x] T039 Commit the accepted feature with a coherent Chinese commit and push `main`
+- [x] T039 [Historical delivery] Commit the accepted feature using the then-current language preference and
+      push `main`. All future repository commits use English.
 
 ## Post-Acceptance Studio Surface Simplification
 
-- [x] T040 Move Scene settings beside Help and add a separate application Settings dialog for locale/theme
+- [x] T040 [Historical 006A/006B acceptance] Move Scene settings beside Help and add a separate application
+      Settings dialog for locale/theme. This completed state records the then-current surface; 007a T044-T049
+      supersede its entry-point/component topology without changing environment semantics.
 - [x] T041 Remove the duplicate Project-menu entry and hide Transform/Arrange/Snap/Spatial inspector surfaces
 - [x] T042 Collapse empty Diagnostics while preserving real diagnostic messages
 - [x] T043 Replace obsolete visible-layout E2E with current hierarchy, Run-gate and hidden-surface evidence
@@ -183,9 +186,38 @@ roll back; appearance preview/apply/cancel/undo round-trips as current 1.2 witho
   preset leakage to schema plus JSON/ZIP/IndexedDB scans. After strict-command and documentation rework, independent
   re-review returned PASS with no remaining finding.
 
+## Phase 8: 007a Unified Settings And Offset Datum Branding
+
+- [x] T044 Replace the historical dual Settings entry with one Application/Scene/Lighting modal and remove
+      the separate `AppSettingsDialog` component topology.
+- [x] T045 Extract the unified settings shell, immediate Application panel, controlled Scene/Lighting panels
+      and state hook so `App.tsx` retains wiring rather than concrete form logic.
+- [x] T046 Layer transient scene preview as draft plus awaiting-ready; prove new-draft precedence, Discard
+      restoration and matching-revision release without document/history/autosave/export leakage.
+- [x] T047 Remove Scene lighting settings from the Lighting menu, retaining only Add Point, Add Spot and
+      `n/8`; preserve menu keyboard focus, disabled reasons and Settings-trigger focus restoration.
+- [x] T048 Add Offset Datum branding using dark tile `#111715`, light rails `#F4F6F5` and teal datum
+      `#4CC4BA`; verify favicon/toolbar geometry, metadata and application theme-color synchronization.
+- [x] T049 Complete bilingual unit/integration, target browser acceptance and independent review; update
+      SSoT/plan/tasks while leaving full E2E status with the main controller.
+
+### 007a acceptance and review evidence
+
+- Unit: 92 files / 542 tests. TypeScript, ESLint, production build, i18n, product design, single-Studio
+  topology, format, Prettier and diff checks passed.
+- Target Chromium/WebGL: 6/6 passed. Manual 1440x960 light-English and dark-Chinese verification covered
+  the unified modal, Application availability, Scene/Lighting draft/Apply, metadata, favicon/toolbar Offset
+  Datum mark, in-app theme-color sync and exactly two Lighting menu items.
+- The independent reviewer reported no remaining implementation or contract finding. The sole Medium issue
+  was stale documentation that still presented T040's dual entry and 006B's Scene lighting menu item as
+  current; T040 is now explicitly historical and T044-T049 define the current state.
+- Final full Chromium/WebGL E2E passed 22/22; `test-results/.last-run.json` records `status=passed`. This
+  full-suite evidence is recorded separately from targeted 6/6 and manual 1440x960 browser verification.
+
 ## Dependencies
 
-`T001-T003 -> T004-T006 -> US1/US2 -> T016 -> US3 -> T024 -> US4 -> T035 -> T036-T039`.
+`T001-T003 -> T004-T006 -> US1/US2 -> T016 -> US3 -> T024 -> US4 -> T035 -> T036-T039 ->
+T040-T043 (historical surface) -> T044-T049 (007a accepted baseline) -> T050-T056 (007b accepted)`.
 
 US1 and US2 have disjoint implementation modules after T004-T006 and may proceed in parallel, but both are
 required for 006A.1 acceptance. 006A.2 depends on stable transform drag/reset semantics. 006A.3 may prepare
@@ -197,3 +229,38 @@ attributable.
 Ship in ordered coherent slices, not one unreviewable change. Keep every slice usable: 006A.1 already
 improves daily editing, 006A.2 adds direct manipulation, and 006A.3 adds durable appearance. Do not defer
 contract migration, payload evidence or lifecycle checks to a frontend-only cleanup pass.
+
+## Phase 9: 007b Direct Manipulation Save Timing
+
+> User approval: 2026-07-17. Critical timing change accepted after implementation, race rework and independent
+> closure review. 007a Apply/Discard evidence remains historical and is not used as proof of 007b behavior.
+
+- [x] T050 Replace the Scene/Lighting Apply/Discard state model with an explicit direct-manipulation authoring
+      controller/hook while keeping `App.tsx` as wiring and preserving the unified three-tab shell.
+- [x] T051 Commit background mode/color, grid, lighting preset/direction and advanced colors immediately through
+      one complete existing `set-scene-environment` command per operation; keep Settings open.
+- [x] T052 Implement range gesture state for transient live preview and one final commit across pointer release,
+      completed keyboard interaction and blur, including duplicate-end and unchanged-value no-ops.
+- [x] T053 On rejected/stale/invalid/unavailable commits, clear preview, restore the latest authoritative
+      environment and expose a localized accessible error without retry or normalization.
+- [x] T054 Remove Scene/Lighting Apply/Discard controls and prove Escape, close button and backdrop only close the
+      dialog without compensating commands or rollback of accepted operations.
+- [x] T055 Add focused unit/App/browser evidence for one operation = one revision/Undo plus existing debounced
+      latest-snapshot autosave scheduling, slider preview
+      timing, dialog-stays-open, close semantics, rejection restoration, Run/no-project gates and sequential Undo/Redo.
+- [x] T056 Compare command, IndexedDB, JSON and ZIP payloads with the approved contracts; run typecheck/lint/build/
+      i18n/design/topology/format/diff/full E2E and independent Critical review before recording 007b acceptance.
+
+### 007b final acceptance evidence
+
+- Focused final 22/22 passed after the High active-range Undo race fix and matching color-gesture cancellation coverage. Every Undo entry point clears active
+  range/color gestures and advances controller-owned cancellation generation; `pointercancel` never commits; late
+  `pointerup`, `change` and `blur` from the invalidated generation produce zero commit.
+- Discrete operations and completed range gestures produce one revision and one Undo entry and enter the existing
+  500ms debounce autosave. Rapid accepted operations may coalesce into one physical latest-snapshot write; preview
+  never schedules autosave. IndexedDB/JSON/ZIP/ProjectRecord/command payload contracts remain unchanged.
+- After the generation High fix and matching color-gesture cancellation coverage, final full unit passed 92 files / 551 tests and full typecheck passed. Lint, build,
+  i18n, design, topology, format and diff checks passed.
+- After the generation fix, key WebGL passed 4/4 and final full Chromium/WebGL E2E passed 22/22.
+- Independent Critical review first found High active-range Undo race. Controller-owned cancellation generation plus
+  regression rework closed it; the same reviewer returned final PASS with no remaining contract finding.

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Ref } from "react";
-import { Lightbulb, Plus, SlidersHorizontal, Zap } from "lucide-react";
+import { Lightbulb, Plus, Zap } from "lucide-react";
 
 import { useStudioI18n } from "../i18n/I18nProvider";
 import type { StudioLightKind } from "./model";
@@ -9,11 +9,9 @@ interface LightingMenuProps {
   readonly open: boolean;
   readonly lightCount: number;
   readonly addDisabledReason: string | null;
-  readonly settingsDisabledReason: string | null;
   readonly buttonRef?: Ref<HTMLButtonElement>;
   readonly onAdd: (kind: StudioLightKind) => boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onOpenSceneSettings: () => void;
   readonly onRefreshAvailability: () => void;
 }
 
@@ -109,17 +107,6 @@ export function LightingMenu(props: LightingMenuProps) {
             icon={<Zap size={14} />}
             label={t.lights.menu.addSpot}
             onSelect={() => add("spot")}
-          />
-          <div className="lighting-menu-separator" role="separator" />
-          <MenuItem
-            description={props.settingsDisabledReason}
-            icon={<SlidersHorizontal size={14} />}
-            label={t.lights.menu.sceneSettings}
-            onSelect={() => {
-              if (props.settingsDisabledReason !== null) return;
-              close(false);
-              props.onOpenSceneSettings();
-            }}
           />
           <div
             aria-label={t.lights.menu.countLabel(props.lightCount)}

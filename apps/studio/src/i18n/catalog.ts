@@ -61,7 +61,6 @@ export const english = {
     editMode: "Edit",
     runMode: "Run",
     help: "Keyboard shortcuts",
-    sceneSettings: "Scene settings",
     settings: "Settings",
     smartAlign: "Smart Align",
     tools: {
@@ -150,6 +149,11 @@ export const english = {
   appSettings: {
     title: "Settings",
     close: "Close settings",
+    tabsLabel: "Settings sections",
+    applicationTab: "Application",
+    sceneTab: "Scene",
+    lightingTab: "Lighting",
+    sceneUnavailable: "Scene and lighting settings require a scene in Edit mode.",
     language: "Language",
     chinese: "Chinese",
     english: "English",
@@ -158,11 +162,6 @@ export const english = {
     dark: "Dark",
   },
   sceneSettings: {
-    title: "Scene settings",
-    close: "Close scene settings",
-    tabsLabel: "Scene settings sections",
-    appearanceTab: "Appearance",
-    lightingTab: "Lighting",
     backgroundMode: "Background mode",
     followTheme: "Follow interface theme",
     customColor: "Custom color",
@@ -197,9 +196,7 @@ export const english = {
     fillGroundColor: "Fill ground color",
     keyColor: "Key light color",
     invalidColor: "Enter a color in #RRGGBB format.",
-    applyFailed: "Could not apply scene settings. Check diagnostics and try again.",
-    apply: "Apply",
-    cancel: "Cancel",
+    commitFailed: "Could not update scene settings. The previous value was restored.",
   },
   lights: {
     menu: {
@@ -207,7 +204,6 @@ export const english = {
       ariaLabel: "Lighting actions",
       addPoint: "Add point",
       addSpot: "Add spot",
-      sceneSettings: "Scene lighting settings",
       countLabel: (count: number) => `${count} of 8 authored lights`,
       reasons: {
         run: "Lighting authoring is disabled in Run mode.",
@@ -664,7 +660,6 @@ export const chinese: CatalogShape<typeof english> = {
     editMode: "编辑",
     runMode: "运行",
     help: "键盘快捷键",
-    sceneSettings: "场景设置",
     settings: "设置",
     smartAlign: "智能对齐",
     tools: {
@@ -747,6 +742,11 @@ export const chinese: CatalogShape<typeof english> = {
   appSettings: {
     title: "设置",
     close: "关闭设置",
+    tabsLabel: "设置分区",
+    applicationTab: "应用",
+    sceneTab: "场景",
+    lightingTab: "灯光",
+    sceneUnavailable: "场景和灯光设置需要已就绪且处于编辑模式的场景。",
     language: "语言",
     chinese: "中文",
     english: "英文",
@@ -755,11 +755,6 @@ export const chinese: CatalogShape<typeof english> = {
     dark: "深色",
   },
   sceneSettings: {
-    title: "场景设置",
-    close: "关闭场景设置",
-    tabsLabel: "场景设置分区",
-    appearanceTab: "外观",
-    lightingTab: "灯光",
     backgroundMode: "背景模式",
     followTheme: "跟随界面主题",
     customColor: "自定义颜色",
@@ -794,9 +789,7 @@ export const chinese: CatalogShape<typeof english> = {
     fillGroundColor: "环境补光地面色",
     keyColor: "主光颜色",
     invalidColor: "请输入 #RRGGBB 格式的颜色。",
-    applyFailed: "无法应用场景设置，请查看诊断信息后重试。",
-    apply: "应用",
-    cancel: "取消",
+    commitFailed: "无法更新场景设置，已恢复之前的值。",
   },
   lights: {
     menu: {
@@ -804,7 +797,6 @@ export const chinese: CatalogShape<typeof english> = {
       ariaLabel: "灯光操作",
       addPoint: "添加点光源",
       addSpot: "添加聚光灯",
-      sceneSettings: "场景灯光设置",
       countLabel: (count) => `已使用 ${count}/8 个自定义灯光`,
       reasons: {
         run: "运行模式下不可编辑灯光。",

@@ -1,9 +1,14 @@
 # Studio Usability And Lighting
 
-> 状态：006A.1/006A.2/006A.3/006B accepted
-> 用户批准：2026-07-16 批准 006A；2026-07-17 批准完整 006B `SceneDocument 1.3.0` 合同
+> 状态：006A.1/006A.2/006A.3/006B accepted；007a unified Settings/branding accepted；007b
+> direct-manipulation save timing accepted
+> 用户批准：2026-07-16 批准 006A；2026-07-17 批准完整 006B `SceneDocument 1.3.0` 合同及
+> 007a non-contract Studio Shell refinement；2026-07-17 批准 007b Critical 保存时机变更
 
 ## 2026-07-16 产品表面精简
+
+> 历史验收状态：本节记录 006A/006B 当时的双设置入口。2026-07-17 的 007a 已取代入口和组件结构；
+> 当前产品事实以本文“007a 当前事实与验收”一节为准。
 
 - Toolbar 将 `Scene settings` 与应用级 `Settings` 放在 Help 旁边。`Scene settings` 默认进入 Lighting，
   继续提供 Appearance/Lighting 两个平级页签，且只在 Edit 可用；应用级 `Settings` 在 Edit/Run 均可用，
@@ -210,9 +215,10 @@ transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、
   manifest 的 `sceneSchemaVersion` 核对迁移前 raw `scene.json` 声明版本。preset、direction option ID 和
   preview 状态不进入 JSON、ZIP 或 IndexedDB。
 
-### 原子命令与设置工作流
+### 原子命令与设置工作流（006A.3 历史验收）
 
-- Scene settings 是唯一 Studio 入口，使用扁平 Appearance/Lighting tabs。Appearance 编辑主题跟随、
+- 在 006A.3 的 scene-environment authoring 范围内，Scene settings 使用扁平 Appearance/Lighting tabs。
+  该独立入口后来与 application Settings 并存，并已由 007a 统一入口取代。Appearance 编辑主题跟随、
   custom color 和 grid；Lighting 提供 Standard/Soft/Contrast concrete preset、fill/key brightness、
   Standard 加八方位方向和 advanced sky/ground/key colors。Custom 只由 exact concrete value 派生。
 - Apply 只发一个 `set-scene-environment` command，包含完整 before/after environment，形成一个 revision
@@ -302,7 +308,8 @@ transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、
 - 关键回归规则：light-only stage 不捕获 mode。staged resources 必须在 commit 时读取 viewport 当前 mode，
   否则 Edit->Run 竞态会重新发布 Edit helper。双向 deferred tests 固定 Edit->Run 无 authoring surface，
   Run->Edit 只恢复一套 helper/proxy/overlay，并复用同一 TransformControls。
-- Lighting menu 位于 Help 旁边，提供 Add point、Add spot、Scene lighting settings 和 `n/8`；Add 依赖
+- 006B 验收时的 Lighting menu 位于 Help 旁边，曾提供 Add point、Add spot、Scene lighting settings 和
+  `n/8`；该 Scene lighting settings 菜单项已在 007a 删除，不能再视为当前产品入口。Add 仍依赖
   Runtime 的 finite ready creation frame，无 fallback。Object Inspector 单独管理 name、visibility、lock、
   color、brightness、range、angle 和 penumbra；中英文、键盘菜单、禁用原因与焦点恢复均有单测/E2E。
 - imported glTF punctual lights 替换为 neutral Object3D，同时保留 parent slot、transform、children、parser
@@ -328,3 +335,88 @@ transaction 中刷写，任一坏记录整笔回滚。ProjectRecord 八字段、
 - 剩余演进风险：`packages/runtime/src/viewer/three-scene-viewport.ts` 已达 1142 行。下一阶段若继续增加 load
   strategy，应按 full-load/light-only orchestration 与 viewport interaction responsibility 拆分；本次不在
   Critical 收尾中做跨层重构。
+
+## 2026-07-17 007a 统一入口与品牌验收历史
+
+用户确认 Studio Shell 只保留一个 Settings 按钮。Application 语言/主题、Scene 背景/网格与 scene-wide
+Lighting 都进入同一个 modal 的平级分区；Lighting 工具菜单只保留 Add Point、Add Spot 和 `n/8`，不再重复
+Scene lighting settings。对象灯光属性仍由 Object Inspector 管理，不塞进全局 Settings。
+
+Application 偏好继续即时写入既有本地 preference；Scene/Lighting 继续复用完整 environment draft、live
+preview、Cancel 回滚和一次 `set-scene-environment` Apply。Run 或无可编辑项目时只禁用 Scene/Lighting，语言与
+主题仍可用。不得改变 SceneDocument 1.3、ProjectRecord、IndexedDB、archive、revision、Undo、held preview 或
+Viewer identity。
+
+> 007b supersede：上述 Scene/Lighting Apply、Discard/Cancel 回滚和 held draft 工作流只代表 007a 已验收
+> 历史。统一 Settings 入口、三个平级 tab、Run/Application gate、Lighting menu 与 Offset Datum 品牌继续有效；
+> 当前保存时机以本文 007b 一节为准。
+
+统一弹窗由 settings shell、Application panel、Scene appearance panel、Scene lighting panel 和独立状态 hook
+组成，`App.tsx` 只做 open/close、Viewer preview/ready 与 command wiring，不拥有具体表单逻辑。scene preview
+使用 `draft` 与 `awaitingReady` 两层 transient state：新 draft 优先显示，关闭新 draft 后恢复仍在等待 matching
+ready revision 的 applied preview；任何一层都不进入 document、history、autosave 或 export。
+
+- Settings 从 Help 旁的唯一齿轮按钮打开，初始焦点落在 Application tab；Escape、关闭按钮和外部点击返回该
+  Settings trigger。Application、Scene、Lighting 是三个平级 tab，不打开第二个设置 dialog。
+- Application 的语言与主题在有项目、无项目、Edit 和 Run 均可用并即时持久化。Run 或无可编辑项目时 Scene
+  与 Lighting tab 禁用并给出本地化原因，不影响 Application。
+- Scene 与 Lighting 共享同一 complete environment draft、live preview、Discard 和一次
+  `set-scene-environment` Apply；command payload、revision/Undo、save 和 Viewer identity 语义保持不变。
+- Lighting menu 当前只有 Add Point、Add Spot 两个 menuitem 和非交互 `n/8` count；scene-wide fill/key
+  只从统一 Settings 的 Lighting tab 编辑，对象灯光属性仍由 Object Inspector 管理。
+
+Studio 的 Offset Datum 品牌几何使用 dark tile `#111715`、light rails `#F4F6F5` 和 teal datum
+`#4CC4BA`，在左上项目入口、toolbar mark 与浏览器 favicon 保持同一识别语言。16px/24px optical geometry
+兼容浅深浏览器 chrome，不以通用 Lucide cube/gear 代替。`index.html` 提供 favicon 与初始
+`theme-color` metadata，应用内 theme-color 再随当前 light/dark theme 同步；不新增营销页或第二产品入口。
+
+### 007a acceptance、review 与 verification
+
+- 当前 unit 证据为 92 files / 542 tests；root/workspace TypeScript、ESLint、production build、i18n、product
+  design、single-Studio topology、Prettier、format 与 diff checks 均通过。
+- Target Chromium/WebGL E2E 6/6 通过，覆盖统一 Settings、Scene/Lighting draft/Apply、focus restoration、
+  Lighting menu 两个 menuitem 以及相关 theme/naming/light-authoring 回归。
+- 实际浏览器在 1440x960 验证 light English 与 dark Chinese：统一三 tab 无遮挡，metadata、favicon、toolbar
+  Offset Datum mark、应用内 theme-color 同步及 Lighting menu 两项均符合当前事实。
+- 独立 reviewer 的实现复核无剩余 contract/code finding；唯一 Medium 为旧双入口文档漂移，本节及
+  006A plan/tasks 历史标注完成后关闭。
+- 主控最终 Chromium/WebGL full E2E 22/22 通过，`test-results/.last-run.json` 为 `status=passed`。该
+  full-suite 证据与上面的 targeted 6/6、1440x960 手工浏览器证据分别记录，不互相替代。
+
+## 2026-07-17 007b 当前保存语义（已验收）
+
+用户批准将 Scene/Lighting 设置改为工程软件式直接操控。007b 只改变 Studio authoring 的提交时机，继续复用
+完整 `set-scene-environment` command；SceneDocument、ProjectRecord、IndexedDB、archive、command payload
+schema 和既有 save 数据含义全部不变。
+
+- 统一 Settings 不再提供 Scene/Lighting Apply 或 Discard。弹窗保持打开，Escape、关闭按钮和 backdrop
+  只关闭弹窗，不回滚已经提交的操作。
+- 背景模式、背景颜色、grid、lighting preset、方向和 advanced colors 属于离散控件。每次完整操作立即执行
+  一个包含完整 before/after environment 的 `set-scene-environment` command。
+- range slider 拖动期间只产生 transient live preview，不写 document/history/autosave。手势结束时只提交
+  最终值一次：pointer 操作以 release 为边界，键盘调整以一次 completed interaction 为边界，失焦以 blur
+  为兜底边界。
+- 每个完整离散操作或 range 手势最多形成一个 revision 和一个 Undo entry，并进入既有 500ms debounce
+  autosave 调度；快速连续操作可合并为一次最新 snapshot 写入。中间 preview 不调度 autosave。Undo/Redo
+  继续恢复完整 authoritative environment。
+- command unchanged 仍是 exact no-op。command rejected/unavailable 时清除对应 transient preview，恢复最后
+  authoritative environment，并在 Settings 内给出可访问错误；不得保留看似已保存的控件值。
+- Application 语言/主题仍即时写入原本地 preference；Run/无可编辑项目 gate、唯一 Settings 入口、Lighting
+  menu 两个 Add item 与 `n/8`、Viewer identity 和 Offset Datum 品牌均不改变。
+
+### 007b final acceptance、review 与 verification
+
+- 用户于 2026-07-17 批准该 Critical 保存时机变更。最终 focused 证据 22/22 通过，包含独立 review 首轮
+  发现的 High active-range Undo race 回归。
+- transient range/color interaction 由 controller-owned cancellation generation 管理。所有 Undo 入口先清 active
+  gesture 并推进 generation；`pointercancel` 只取消 preview、永不提交；取消后的 late `pointerup`、`change` 或
+  `blur` 因 generation 已失效而零提交。pointer、keyboard、blur、duplicate end、unchanged final value 和
+  rejection restoration 均有 focused 证据。
+- 每个 accepted operation 只形成一个 revision 和一个 Undo entry，并进入既有 500ms debounce autosave；快速
+  操作可合并为一次 latest accepted snapshot 物理写，不能表述为“一操作一次物理写”。preview-only value 不调度
+  autosave。IndexedDB、JSON、ZIP、ProjectRecord 与 command payload schema/save meaning 保持不变。
+- generation High fix 及同类颜色手势取消回归覆盖后 final full unit 为 92 files / 551 tests，full typecheck 通过；ESLint、production
+  build、i18n、product design、single-Studio topology、format、Prettier 和 diff checks 通过。
+- generation 修复后 key WebGL 4/4 与 final full Chromium/WebGL E2E 22/22 均通过。
+- 独立 Critical reviewer 首轮发现 High active-range Undo race；controller-owned cancellation generation 与
+  回归测试返工后，同一 reviewer 最终复审 PASS，无 remaining contract finding。

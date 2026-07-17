@@ -44,45 +44,71 @@ test.describe("Scene appearance and lighting", () => {
     });
 
     await openSceneSettings(page);
-    const dialog = page.getByRole("dialog", { name: "Scene settings" });
+    const dialog = page.getByRole("dialog", { name: "Settings" });
     await dialog.getByRole("tab", { name: "Lighting" }).click();
     await dialog.getByRole("button", { name: "Contrast", exact: true }).click();
+    await expectRevision(page, 2);
     const contrastPixels = await canvas.screenshot();
     expect(await canvasPixelDifference(page, baselinePixels, contrastPixels)).toBeGreaterThan(
       0.002,
     );
-    expect(await activeStoredDocument(page)).toEqual(storedBefore);
-    await expectRevision(page, 1);
+    await expect
+      .poll(() => activeStoredDocument(page))
+      .toMatchObject({ revision: 2, environment: { lighting: contrastLighting() } });
     await expectCanvasIdentity(page, canvasIdentity);
 
-    await dialog.getByRole("tab", { name: "Appearance" }).click();
+    const fillBrightness = dialog.getByLabel("Fill brightness");
+    await previewRange(fillBrightness, [1.2, 1.4]);
+    await expect(fillBrightness).toHaveValue("1.4");
+    await expectRevision(page, 2);
+    await expect
+      .poll(() => activeStoredDocument(page))
+      .toMatchObject({ revision: 2, environment: { lighting: contrastLighting() } });
+    await fillBrightness.dispatchEvent("pointerup");
+    await expectRevision(page, 3);
+    await expect
+      .poll(() => activeStoredDocument(page))
+      .toMatchObject({
+        revision: 3,
+        environment: {
+          lighting: {
+            ...contrastLighting(),
+            fill: { ...contrastLighting().fill, intensity: 1.4 },
+          },
+        },
+      });
+
+    await dialog.getByRole("tab", { name: "Scene" }).click();
     await dialog.getByText("Custom color", { exact: true }).click();
+    await expectRevision(page, 3);
     await setColorInput(dialog.getByLabel("Background color"), "#DDE4E1");
+    await expectRevision(page, 4);
     await dialog.getByLabel("Show grid").uncheck();
+    await expectRevision(page, 5);
     await expectCanvasBackground(page, canvas, [221, 228, 225]);
     await expectCanvasIdentity(page, canvasIdentity);
-    expect(await activeStoredDocument(page)).toEqual(storedBefore);
-
-    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("footer")).toHaveCount(0);
+    await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
-    await expectRevision(page, 2);
+    await expectRevision(page, 5);
     await expectCanvasIdentity(page, canvasIdentity);
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
         schemaVersion: "1.3.0",
-        revision: 2,
-        environment: concreteEnvironment(),
+        revision: 5,
+        environment: concreteEnvironment(1.4),
       });
 
     await page.getByRole("button", { name: "Undo" }).click();
-    await expectRevision(page, 3);
-    await expectCanvasBackground(page, canvas, [244, 246, 245]);
-    expect(
-      await canvasPixelDifference(page, baselinePixels, await canvas.screenshot()),
-    ).toBeLessThan(0.002);
+    await expectRevision(page, 6);
+    await expectCanvasBackground(page, canvas, [221, 228, 225]);
+    await expect
+      .poll(() => activeStoredDocument(page))
+      .toMatchObject({ environment: { grid: true } });
     await page.getByRole("button", { name: "Redo" }).click();
-    await expectRevision(page, 4);
+    await expectRevision(page, 7);
     await expectCanvasBackground(page, canvas, [221, 228, 225]);
     await expectCanvasIdentity(page, canvasIdentity);
 
@@ -95,8 +121,8 @@ test.describe("Scene appearance and lighting", () => {
     const jsonDocument = JSON.parse(await readFile(jsonPath, "utf8")) as SceneDocument;
     expect(jsonDocument).toMatchObject({
       schemaVersion: "1.3.0",
-      revision: 4,
-      environment: concreteEnvironment(),
+      revision: 7,
+      environment: concreteEnvironment(1.4),
     });
     expect(JSON.stringify(jsonDocument)).not.toContain('"preset"');
 
@@ -112,8 +138,8 @@ test.describe("Scene appearance and lighting", () => {
     });
     expect(archive.document).toMatchObject({
       schemaVersion: "1.3.0",
-      revision: 4,
-      environment: concreteEnvironment(),
+      revision: 7,
+      environment: concreteEnvironment(1.4),
     });
     expect(JSON.stringify(archive.document)).not.toContain('"preset"');
 
@@ -121,8 +147,8 @@ test.describe("Scene appearance and lighting", () => {
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
         schemaVersion: "1.3.0",
-        revision: 4,
-        environment: concreteEnvironment(),
+        revision: 7,
+        environment: concreteEnvironment(1.4),
       });
     await page.screenshot({
       path: artifact("studio-scene-appearance-light-1440x900.png"),
@@ -167,9 +193,8 @@ function currentLayoutDocument(sceneJson: string): SceneDocument {
 }
 
 async function openSceneSettings(page: Page): Promise<void> {
-  await page.getByTestId("lighting-menu-trigger").click();
-  await page.getByRole("menuitem", { name: /Scene lighting settings|场景灯光设置/ }).click();
-  await expect(page.getByRole("dialog", { name: /Scene settings|场景设置/ })).toBeVisible();
+  await page.getByTestId("app-settings-button").click();
+  await expect(page.getByRole("dialog", { name: /Settings|设置/ })).toBeVisible();
 }
 
 async function openProjectMenu(page: Page): Promise<void> {
@@ -186,6 +211,19 @@ async function setColorInput(input: Locator, value: string): Promise<void> {
     control.dispatchEvent(new Event("input", { bubbles: true }));
     control.dispatchEvent(new Event("change", { bubbles: true }));
   }, value);
+}
+
+async function previewRange(input: Locator, values: readonly number[]): Promise<void> {
+  for (const value of values) {
+    await input.evaluate((element, next) => {
+      const control = element as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (setter === undefined) throw new Error("Range input setter is unavailable.");
+      setter.call(control, String(next));
+      control.dispatchEvent(new Event("input", { bubbles: true }));
+      control.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  }
 }
 
 async function readyCanvas(page: Page): Promise<Locator> {
@@ -378,7 +416,18 @@ function standardLighting() {
   } as const;
 }
 
-function concreteEnvironment() {
+function contrastLighting() {
+  return {
+    fill: { skyColor: "#DDE7E3", groundColor: "#3D4743", intensity: 0.9 },
+    key: {
+      color: "#FFF1D6",
+      intensity: 3,
+      directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
+    },
+  } as const;
+}
+
+function concreteEnvironment(fillIntensity = 0.9) {
   return {
     backgroundMode: "custom",
     background: "#DDE4E1",
@@ -386,12 +435,8 @@ function concreteEnvironment() {
     unit: "m",
     upAxis: "Y",
     lighting: {
-      fill: { skyColor: "#DDE7E3", groundColor: "#3D4743", intensity: 0.9 },
-      key: {
-        color: "#FFF1D6",
-        intensity: 3,
-        directionToLight: [0.37904902178945177, 0.7580980435789035, 0.5306686305052324],
-      },
+      ...contrastLighting(),
+      fill: { ...contrastLighting().fill, intensity: fillIntensity },
     },
   } as const;
 }

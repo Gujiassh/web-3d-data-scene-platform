@@ -116,9 +116,10 @@ Asset inspection reports glTF `KHR_lights_punctual` presence. The asset loader e
 lights from the runtime generation so they cannot silently double-light the scene; diagnostics use asset
 identity, never guessed node names.
 
-Studio evolves Scene settings into flat Appearance and Lighting tabs. The dialog owns a local draft and
-live preview; Apply emits one environment command and Cancel clears preview. Run is read-only. Presets,
-direction choices and color/intensity controls are bilingual and keyboard accessible.
+For the original 006A.3 acceptance, Studio evolved Scene settings into flat Appearance and Lighting tabs.
+That standalone scene surface and the later separate `AppSettingsDialog` are historical 006A/006B states,
+superseded by the 2026-07-17 007a architecture below. Its environment draft, preview, Apply and Run
+evidence remains historical; 007b below supersedes its commit timing without changing environment data meaning.
 
 ## Module Boundaries
 
@@ -171,5 +172,91 @@ those files. `EntityInspector` remains a composition surface.
 
 Each slice follows implementation -> focused verification -> independent review -> original-worker rework
 -> full gates -> checkpoint. 006A.2 does not start until 006A.1 is accepted; 006A.3 does not start until
-006A.2 is accepted. One coherent Chinese commit may close each accepted slice; push follows the user's
-existing project preference after the complete approved feature or an explicitly requested checkpoint.
+006A.2 is accepted. The historical 006A slices used the then-current commit-language preference. All future
+commits in this repository use English; push follows an explicit user request.
+
+## 2026-07-17 007a Unified Settings And Branding (Accepted Baseline)
+
+007a is a non-contract Studio Shell refinement after 006B. It replaces the historical two-entry arrangement
+(`Scene settings` plus a separate `AppSettingsDialog`) with one Settings trigger and one modal containing
+flat Application, Scene and Lighting tabs. The Lighting menu no longer routes to scene settings; it contains
+only Add Point, Add Spot and the non-interactive authored-light count.
+
+### Current module boundaries
+
+- For the accepted 007a baseline, `apps/studio/src/settings/StudioSettingsDialog.tsx` owned the dialog shell,
+  three-tab keyboard/focus model, Run/no-project disabled reason and scene Apply/Discard footer. 007b removes that
+  footer while preserving the shell responsibilities.
+- `ApplicationSettingsPanel` owns immediate locale/theme preferences. `SceneAppearancePanel` and
+  `SceneLightingPanel` remain controlled scene draft editors with shared controls in `scene-settings/`.
+- `useStudioSettingsDialog` owns open/close, project-document identity, complete environment draft, exact dirty
+  state, one existing environment command and matching-ready release. `App.tsx` remains narrow wiring.
+- The accepted 007a preview state used transient `draft` plus `awaitingReady`; that Apply/Discard lifecycle is
+  historical after 007b. The 007b controller retains transient range preview only until one gesture-end commit.
+- Application remains available with no project and in Run. Scene/Lighting are disabled with a localized
+  reason when no editable project exists; no SceneDocument, command, history, save or Runtime contract changes.
+
+### Brand and host integration
+
+Offset Datum uses dark tile `#111715`, light rails `#F4F6F5` and teal datum `#4CC4BA`. The project/toolbar
+mark and 16px favicon use the same identifiable geometry. Host metadata includes SVG/ICO favicon entries and
+an initial theme color; Studio synchronizes `theme-color` with application light/dark theme changes.
+
+### Verification and review record
+
+- Unit: 92 files / 542 tests. TypeScript, ESLint, production build, i18n, product design, topology, format,
+  Prettier and diff checks passed.
+- Target E2E: 6/6 passed. Manual Chromium at 1440x960 verified light English and dark Chinese, metadata,
+  favicon/toolbar mark, in-app theme-color synchronization and exactly two Lighting menu items.
+- Independent review found no remaining implementation/contract issue. Its sole Medium finding was stale
+  documentation describing the historical dual entry and Scene-lighting menu item; this plan and the SSoT/task
+  record close that drift.
+- Final full Chromium/WebGL E2E passed 22/22 and `test-results/.last-run.json` records `status=passed`.
+  This full-suite result remains separate from the targeted 6/6 and manual 1440x960 evidence above.
+
+## 2026-07-17 007b Direct Manipulation Save Timing (Accepted)
+
+007b preserves the accepted 007a unified shell and replaces only its Scene/Lighting Apply/Discard and draft
+commit model. The implementation must keep timing policy outside `App.tsx`: the settings authoring controller/hook
+owns authoritative environment reconciliation, discrete commits, active range gestures, preview cleanup and
+accessible rejection state; panels remain controlled presentation components.
+
+### Interaction and transaction boundaries
+
+- Discrete controls construct one complete next environment from the latest authoritative environment and execute
+  the existing `set-scene-environment` command immediately. Success leaves the dialog open and refreshes the local
+  authoritative baseline from the resulting document revision.
+- A range gesture captures one authoritative before snapshot. Pointer/keyboard changes update transient Viewer
+  preview only. Pointer release, completed keyboard interaction or blur commits the final complete environment once;
+  duplicate completion signals and unchanged final values are no-ops.
+- Closing Settings cancels only an active uncommitted range preview and otherwise closes the shell. It never issues
+  a compensating command and never rolls back operations already accepted into history.
+- Rejection clears transient preview, reconciles every Scene/Lighting control to the latest authoritative
+  environment and announces a localized error. Stale before is not retried by guessing or normalization.
+- Application preferences remain immediate and independent. Run/no-project gates and 007a focus, menu and brand
+  boundaries remain unchanged.
+
+### Contract boundary
+
+007b introduces no schema or storage migration. SceneDocument, ProjectRecord eight-key shape, IndexedDB topology,
+archive versions, JSON/ZIP payloads and the complete before/after `set-scene-environment` command remain unchanged.
+One complete accepted interaction maps to one revision and one Undo entry and enters the existing debounced autosave
+scheduler. Rapid operations may coalesce into one repository write of the latest accepted snapshot; preview-only
+values never schedule autosave.
+
+### Final verification and review
+
+- Focused final 22/22 passed after the High race rework and matching color-gesture cancellation coverage. Controller-owned cancellation generation is the
+  authoritative concurrency boundary: every Undo entry point clears active range/color gestures and advances
+  generation; `pointercancel` never commits; late `pointerup`, `change` and `blur` from an invalidated generation
+  commit nothing.
+- Discrete controls, pointer/keyboard/blur range completion, duplicate end, unchanged final values, dialog-stays-open,
+  close-without-rollback, accessible rejection restoration and sequential Undo/Redo are covered by focused tests.
+- One accepted operation maps to one revision and one Undo entry, then enters the existing 500ms debounce autosave.
+  Rapid operations may coalesce into one physical write of the latest accepted snapshot. Contract/persistence checks
+  preserve SceneDocument, ProjectRecord, IndexedDB, JSON, ZIP and complete command payload meaning.
+- After the generation High fix and matching color-gesture cancellation coverage, final full unit passed 92 files / 551 tests and full typecheck passed. ESLint,
+  production build, i18n, product design, topology, format, Prettier and diff checks passed.
+- After the generation fix, key WebGL passed 4/4 and final full Chromium/WebGL E2E passed 22/22.
+- Independent Critical review first found the High active-range Undo race. After controller-owned cancellation
+  generation and regression rework, the same reviewer returned final PASS with no remaining contract finding.

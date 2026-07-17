@@ -14,7 +14,8 @@ import { SMART_ALIGN_PREFERENCE_KEY } from "./smart-align/preference";
 
 type TestCommandOutcome =
   | { readonly status: "changed"; readonly revision: number }
-  | { readonly status: "unchanged"; readonly revision: number };
+  | { readonly status: "unchanged"; readonly revision: number }
+  | { readonly status: "rejected"; readonly message: string };
 
 interface TestReadyEvent {
   readonly type: "ready";
@@ -294,7 +295,7 @@ describe("App scene settings preview", () => {
     localStorage.clear();
   });
 
-  it("does not loop when the settings dialog reports its initial preview", () => {
+  it("opens one unified Settings dialog without reporting an initial scene preview", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     act(() => {
       root.render(
@@ -307,42 +308,41 @@ describe("App scene settings preview", () => {
 
     const beforeOpen = harness.authoringSceneRenders.length;
     expect(() => {
-      act(() => button("Lighting").click());
-      act(() => buttonByVisibleName("Scene lighting settings").click());
+      act(() => button("Settings").click());
     }).not.toThrow();
 
     expect(consoleError.mock.calls.flat().join(" ")).not.toContain("Maximum update depth exceeded");
     expect(harness.authoringSceneRenders.length - beforeOpen).toBeLessThan(8);
-    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe(
-      "Scene settings",
-    );
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe("Settings");
+    expect(tab("Application").getAttribute("aria-selected")).toBe("true");
   });
 
-  it("applies one concrete environment command and holds every preview until ready", () => {
+  it("commits each direct scene operation immediately and holds the latest preview until ready", () => {
     renderApp();
     openSceneSettings();
+    acceptEnvironmentCommands();
     checkInput(input("Custom color"), true);
     changeInput(input("Background color"), "#336699");
     checkInput(inputByText("Show grid"), false);
     act(() => tab("Lighting").click());
     act(() => buttonByVisibleName("Contrast").click());
-    harness.workspace.execute.mockReturnValueOnce({ status: "changed", revision: 2 });
 
-    act(() =>
-      container
-        .querySelector<HTMLFormElement>("form")!
-        .dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true })),
-    );
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(container.querySelector("form")).toBeNull();
+    expect(harness.workspace.execute).toHaveBeenCalledTimes(4);
     expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
     expect(harness.gridRenders.at(-1)).toBe(false);
     expect(harness.lightingRenders.at(-1)).toMatchObject({
       fill: { skyColor: "#DDE7E3", groundColor: "#3D4743", intensity: 0.9 },
       key: { color: "#FFF1D6", intensity: 3 },
     });
-    expect(harness.workspace.execute).toHaveBeenCalledWith({
+    expect(harness.workspace.execute).toHaveBeenLastCalledWith({
       type: "set-scene-environment",
-      before: harness.workspace.project.document.environment,
+      before: expect.objectContaining({
+        backgroundMode: "custom",
+        background: "#336699",
+        grid: false,
+      }),
       after: {
         ...harness.workspace.project.document.environment,
         backgroundMode: "custom",
@@ -354,40 +354,63 @@ describe("App scene settings preview", () => {
         }),
       },
     });
-    const executedCommand: unknown = harness.workspace.execute.mock.calls[0]?.[0];
-    expect(executedCommand).not.toHaveProperty("preset");
+    for (const [executedCommand] of harness.workspace.execute.mock.calls) {
+      expect(executedCommand).not.toHaveProperty("preset");
+    }
 
-    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 1 }));
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 4 }));
     expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
     expect(harness.gridRenders.at(-1)).toBe(false);
     expect(harness.lightingRenders.at(-1)).not.toBeNull();
 
-    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 3 }));
+    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 5 }));
     expect(harness.authoringSceneRenders.at(-1)).toBeNull();
     expect(harness.gridRenders.at(-1)).toBeNull();
     expect(harness.lightingRenders.at(-1)).toBeNull();
   });
 
-  it("keeps an applied preview while application Settings opens before matching ready", () => {
+  it("keeps committed values when Settings closes and reports rejected direct edits", () => {
     renderApp();
     openSceneSettings();
-    act(() => tab("Appearance").click());
+    acceptEnvironmentCommands();
     checkInput(input("Custom color"), true);
     changeInput(input("Background color"), "#336699");
-    harness.workspace.execute.mockReturnValueOnce({ status: "changed", revision: 2 });
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+
+    harness.workspace.execute.mockReturnValueOnce({ status: "rejected", message: "stale" });
+    changeInput(input("Background color"), "#123456");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Could not update scene settings",
+    );
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+    expect(input("Background color").value).toBe("#336699");
+
+    act(() => button("Close settings").click());
+    expect(harness.workspace.project.document.environment.background).toBe("#336699");
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("clears a held settings preview before toolbar Undo after the dialog closes", () => {
+    renderApp();
+    openSceneSettings();
+    acceptEnvironmentCommands();
+    checkInput(input("Custom color"), true);
+    changeInput(input("Background color"), "#336699");
+    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
+    act(() => button("Close settings").click());
 
     act(() =>
-      container
-        .querySelector<HTMLFormElement>("form")!
-        .dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true })),
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "z",
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
     );
-    act(() => button("Settings").click());
-    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe("Settings");
-    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
 
-    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 1 }));
-    expect(harness.authoringSceneRenders.at(-1)).toBe("#336699");
-    act(() => harness.authoringReady?.({ type: "ready", documentId: "scene-a", revision: 2 }));
+    expect(harness.workspace.undo).toHaveBeenCalledOnce();
     expect(harness.authoringSceneRenders.at(-1)).toBeNull();
   });
 
@@ -414,6 +437,23 @@ describe("App scene settings preview", () => {
     expect(harness.viewerCalls).toEqual(["authoring:run", "tool:select", "mode:run"]);
     expect(harness.authoringSceneMounts).toBe(1);
     harness.workspace.session.tool = "select";
+  });
+
+  it("keeps Application settings available while Scene and Lighting are disabled in Run", () => {
+    harness.workspace.canEdit = false;
+    harness.workspace.session.mode = "run";
+    renderApp();
+
+    act(() => button("Settings").click());
+    expect(tab("Application").disabled).toBe(false);
+    expect(tab("Scene").disabled).toBe(true);
+    expect(tab("Lighting").disabled).toBe(true);
+    expect(container.textContent).toContain(
+      "Scene and lighting settings require a scene in Edit mode.",
+    );
+
+    harness.workspace.canEdit = true;
+    harness.workspace.session.mode = "edit";
   });
 
   it("drives Viewer, toolbar and exact S from one persistent preference without resetting in Run", () => {
@@ -448,8 +488,27 @@ describe("App scene settings preview", () => {
   }
 
   function openSceneSettings(): void {
-    act(() => button("Lighting").click());
-    act(() => buttonByVisibleName("Scene lighting settings").click());
+    act(() => button("Settings").click());
+    act(() => tab("Scene").click());
+  }
+
+  function acceptEnvironmentCommands(): void {
+    harness.workspace.execute.mockImplementation((command: unknown) => {
+      if (
+        typeof command !== "object" ||
+        command === null ||
+        !("type" in command) ||
+        command.type !== "set-scene-environment" ||
+        !("after" in command)
+      ) {
+        return { status: "unchanged", revision: harness.workspace.project.document.revision };
+      }
+      const revision = harness.workspace.project.document.revision + 1;
+      harness.workspace.project.document.environment =
+        command.after as typeof harness.workspace.project.document.environment;
+      harness.workspace.project.document.revision = revision;
+      return { status: "changed", revision };
+    });
   }
 
   function input(label: string): HTMLInputElement {
@@ -491,6 +550,7 @@ describe("App scene settings preview", () => {
     act(() => {
       setter.call(element, value);
       element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
     });
   }
 

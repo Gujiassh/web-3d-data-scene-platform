@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Box, FolderTree, TriangleAlert } from "lucide-react";
 
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
@@ -11,6 +11,7 @@ import { SceneNameDialog, type SceneNameDialogMode } from "./features/SceneNameD
 import { SceneTree } from "./features/SceneTree";
 import { StudioToolbar } from "./features/StudioToolbar";
 import { StudioInspector } from "./features/StudioInspector";
+import { syncStudioThemeColor } from "./branding/theme-color";
 import { ShortcutHelpDialog } from "./help/ShortcutHelpDialog";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
@@ -19,23 +20,9 @@ import { useStudioLightAuthoring } from "./lights/useStudioLightAuthoring";
 import { studioHistoryCapabilities } from "./session/authoring-capabilities";
 import { useStudioShortcuts, type StudioShortcutActions } from "./session/useStudioShortcuts";
 import { useSmartAlignPreference } from "./smart-align/preference";
-import { SceneSettingsDialog } from "./scene-settings/SceneSettingsDialog";
-import {
-  createSetSceneEnvironmentCommand,
-  sceneSettingsDraft,
-  sceneSettingsStateKey,
-  themeBackgroundFor,
-  type SceneSettingsDraft,
-} from "./scene-settings/model";
-import {
-  closeSceneSettingsDraftPreview,
-  createSceneSettingsDraftPreview,
-  holdSceneSettingsPreviewUntilReady,
-  releaseSceneSettingsPreviewOnReady,
-  resolveSceneSettingsPreview,
-  type SceneSettingsPreviewState,
-} from "./scene-settings/preview-state";
-import { AppSettingsDialog } from "./settings/AppSettingsDialog";
+import { themeBackgroundFor } from "./scene-settings/model";
+import { StudioSettingsDialog } from "./settings/StudioSettingsDialog";
+import { useStudioSettingsDialog } from "./settings/useStudioSettingsDialog";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
 type LeftPanel = "scene" | "assets";
@@ -50,21 +37,13 @@ export function App() {
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
-  const sceneSettingsButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
-  const [sceneSettingsKey, setSceneSettingsKey] = useState<string | null>(null);
-  const [sceneSettingsDraftValue, setSceneSettingsDraftValue] = useState<SceneSettingsDraft | null>(
-    null,
-  );
   const [helpOpen, setHelpOpen] = useState(false);
-  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [lightingMenuOpen, setLightingMenuOpen] = useState(false);
   const [smartAlignEnabled, toggleSmartAlign] = useSmartAlignPreference();
-  const [sceneSettingsPreview, setSceneSettingsPreview] =
-    useState<SceneSettingsPreviewState | null>(null);
 
   const selectedEntityId = workspace.session?.primaryEntityId ?? null;
   const activeTool = workspace.session?.tool ?? "select";
@@ -74,14 +53,18 @@ export function App() {
   const session = workspace.session;
   const history = workspace.history;
   const themeBackground = themeBackgroundFor(theme);
-  const projectDocumentKey =
-    project === null ? null : sceneSettingsStateKey(project.record.id, project.document.id);
-  const sceneSettingsOpen = sceneSettingsKey !== null && sceneSettingsKey === projectDocumentKey;
-  const resolvedSceneSettingsPreview = resolveSceneSettingsPreview(
-    sceneSettingsPreview,
-    projectDocumentKey,
+  const restoreSettingsFocus = (): void => {
+    requestAnimationFrame(() => settingsButtonRef.current?.focus());
+  };
+  const settings = useStudioSettingsDialog({
+    projectId: project?.record.id ?? null,
+    documentId: project?.document.id ?? null,
+    environment: project?.document.environment ?? null,
+    canEdit: workspace.canEdit,
     themeBackground,
-  );
+    execute: workspace.execute,
+    restoreFocus: restoreSettingsFocus,
+  });
   const historyCapabilities = studioHistoryCapabilities(
     workspace.canEdit,
     history?.undoStack.length ?? 0,
@@ -124,39 +107,9 @@ export function App() {
       document.querySelector<HTMLButtonElement>(".project-menu-trigger")?.focus(),
     );
   };
-  const closeSceneSettings = (): void => {
-    setSceneSettingsKey(null);
-    setSceneSettingsDraftValue(null);
-    setSceneSettingsPreview(null);
-    restoreSceneSettingsFocus();
-  };
-  const restoreSceneSettingsFocus = (): void => {
-    requestAnimationFrame(() => sceneSettingsButtonRef.current?.focus());
-  };
-  const handleSceneSettingsPreview = useCallback(
-    (settings: SceneSettingsDraft) => {
-      if (projectDocumentKey !== null) {
-        setSceneSettingsPreview(createSceneSettingsDraftPreview(projectDocumentKey, settings));
-      }
-    },
-    [projectDocumentKey],
-  );
   const closeHelp = (): void => {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
-  };
-  const closeAppSettings = (): void => {
-    setAppSettingsOpen(false);
-    requestAnimationFrame(() => settingsButtonRef.current?.focus());
-  };
-  const openSceneSettings = (): void => {
-    if (!workspace.canEdit || projectDocumentKey === null || project === null) return;
-    setProjectMenuOpen(false);
-    setHelpOpen(false);
-    setAppSettingsOpen(false);
-    setLightingMenuOpen(false);
-    setSceneSettingsDraftValue(sceneSettingsDraft(project.document.environment));
-    setSceneSettingsKey(projectDocumentKey);
   };
 
   useEffect(() => {
@@ -170,6 +123,10 @@ export function App() {
       project === null ? t.app.documentTitle : `${project.record.name} | ${t.app.documentTitle}`;
     document.title = title;
   }, [project, t.app.documentTitle]);
+
+  useLayoutEffect(() => {
+    syncStudioThemeColor(theme);
+  }, [theme]);
 
   const focusSelection = (): void => {
     if (selectedEntityId === null) return;
@@ -196,6 +153,14 @@ export function App() {
     }
     sceneLayout.duplicateSelection();
   };
+  const undo = (): void => {
+    settings.clearScenePreview();
+    workspace.undo();
+  };
+  const redo = (): void => {
+    settings.clearScenePreview();
+    workspace.redo();
+  };
   const shortcutActions: StudioShortcutActions = {
     "tool.select": () => workspace.setTool("select"),
     "tool.translate": () => {
@@ -211,8 +176,8 @@ export function App() {
     "reset.position": () => void sceneLayout.resetSelection("position"),
     "reset.rotation": () => void sceneLayout.resetSelection("rotation"),
     "reset.scale": () => void sceneLayout.resetSelection("scale"),
-    "history.undo": workspace.undo,
-    "history.redo": workspace.redo,
+    "history.undo": undo,
+    "history.redo": redo,
     "selection.duplicate": duplicateSelection,
     "selection.delete": deleteSelection,
     "selection.clear": () => workspace.selectEntity(null),
@@ -227,11 +192,10 @@ export function App() {
     hasSelection: selectedEntityId !== null,
     modalOpen:
       helpOpen ||
-      appSettingsOpen ||
+      settings.open ||
       lightingMenuOpen ||
       workspace.importState !== null ||
-      sceneNameDialogMode !== null ||
-      sceneSettingsOpen,
+      sceneNameDialogMode !== null,
     viewerRef,
   });
 
@@ -250,7 +214,6 @@ export function App() {
     <div className="studio-app">
       <StudioToolbar
         helpButtonRef={helpButtonRef}
-        sceneSettingsButtonRef={sceneSettingsButtonRef}
         settingsButtonRef={settingsButtonRef}
         canEdit={workspace.canEdit}
         canDuplicate={
@@ -286,9 +249,6 @@ export function App() {
               ? t.lights.menu.reasons.notReady
               : t.lights.menu.reasons[lightAuthoring.addDisabledReason]
         }
-        lightSettingsDisabledReason={
-          lightAuthoring.settingsDisabled ? t.lights.menu.reasons.run : null
-        }
         toolDisabledReasons={Object.fromEntries(
           (["translate", "rotate", "scale"] as const)
             .filter((tool) => !lightAuthoring.canUseTool(tool))
@@ -306,30 +266,25 @@ export function App() {
         }}
         onOpenHelp={() => {
           setProjectMenuOpen(false);
-          setAppSettingsOpen(false);
           setLightingMenuOpen(false);
           setHelpOpen(true);
         }}
-        onOpenSceneSettings={openSceneSettings}
         onOpenSettings={() => {
           setProjectMenuOpen(false);
           setHelpOpen(false);
           setLightingMenuOpen(false);
-          setSceneSettingsKey(null);
-          setSceneSettingsDraftValue(null);
-          setSceneSettingsPreview(closeSceneSettingsDraftPreview);
-          setAppSettingsOpen(true);
+          settings.openDialog();
         }}
         onToggleSmartAlign={toggleSmartAlign}
         onAddLight={lightAuthoring.add}
         onLightingMenuOpenChange={setLightingMenuOpen}
         onRefreshLightAvailability={lightAuthoring.refreshCreationAvailability}
-        onRedo={workspace.redo}
+        onRedo={redo}
         onSave={() => void workspace.save().catch(() => undefined)}
         onToolChange={(tool) => {
           if (lightAuthoring.canUseTool(tool)) workspace.setTool(tool);
         }}
-        onUndo={workspace.undo}
+        onUndo={undo}
       />
 
       {projectMenuOpen && project !== null && (
@@ -437,20 +392,20 @@ export function App() {
             <AuthoringScene
               ref={viewerRef}
               adapters={dataBinding.adapters}
-              backgroundPreview={resolvedSceneSettingsPreview?.background ?? null}
+              backgroundPreview={settings.preview?.background ?? null}
               authoringMode={session?.mode ?? "edit"}
               dataRuntimeEnabled={session?.mode === "run"}
               canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
               className="studio-viewer"
               initialTool={activeTool}
-              gridPreview={resolvedSceneSettingsPreview?.grid ?? null}
+              gridPreview={settings.preview?.grid ?? null}
               key={project.record.id}
               primaryEntityId={session?.primaryEntityId ?? null}
               selectedEntityIds={session?.selectedEntityIds ?? []}
               smartAlignEnabled={smartAlignEnabled}
               source={project.document}
-              lightingPreview={resolvedSceneSettingsPreview?.lighting ?? null}
+              lightingPreview={settings.preview?.lighting ?? null}
               themeBackground={themeBackground}
               transformSettings={sceneLayout.transformSettings}
               onDiagnostic={(diagnostic) =>
@@ -458,13 +413,7 @@ export function App() {
               }
               onEvent={dataBinding.handleViewerEvent}
               onReady={(event) => {
-                setSceneSettingsPreview((current) =>
-                  releaseSceneSettingsPreviewOnReady(
-                    current,
-                    sceneSettingsStateKey(project.record.id, event.documentId),
-                    event.revision,
-                  ),
-                );
+                settings.handleReady(event.documentId, event.revision);
                 const viewer = viewerRef.current;
                 if (viewer === null) return;
                 viewer.setTool(activeTool);
@@ -557,40 +506,21 @@ export function App() {
         />
       )}
 
-      {sceneSettingsOpen && project !== null && sceneSettingsDraftValue !== null && (
-        <SceneSettingsDialog
-          draft={sceneSettingsDraftValue}
-          initialTab="lighting"
-          key={projectDocumentKey ?? undefined}
-          onApply={(settings) => {
-            const outcome = workspace.execute(
-              createSetSceneEnvironmentCommand(project.document.environment, settings),
-            );
-            if (outcome.status === "rejected" || outcome.status === "unavailable") return false;
-            if (outcome.status === "changed") {
-              setSceneSettingsKey(null);
-              setSceneSettingsDraftValue(null);
-              setSceneSettingsPreview(
-                holdSceneSettingsPreviewUntilReady(
-                  sceneSettingsStateKey(project.record.id, project.document.id),
-                  settings,
-                  outcome.revision,
-                ),
-              );
-              restoreSceneSettingsFocus();
-            } else {
-              closeSceneSettings();
-            }
-            return true;
-          }}
-          onCancel={closeSceneSettings}
-          onDraftChange={setSceneSettingsDraftValue}
-          onPreview={handleSceneSettingsPreview}
+      {settings.open && (
+        <StudioSettingsDialog
+          draft={settings.draft}
+          sceneEditable={settings.sceneEditable}
+          previewCancellation={settings.previewCancellation}
+          onCancelScenePreview={settings.cancelScenePreview}
+          onClose={settings.closeDialog}
+          onCommitScene={settings.commitSceneSettings}
+          onPreviewScene={settings.previewSceneSettings}
+          onRedo={redo}
+          onUndo={undo}
         />
       )}
 
       {helpOpen && <ShortcutHelpDialog onClose={closeHelp} />}
-      {appSettingsOpen && <AppSettingsDialog onClose={closeAppSettings} />}
 
       <input
         ref={modelInputRef}

@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 export async function openAppSettings(page: Page): Promise<Locator> {
   await page.getByTestId("app-settings-button").click();
-  const dialog = page.locator(".app-settings-dialog");
+  const dialog = page.locator(".studio-settings-dialog");
   await expect(dialog).toBeVisible();
   return dialog;
 }

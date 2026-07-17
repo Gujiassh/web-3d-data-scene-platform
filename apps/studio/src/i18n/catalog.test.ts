@@ -52,7 +52,10 @@ describe("Studio catalog", () => {
     expect(chinese.toolbar.smartAlign).toBe("智能对齐");
   });
 
-  it("keeps Scene settings tabs, presets and directions symmetric", () => {
+  it("keeps unified Settings tabs, Scene presets and directions symmetric", () => {
+    expect(english.appSettings.applicationTab).toBe("Application");
+    expect(english.appSettings.sceneTab).toBe("Scene");
+    expect(chinese.appSettings.lightingTab).toBe("灯光");
     expect(Object.keys(english.sceneSettings.presets)).toEqual(
       Object.keys(chinese.sceneSettings.presets),
     );
@@ -71,8 +74,8 @@ describe("Studio catalog", () => {
     expect(Object.keys(english.appSettings)).toEqual(Object.keys(chinese.appSettings));
     expect(english.toolbar.settings).toBe("Settings");
     expect(chinese.toolbar.settings).toBe("设置");
-    expect(english.toolbar.sceneSettings).toBe("Scene settings");
-    expect(chinese.toolbar.sceneSettings).toBe("场景设置");
+    expect(english.sceneSettings.commitFailed).toContain("previous value was restored");
+    expect(chinese.sceneSettings.commitFailed).toContain("已恢复之前的值");
   });
 
   it("keeps authored-light menu, fields and disabled reasons bilingual", () => {
@@ -82,7 +85,6 @@ describe("Studio catalog", () => {
     );
     expect(english.lights.menu.addPoint).toBe("Add point");
     expect(chinese.lights.menu.addSpot).toBe("添加聚光灯");
-    expect(english.lights.menu.sceneSettings).toBe("Scene lighting settings");
     expect(chinese.lights.menu.countLabel(3)).toContain("3/8");
     expect(english.lights.inspector.brightness).toBe("Brightness");
     expect(chinese.lights.inspector.brightness).toBe("亮度");

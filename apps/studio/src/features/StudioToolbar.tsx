@@ -1,5 +1,4 @@
 import {
-  Box,
   Download,
   Copy,
   FolderOpen,
@@ -19,6 +18,7 @@ import {
   Upload,
 } from "lucide-react";
 
+import { BrandMark } from "../branding";
 import { useStudioI18n } from "../i18n/I18nProvider";
 import { LightingMenu } from "../lights/LightingMenu";
 import type { StudioLightKind } from "../lights/model";
@@ -41,7 +41,6 @@ interface StudioToolbarProps {
   readonly lightCount: number;
   readonly lightingMenuOpen: boolean;
   readonly lightAddDisabledReason: string | null;
-  readonly lightSettingsDisabledReason: string | null;
   readonly toolDisabledReasons: Readonly<Partial<Record<AuthoringTool, string>>>;
   readonly onOpenProjectMenu: () => void;
   readonly onUndo: () => void;
@@ -54,14 +53,12 @@ interface StudioToolbarProps {
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
   readonly onOpenHelp: () => void;
-  readonly onOpenSceneSettings: () => void;
   readonly onOpenSettings: () => void;
   readonly onToggleSmartAlign: () => void;
   readonly onAddLight: (kind: StudioLightKind) => boolean;
   readonly onLightingMenuOpenChange: (open: boolean) => void;
   readonly onRefreshLightAvailability: () => void;
   readonly helpButtonRef?: React.Ref<HTMLButtonElement>;
-  readonly sceneSettingsButtonRef?: React.Ref<HTMLButtonElement>;
   readonly settingsButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
@@ -85,9 +82,7 @@ export function StudioToolbar(props: StudioToolbarProps) {
         type="button"
         onClick={props.onOpenProjectMenu}
       >
-        <span className="project-symbol">
-          <Box size={16} />
-        </span>
+        <BrandMark className="project-symbol" size={28} />
         <span className="project-copy">
           <strong>{props.projectName}</strong>
           <span className="project-status-row">
@@ -188,16 +183,11 @@ export function StudioToolbar(props: StudioToolbarProps) {
         onClick={props.onOpenHelp}
       />
       <LightingMenu
-        {...(props.sceneSettingsButtonRef === undefined
-          ? {}
-          : { buttonRef: props.sceneSettingsButtonRef })}
         addDisabledReason={props.lightAddDisabledReason}
         lightCount={props.lightCount}
         open={props.lightingMenuOpen}
-        settingsDisabledReason={props.lightSettingsDisabledReason}
         onAdd={props.onAddLight}
         onOpenChange={props.onLightingMenuOpenChange}
-        onOpenSceneSettings={props.onOpenSceneSettings}
         onRefreshAvailability={props.onRefreshLightAvailability}
       />
       <IconCommand

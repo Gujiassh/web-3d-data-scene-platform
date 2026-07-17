@@ -1,5 +1,6 @@
-.app-settings-dialog {
-  width: min(420px, calc(100vw - 40px));
+.studio-settings-dialog {
+  width: min(520px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
   overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
@@ -7,7 +8,7 @@
   box-shadow: var(--shadow-lg);
 }
 
-.app-settings-dialog > header {
+.studio-settings-dialog > header {
   min-height: 52px;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) 30px;
@@ -17,25 +18,76 @@
   border-bottom: 1px solid var(--border);
 }
 
-.app-settings-dialog h2 {
+.studio-settings-dialog h2 {
   margin: 0;
   font-size: 12px;
 }
 
-.app-settings-content {
+.studio-settings-tabs {
   display: grid;
-  gap: 18px;
-  padding: 18px 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
 }
 
-.app-settings-content fieldset {
+.studio-settings-tabs button {
+  min-height: 36px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.studio-settings-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.studio-settings-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.studio-settings-tabs button:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: -2px;
+}
+
+.studio-settings-content {
+  max-height: calc(100vh - 170px);
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding: 16px 14px 12px;
+}
+
+.studio-settings-dialog [role="tabpanel"][hidden] {
+  display: none;
+}
+
+.settings-disabled-reason {
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+.application-settings-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.application-settings-panel fieldset {
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-.app-settings-content legend {
+.application-settings-panel legend {
   margin-bottom: 7px;
   color: var(--ink-muted);
   font-size: 10px;

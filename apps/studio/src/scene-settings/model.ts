@@ -97,6 +97,15 @@ export function sceneSettingsDraft(environment: SceneEnvironment): SceneSettings
   };
 }
 
+export function sceneSettingsEqual(left: SceneSettingsDraft, right: SceneSettingsDraft): boolean {
+  return (
+    left.backgroundMode === right.backgroundMode &&
+    left.background === right.background &&
+    left.grid === right.grid &&
+    lightingEqual(left.lighting, right.lighting)
+  );
+}
+
 export function createSetSceneEnvironmentCommand(
   before: SceneEnvironment,
   after: SceneSettingsDraft,

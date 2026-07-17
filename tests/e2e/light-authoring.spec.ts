@@ -44,22 +44,28 @@ test.describe("Feature 006B light authoring", () => {
     await releaseFixtureAssetReads(page);
     await expect(addPoint).toHaveAttribute("aria-disabled", "false", { timeout: 15_000 });
     await expect(menu).toContainText("0/8");
-    await menu.getByRole("menuitem", { name: "Scene lighting settings", exact: true }).click();
+    await expect(menu.getByRole("menuitem")).toHaveCount(2);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("lighting-menu-trigger")).toBeFocused();
 
-    const settings = page.getByRole("dialog", { name: "Scene settings" });
+    await page.getByTestId("app-settings-button").click();
+
+    const settings = page.getByRole("dialog", { name: "Settings" });
     await expect(settings).toBeVisible();
+    await settings.getByRole("tab", { name: "Lighting" }).click();
     await expect
       .poll(() => settings.evaluate((dialog) => dialog.contains(document.activeElement)))
       .toBe(true);
-    await settings.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(page.getByTestId("lighting-menu-trigger")).toBeFocused();
+    await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+    await expect(page.getByTestId("app-settings-button")).toBeFocused();
 
     await setInterfacePreferences(page, { locale: "zh-CN" });
     await page.getByTestId("lighting-menu-trigger").click();
     const chineseMenu = page.getByRole("menu", { name: "灯光操作" });
     await expect(chineseMenu).toContainText("添加点光源");
     await expect(chineseMenu).toContainText("添加聚光灯");
-    await expect(chineseMenu).toContainText("场景灯光设置");
+    await expect(chineseMenu.getByRole("menuitem")).toHaveCount(2);
+    await expect(chineseMenu).not.toContainText("场景灯光设置");
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("lighting-menu-trigger")).toBeFocused();
     expect(runtimeErrors).toEqual([]);

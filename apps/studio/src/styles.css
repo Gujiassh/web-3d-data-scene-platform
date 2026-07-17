@@ -48,18 +48,15 @@
 }
 
 .project-symbol {
-  display: grid;
+  display: block;
   width: 28px;
   height: 28px;
   flex: 0 0 28px;
-  place-items: center;
   border-radius: 4px;
-  background: var(--ink);
-  color: var(--ink-inverse);
 }
 
 .studio-project .project-symbol {
-  display: grid;
+  display: block;
 }
 
 .project-copy {

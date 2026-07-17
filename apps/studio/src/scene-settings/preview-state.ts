@@ -3,20 +3,18 @@ import type { SceneLighting } from "@web3d/document";
 import { themeBackgroundForSettings, type SceneSettingsDraft } from "./model";
 
 interface SceneSettingsDraftPreview {
-  readonly status: "draft";
   readonly projectDocumentKey: string;
   readonly settings: SceneSettingsDraft;
 }
 
-interface SceneSettingsAwaitingReadyPreview {
-  readonly status: "awaiting-ready";
-  readonly projectDocumentKey: string;
-  readonly settings: SceneSettingsDraft;
+interface SceneSettingsAwaitingReadyPreview extends SceneSettingsDraftPreview {
   readonly revision: number;
 }
 
-export type SceneSettingsPreviewState =
-  SceneSettingsDraftPreview | SceneSettingsAwaitingReadyPreview;
+export interface SceneSettingsPreviewState {
+  readonly draft: SceneSettingsDraftPreview | null;
+  readonly awaitingReady: SceneSettingsAwaitingReadyPreview | null;
+}
 
 export interface ResolvedSceneSettingsPreview {
   readonly background: string;
@@ -24,51 +22,63 @@ export interface ResolvedSceneSettingsPreview {
   readonly lighting: SceneLighting;
 }
 
+export const EMPTY_SCENE_SETTINGS_PREVIEW: SceneSettingsPreviewState = Object.freeze({
+  draft: null,
+  awaitingReady: null,
+});
+
 export function createSceneSettingsDraftPreview(
+  state: SceneSettingsPreviewState,
   projectDocumentKey: string,
   settings: SceneSettingsDraft,
 ): SceneSettingsPreviewState {
-  return { status: "draft", projectDocumentKey, settings };
+  return { ...state, draft: { projectDocumentKey, settings } };
 }
 
 export function holdSceneSettingsPreviewUntilReady(
+  state: SceneSettingsPreviewState,
   projectDocumentKey: string,
   settings: SceneSettingsDraft,
   revision: number,
 ): SceneSettingsPreviewState {
-  return { status: "awaiting-ready", projectDocumentKey, settings, revision };
+  return {
+    draft: null,
+    awaitingReady: { projectDocumentKey, settings, revision },
+  };
 }
 
 export function resolveSceneSettingsPreview(
-  state: SceneSettingsPreviewState | null,
+  state: SceneSettingsPreviewState,
   projectDocumentKey: string | null,
   themeBackground: string,
 ): ResolvedSceneSettingsPreview | null {
-  if (state === null || state.projectDocumentKey !== projectDocumentKey) return null;
+  const preview = state.draft ?? state.awaitingReady;
+  if (preview === null || preview.projectDocumentKey !== projectDocumentKey) return null;
   return {
-    background: themeBackgroundForSettings(state.settings, themeBackground),
-    grid: state.settings.grid,
-    lighting: state.settings.lighting,
+    background: themeBackgroundForSettings(preview.settings, themeBackground),
+    grid: preview.settings.grid,
+    lighting: preview.settings.lighting,
   };
 }
 
 export function releaseSceneSettingsPreviewOnReady(
-  state: SceneSettingsPreviewState | null,
+  state: SceneSettingsPreviewState,
   projectDocumentKey: string,
   revision: number,
-): SceneSettingsPreviewState | null {
+): SceneSettingsPreviewState {
+  const awaiting = state.awaitingReady;
   if (
-    state?.status === "awaiting-ready" &&
-    state.projectDocumentKey === projectDocumentKey &&
-    revision >= state.revision
+    awaiting !== null &&
+    awaiting.projectDocumentKey === projectDocumentKey &&
+    revision >= awaiting.revision
   ) {
-    return null;
+    return { ...state, awaitingReady: null };
   }
   return state;
 }
 
 export function closeSceneSettingsDraftPreview(
-  state: SceneSettingsPreviewState | null,
-): SceneSettingsPreviewState | null {
-  return state?.status === "draft" ? null : state;
+  state: SceneSettingsPreviewState,
+): SceneSettingsPreviewState {
+  return state.draft === null ? state : { ...state, draft: null };
 }
