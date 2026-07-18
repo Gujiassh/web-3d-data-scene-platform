@@ -1,0 +1,929 @@
+{
+  "version": 1,
+  "viewport": { "width": 1440, "height": 900, "dpr": 1 },
+  "camera": { "position": [0, 0, 12], "target": [0, 0, 0], "fov": 45 },
+  "rigidSurface": {
+    "entityId": "007-calibration-rigid-entity",
+    "assetHash": "007-calibration-rigid-surface-v1",
+    "nodeIndex": 1,
+    "size": [12.5, 7, 0.1]
+  },
+  "markers": [
+    { "id": "surface-001", "nodeLocalPosition": [-5.7, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-002",
+      "nodeLocalPosition": [-5.1000000000000005, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-003", "nodeLocalPosition": [-4.5, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-004",
+      "nodeLocalPosition": [-3.9000000000000004, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-005",
+      "nodeLocalPosition": [-3.3000000000000003, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-006", "nodeLocalPosition": [-2.7, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-007",
+      "nodeLocalPosition": [-2.1000000000000005, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-008", "nodeLocalPosition": [-1.5, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-009",
+      "nodeLocalPosition": [-0.9000000000000004, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-010",
+      "nodeLocalPosition": [-0.3000000000000007, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-011",
+      "nodeLocalPosition": [0.2999999999999998, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-012",
+      "nodeLocalPosition": [0.8999999999999995, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-013",
+      "nodeLocalPosition": [1.4999999999999991, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-014",
+      "nodeLocalPosition": [2.0999999999999996, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-015", "nodeLocalPosition": [2.7, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    { "id": "surface-016", "nodeLocalPosition": [3.3, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-017",
+      "nodeLocalPosition": [3.8999999999999995, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-018",
+      "nodeLocalPosition": [4.499999999999999, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-019",
+      "nodeLocalPosition": [5.099999999999999, -2.7, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-020", "nodeLocalPosition": [5.7, -2.7, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    { "id": "surface-021", "nodeLocalPosition": [-5.7, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-022",
+      "nodeLocalPosition": [-5.1000000000000005, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-023", "nodeLocalPosition": [-4.5, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-024",
+      "nodeLocalPosition": [-3.9000000000000004, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-025",
+      "nodeLocalPosition": [-3.3000000000000003, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-026", "nodeLocalPosition": [-2.7, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-027",
+      "nodeLocalPosition": [-2.1000000000000005, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-028", "nodeLocalPosition": [-1.5, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-029",
+      "nodeLocalPosition": [-0.9000000000000004, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-030",
+      "nodeLocalPosition": [-0.3000000000000007, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-031",
+      "nodeLocalPosition": [0.2999999999999998, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-032",
+      "nodeLocalPosition": [0.8999999999999995, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-033",
+      "nodeLocalPosition": [1.4999999999999991, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-034",
+      "nodeLocalPosition": [2.0999999999999996, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-035", "nodeLocalPosition": [2.7, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    { "id": "surface-036", "nodeLocalPosition": [3.3, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-037",
+      "nodeLocalPosition": [3.8999999999999995, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-038",
+      "nodeLocalPosition": [4.499999999999999, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-039",
+      "nodeLocalPosition": [5.099999999999999, -2.1, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-040", "nodeLocalPosition": [5.7, -2.1, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-041",
+      "nodeLocalPosition": [-5.7, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-042",
+      "nodeLocalPosition": [-5.1000000000000005, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-043",
+      "nodeLocalPosition": [-4.5, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-044",
+      "nodeLocalPosition": [-3.9000000000000004, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-045",
+      "nodeLocalPosition": [-3.3000000000000003, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-046",
+      "nodeLocalPosition": [-2.7, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-047",
+      "nodeLocalPosition": [-2.1000000000000005, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-048",
+      "nodeLocalPosition": [-1.5, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-049",
+      "nodeLocalPosition": [-0.9000000000000004, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-050",
+      "nodeLocalPosition": [-0.3000000000000007, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-051",
+      "nodeLocalPosition": [0.2999999999999998, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-052",
+      "nodeLocalPosition": [0.8999999999999995, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-053",
+      "nodeLocalPosition": [1.4999999999999991, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-054",
+      "nodeLocalPosition": [2.0999999999999996, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-055",
+      "nodeLocalPosition": [2.7, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-056",
+      "nodeLocalPosition": [3.3, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-057",
+      "nodeLocalPosition": [3.8999999999999995, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-058",
+      "nodeLocalPosition": [4.499999999999999, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-059",
+      "nodeLocalPosition": [5.099999999999999, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-060",
+      "nodeLocalPosition": [5.7, -1.5000000000000002, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-061",
+      "nodeLocalPosition": [-5.7, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-062",
+      "nodeLocalPosition": [-5.1000000000000005, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-063",
+      "nodeLocalPosition": [-4.5, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-064",
+      "nodeLocalPosition": [-3.9000000000000004, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-065",
+      "nodeLocalPosition": [-3.3000000000000003, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-066",
+      "nodeLocalPosition": [-2.7, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-067",
+      "nodeLocalPosition": [-2.1000000000000005, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-068",
+      "nodeLocalPosition": [-1.5, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-069",
+      "nodeLocalPosition": [-0.9000000000000004, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-070",
+      "nodeLocalPosition": [-0.3000000000000007, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-071",
+      "nodeLocalPosition": [0.2999999999999998, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-072",
+      "nodeLocalPosition": [0.8999999999999995, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-073",
+      "nodeLocalPosition": [1.4999999999999991, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-074",
+      "nodeLocalPosition": [2.0999999999999996, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-075",
+      "nodeLocalPosition": [2.7, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-076",
+      "nodeLocalPosition": [3.3, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-077",
+      "nodeLocalPosition": [3.8999999999999995, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-078",
+      "nodeLocalPosition": [4.499999999999999, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-079",
+      "nodeLocalPosition": [5.099999999999999, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-080",
+      "nodeLocalPosition": [5.7, -0.9000000000000004, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-081",
+      "nodeLocalPosition": [-5.7, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-082",
+      "nodeLocalPosition": [-5.1000000000000005, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-083",
+      "nodeLocalPosition": [-4.5, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-084",
+      "nodeLocalPosition": [-3.9000000000000004, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-085",
+      "nodeLocalPosition": [-3.3000000000000003, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-086",
+      "nodeLocalPosition": [-2.7, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-087",
+      "nodeLocalPosition": [-2.1000000000000005, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-088",
+      "nodeLocalPosition": [-1.5, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-089",
+      "nodeLocalPosition": [-0.9000000000000004, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-090",
+      "nodeLocalPosition": [-0.3000000000000007, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-091",
+      "nodeLocalPosition": [0.2999999999999998, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-092",
+      "nodeLocalPosition": [0.8999999999999995, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-093",
+      "nodeLocalPosition": [1.4999999999999991, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-094",
+      "nodeLocalPosition": [2.0999999999999996, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-095",
+      "nodeLocalPosition": [2.7, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-096",
+      "nodeLocalPosition": [3.3, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-097",
+      "nodeLocalPosition": [3.8999999999999995, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-098",
+      "nodeLocalPosition": [4.499999999999999, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-099",
+      "nodeLocalPosition": [5.099999999999999, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-100",
+      "nodeLocalPosition": [5.7, -0.30000000000000027, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-101",
+      "nodeLocalPosition": [-5.7, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-102",
+      "nodeLocalPosition": [-5.1000000000000005, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-103",
+      "nodeLocalPosition": [-4.5, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-104",
+      "nodeLocalPosition": [-3.9000000000000004, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-105",
+      "nodeLocalPosition": [-3.3000000000000003, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-106",
+      "nodeLocalPosition": [-2.7, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-107",
+      "nodeLocalPosition": [-2.1000000000000005, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-108",
+      "nodeLocalPosition": [-1.5, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-109",
+      "nodeLocalPosition": [-0.9000000000000004, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-110",
+      "nodeLocalPosition": [-0.3000000000000007, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-111",
+      "nodeLocalPosition": [0.2999999999999998, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-112",
+      "nodeLocalPosition": [0.8999999999999995, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-113",
+      "nodeLocalPosition": [1.4999999999999991, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-114",
+      "nodeLocalPosition": [2.0999999999999996, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-115",
+      "nodeLocalPosition": [2.7, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-116",
+      "nodeLocalPosition": [3.3, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-117",
+      "nodeLocalPosition": [3.8999999999999995, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-118",
+      "nodeLocalPosition": [4.499999999999999, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-119",
+      "nodeLocalPosition": [5.099999999999999, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-120",
+      "nodeLocalPosition": [5.7, 0.2999999999999998, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-121",
+      "nodeLocalPosition": [-5.7, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-122",
+      "nodeLocalPosition": [-5.1000000000000005, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-123",
+      "nodeLocalPosition": [-4.5, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-124",
+      "nodeLocalPosition": [-3.9000000000000004, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-125",
+      "nodeLocalPosition": [-3.3000000000000003, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-126",
+      "nodeLocalPosition": [-2.7, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-127",
+      "nodeLocalPosition": [-2.1000000000000005, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-128",
+      "nodeLocalPosition": [-1.5, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-129",
+      "nodeLocalPosition": [-0.9000000000000004, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-130",
+      "nodeLocalPosition": [-0.3000000000000007, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-131",
+      "nodeLocalPosition": [0.2999999999999998, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-132",
+      "nodeLocalPosition": [0.8999999999999995, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-133",
+      "nodeLocalPosition": [1.4999999999999991, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-134",
+      "nodeLocalPosition": [2.0999999999999996, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-135",
+      "nodeLocalPosition": [2.7, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-136",
+      "nodeLocalPosition": [3.3, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-137",
+      "nodeLocalPosition": [3.8999999999999995, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-138",
+      "nodeLocalPosition": [4.499999999999999, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-139",
+      "nodeLocalPosition": [5.099999999999999, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-140",
+      "nodeLocalPosition": [5.7, 0.8999999999999995, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-141", "nodeLocalPosition": [-5.7, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-142",
+      "nodeLocalPosition": [-5.1000000000000005, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-143", "nodeLocalPosition": [-4.5, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-144",
+      "nodeLocalPosition": [-3.9000000000000004, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-145",
+      "nodeLocalPosition": [-3.3000000000000003, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-146", "nodeLocalPosition": [-2.7, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-147",
+      "nodeLocalPosition": [-2.1000000000000005, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-148", "nodeLocalPosition": [-1.5, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-149",
+      "nodeLocalPosition": [-0.9000000000000004, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-150",
+      "nodeLocalPosition": [-0.3000000000000007, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-151",
+      "nodeLocalPosition": [0.2999999999999998, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-152",
+      "nodeLocalPosition": [0.8999999999999995, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-153",
+      "nodeLocalPosition": [1.4999999999999991, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-154",
+      "nodeLocalPosition": [2.0999999999999996, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-155", "nodeLocalPosition": [2.7, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    { "id": "surface-156", "nodeLocalPosition": [3.3, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-157",
+      "nodeLocalPosition": [3.8999999999999995, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-158",
+      "nodeLocalPosition": [4.499999999999999, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-159",
+      "nodeLocalPosition": [5.099999999999999, 1.5, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    { "id": "surface-160", "nodeLocalPosition": [5.7, 1.5, 0.06], "nodeLocalNormal": [0, 0, 1] },
+    {
+      "id": "surface-161",
+      "nodeLocalPosition": [-5.7, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-162",
+      "nodeLocalPosition": [-5.1000000000000005, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-163",
+      "nodeLocalPosition": [-4.5, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-164",
+      "nodeLocalPosition": [-3.9000000000000004, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-165",
+      "nodeLocalPosition": [-3.3000000000000003, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-166",
+      "nodeLocalPosition": [-2.7, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-167",
+      "nodeLocalPosition": [-2.1000000000000005, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-168",
+      "nodeLocalPosition": [-1.5, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-169",
+      "nodeLocalPosition": [-0.9000000000000004, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-170",
+      "nodeLocalPosition": [-0.3000000000000007, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-171",
+      "nodeLocalPosition": [0.2999999999999998, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-172",
+      "nodeLocalPosition": [0.8999999999999995, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-173",
+      "nodeLocalPosition": [1.4999999999999991, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-174",
+      "nodeLocalPosition": [2.0999999999999996, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-175",
+      "nodeLocalPosition": [2.7, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-176",
+      "nodeLocalPosition": [3.3, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-177",
+      "nodeLocalPosition": [3.8999999999999995, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-178",
+      "nodeLocalPosition": [4.499999999999999, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-179",
+      "nodeLocalPosition": [5.099999999999999, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-180",
+      "nodeLocalPosition": [5.7, 2.0999999999999996, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-181",
+      "nodeLocalPosition": [-5.7, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-182",
+      "nodeLocalPosition": [-5.1000000000000005, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-183",
+      "nodeLocalPosition": [-4.5, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-184",
+      "nodeLocalPosition": [-3.9000000000000004, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-185",
+      "nodeLocalPosition": [-3.3000000000000003, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-186",
+      "nodeLocalPosition": [-2.7, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-187",
+      "nodeLocalPosition": [-2.1000000000000005, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-188",
+      "nodeLocalPosition": [-1.5, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-189",
+      "nodeLocalPosition": [-0.9000000000000004, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-190",
+      "nodeLocalPosition": [-0.3000000000000007, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-191",
+      "nodeLocalPosition": [0.2999999999999998, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-192",
+      "nodeLocalPosition": [0.8999999999999995, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-193",
+      "nodeLocalPosition": [1.4999999999999991, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-194",
+      "nodeLocalPosition": [2.0999999999999996, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-195",
+      "nodeLocalPosition": [2.7, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-196",
+      "nodeLocalPosition": [3.3, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-197",
+      "nodeLocalPosition": [3.8999999999999995, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-198",
+      "nodeLocalPosition": [4.499999999999999, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-199",
+      "nodeLocalPosition": [5.099999999999999, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    },
+    {
+      "id": "surface-200",
+      "nodeLocalPosition": [5.7, 2.6999999999999993, 0.06],
+      "nodeLocalNormal": [0, 0, 1]
+    }
+  ]
+}

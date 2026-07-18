@@ -57,11 +57,13 @@
 
 - [x] CHK029 Independent Critical UX and data-contract review has completed with every finding reconciled.
 - [x] CHK030 The user approved the SceneDocument 1.4 direction and no-count-cap calibration scope on 2026-07-17.
-- [ ] CHK031 Design calibration has validated the 200-visible render threshold without production/schema edits.
-- [ ] CHK032 The implementation plan/tasks and calibrated complete contract have independent final review and explicit
-      user implementation approval before production/schema edits.
+- [x] CHK031 Design calibration validated exact identity, 200 visible markers, browser paint latency, cleanup, picking,
+      occlusion and real pointer input on hardware Chrome without production/schema edits; Critical re-review passed on
+      2026-07-18 with no remaining findings.
+- [x] CHK032 The implementation plan/tasks and calibrated complete contract received independent final review and
+      explicit user implementation approval on 2026-07-18 before production/schema edits.
 
 ## Notes
 
-- CHK029-CHK032 intentionally remain open. Direction approval permits calibration/planning, not implementation.
-- SceneDocument 1.3 remains the production authority until CHK032 closes after final implementation approval.
+- CHK032 is closed. Production implementation may proceed only within the approved complete contract and plan.
+- SceneDocument 1.3 remains the production authority until the approved migration is implemented and accepted.

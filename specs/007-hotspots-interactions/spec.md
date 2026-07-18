@@ -2,13 +2,13 @@
 
 **Feature Branch**: `007-hotspots-interactions`
 **Created**: 2026-07-17
-**Status**: Direction approved 2026-07-17; calibration and final implementation approval pending
+**Status**: Direction approved 2026-07-17; calibration and implementation approval complete 2026-07-18
 **Input**: Add precise surface hotspots and simple declarative interactions through direct Canvas manipulation, without exposing technical forms.
 
-> **Approval gate**: This specification freezes the proposed user experience. The linked SceneDocument 1.4 model,
-> migration, command and save semantics remain proposals. Initial user approval authorizes design calibration and
-> implementation planning only. Production code, persisted data and save behavior MUST remain at SceneDocument 1.3
-> until the calibrated complete contract receives final implementation approval.
+> **Approval gate**: This specification freezes the approved user experience. The linked SceneDocument 1.4 model,
+> migration, command and save semantics received explicit implementation approval on 2026-07-18 after calibration and
+> Critical closure. SceneDocument 1.3 remains production authority until the approved migration is implemented and
+> accepted.
 
 ## Problem
 
@@ -302,8 +302,10 @@ legacy values and inject invalid or failed storage writes. Confirm all-or-nothin
 - **NFR-003**: During active placement or reposition, pointer-to-preview latency p95 MUST be at most 50ms. Preview MUST
   track the pointer without easing and surface raycasts MUST not run while authoring interaction is idle.
 - **NFR-004**: With 200 visible hotspots on the deterministic acceptance fixture at fixed 1440x900 DPR1 in recorded
-  hardware Chromium, warmed render p95 MUST remain at most 16.7ms and hotspot overhead p95 MUST be at most 2ms versus
-  the same camera with zero hotspots. Final thresholds require design calibration before production acceptance.
+  hardware Chromium, warmed full CPU frame work MUST remain at most 16.7ms p95 and the 200-versus-zero p95 delta MUST
+  remain at most 2ms. GPU timer p95 MUST remain at most 16.7ms when supported. Presented 60Hz RAF interval p95 MUST
+  remain at most 17.5ms with zero intervals above 25ms. Projection/occlusion, DOM/marker update and marker picking MUST
+  each remain at most 2ms p95. Production acceptance MUST rerun the calibrated protocol through production modules.
 - **NFR-005**: Hover/focus feedback MUST complete in about 100ms, popover enter in about 160ms and exit in about
   100ms. Drag preview has no easing. No error uses shake or decorative motion.
 - **NFR-006**: `prefers-reduced-motion` MUST remove translations, pulses and settle motion while retaining immediate
@@ -378,8 +380,8 @@ performance baseline. This closes direction gate CHK030 and permits design calib
 6. Add complete-snapshot add/update/remove commands, locked exceptions, delete cascades and no-copy-on-duplicate
    semantics.
 
-The detailed proposal is in [data-model.md](data-model.md) and
-[contracts/scene-document-1.4.md](contracts/scene-document-1.4.md). After direction approval, calibration may tighten
-the defaults/performance budget and the project will produce the full implementation plan and tasks. The user must
-then approve that calibrated complete contract before any production/schema implementation. SceneDocument 1.3 remains
-authoritative until final implementation approval.
+The detailed approved contract is in [data-model.md](data-model.md) and
+[contracts/scene-document-1.4.md](contracts/scene-document-1.4.md). Calibration completed on 2026-07-18 and is recorded
+in [technical-design.md](technical-design.md), [plan.md](plan.md), [tasks.md](tasks.md) and [review.md](review.md). The
+user explicitly approved the calibrated complete contract on 2026-07-18. SceneDocument 1.3 remains authoritative until
+the approved migration is implemented and accepted.

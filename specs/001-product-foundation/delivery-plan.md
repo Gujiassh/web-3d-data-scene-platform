@@ -121,7 +121,7 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 
 ### 交付
 
-- 选择明确 glTF node/surface 并创建稳定 Target/热点。
+- 点击明确的受支持 glTF node/surface 并创建稳定 Surface hotspot；不自动创建或猜测 Target。
 - 3D Annotation、可访问替代列表和热点检查器。
 - 持久化声明式 click/selection action，使用稳定 ID 和受限 action type。
 - Edit authoring、Run preview 和 Viewer 事件保持同一语义。

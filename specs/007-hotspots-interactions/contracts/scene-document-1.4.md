@@ -1,6 +1,6 @@
 # Contract: SceneDocument 1.4 Hotspot Annotations
 
-**Status**: Direction approved 2026-07-17; calibrated implementation approval pending
+**Status**: Direction approved 2026-07-17; calibrated and approved for implementation 2026-07-18
 **Current production contract**: SceneDocument 1.3.0
 **Proposed contract**: SceneDocument 1.4.0
 **Archive container**: Remains 1.0.0
@@ -12,8 +12,8 @@ implementation planning. Calibration may tighten defaults/performance budgets bu
 behavior or persistence meaning
 without returning for direction approval. A second explicit approval of the calibrated complete contract and plan is
 required before changes to SceneDocument schema/types/validators, migration, archive, IndexedDB, commands, Runtime,
-React or Studio production code. Until then, 1.3 remains authoritative and no production fallback or partial 1.4 is
-allowed.
+React or Studio production code. That approval was received on 2026-07-18. SceneDocument 1.3 remains authoritative until
+the approved migration is implemented and accepted; no production fallback or partial 1.4 is allowed.
 
 ## Type Contract
 
@@ -216,10 +216,16 @@ late callbacks for canceled IDs are ignored. StrictMode MUST not duplicate liste
 - Runtime renders every valid visible Surface anchor without silent count truncation. Two hundred simultaneously visible
   markers are the minimum calibrated acceptance load, not a product/schema limit.
 - Fixed 1440x900 DPR1 hardware Chromium evidence compares zero versus 200 visible markers on a deterministic fixture.
-- Proposed final gate: warmed total render p95 at most 16.7ms and marker overhead p95 at most 2ms. Calibration may
-  tighten the threshold before implementation but cannot introduce a count cap or silently relax it afterward.
+- Final gate: warmed full CPU frame work p95 at most 16.7ms and explicit 200-versus-zero CPU p95 delta at most 2ms.
+  Supported GPU timer query p95 is at most 16.7ms. Projection/occlusion, DOM/marker update and marker pick p95 are each
+  at most 2ms.
+- Fixed 60Hz presented RAF interval p95 is at most 17.5ms, accounting for Chrome's 0.1ms timestamp granularity, with
+  zero intervals above 25ms. This additional cadence oracle does not relax the 16.7ms CPU-work gate.
 - Placement/reposition pointer-to-preview p95 is at most 50ms.
 - Marker geometry/material or instancing strategy must keep resources bounded and prove complete dispose cleanup.
+  Production capacity grows dynamically and never treats 200 as a cap.
+- Opaque visible depth-writing geometry occludes markers. Transparent/transmissive, `depthWrite=false`, zero-opacity
+  and invisible material state does not hide markers or DOM proxies in V1.
 - Marker and list actions have keyboard parity, visible focus, localized accessible names and non-color-only state.
 - Reduced motion removes marker translation/pulse/settle while retaining immediate state feedback.
 
@@ -250,3 +256,6 @@ Approval is requested as one coherent contract rather than piecemeal implementat
 A single explicit approval of all five authorizes planning and non-production calibration. Any rejected item returns
 the design package for revision. After calibration, the resulting complete contract, plan and tasks require one final
 explicit implementation approval; neither approval authorizes a partial schema implementation.
+
+The user gave that final explicit implementation approval on 2026-07-18. All five decisions and the calibrated plan are
+approved as one package.

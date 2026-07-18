@@ -1,0 +1,39 @@
+{
+  "zero": {
+    "state": "zero",
+    "frameCount": 120,
+    "style": { "count": 1, "totalMs": 1.309, "maxMs": 1.309, "perFrame": 0.008333333333333333 },
+    "layout": { "count": 1, "totalMs": 0.082, "maxMs": 0.082, "perFrame": 0.008333333333333333 },
+    "paint": {
+      "count": 121,
+      "totalMs": 5.9670000000000005,
+      "maxMs": 0.324,
+      "perFrame": 1.0083333333333333
+    },
+    "composite": {
+      "count": 356,
+      "totalMs": 0.4300000000000002,
+      "maxMs": 0.171,
+      "perFrame": 2.966666666666667
+    },
+    "runTasksOver50Ms": 0
+  },
+  "markers": {
+    "state": "surface-200",
+    "frameCount": 120,
+    "style": { "count": 1, "totalMs": 1.279, "maxMs": 1.279, "perFrame": 0.008333333333333333 },
+    "layout": { "count": 1, "totalMs": 0.191, "maxMs": 0.191, "perFrame": 0.008333333333333333 },
+    "paint": { "count": 321, "totalMs": 5.927999999999996, "maxMs": 0.352, "perFrame": 2.675 },
+    "composite": {
+      "count": 356,
+      "totalMs": 0.5360000000000001,
+      "maxMs": 0.296,
+      "perFrame": 2.966666666666667
+    },
+    "runTasksOver50Ms": 0
+  },
+  "rawEvents": {
+    "path": "artifacts/performance/007-hotspot-calibration-trace-events.jsonl",
+    "sha256": "8ea704a8c643ad9c0427c9ebc7abe1346397e3508b50b6e00a4409eee79d29d9"
+  }
+}

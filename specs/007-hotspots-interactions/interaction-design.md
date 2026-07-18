@@ -1,6 +1,6 @@
 # Interaction Design: Canvas-First Hotspot Authoring
 
-**Status**: UX direction approved 2026-07-17; implementation blocked on calibrated final approval
+**Status**: UX direction approved 2026-07-17; calibrated implementation approved 2026-07-18
 **Method**: Direct manipulation, progressive disclosure and purposeful feedback
 **Primary user**: A solution engineer preparing an interactive 3D scene
 
@@ -212,6 +212,8 @@ that event, but host routes, callback names and arbitrary payloads are never aut
   mutation.
 - An unresolved visible item is not rendered on Canvas and is disabled in the Run list with a localized reason. It
   remains locally saveable/exportable with a diagnostic; Feature 008 decides publish readiness.
+- Marker/DOM-proxy occlusion uses visible opaque depth-writing geometry. Transparent/transmissive materials,
+  `depthWrite=false`, zero opacity and invisible material state do not hide a marker in V1.
 
 ## Feedback And Motion
 

@@ -1,6 +1,6 @@
 # Data Model: Hotspots And Declarative Interactions
 
-**Status**: Direction approved 2026-07-17; calibrated final contract not approved or implemented
+**Status**: Calibrated final contract approved 2026-07-18; implementation in progress
 **Current production authority**: SceneDocument 1.3
 
 ## Model Decision

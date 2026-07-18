@@ -1,0 +1,1542 @@
+{
+  "generatedAt": "2026-07-18T09:03:29.486Z",
+  "acceptanceEligible": true,
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "memory": {
+      "garbageCollectionAvailable": true,
+      "beforeCleanup": {
+        "jsHeapSizeLimit": 4395630592,
+        "totalJSHeapSize": 15510837,
+        "usedJSHeapSize": 14671729
+      },
+      "afterCleanup": {
+        "jsHeapSizeLimit": 4395630592,
+        "totalJSHeapSize": 15510837,
+        "usedJSHeapSize": 14671729
+      },
+      "usedHeapDelta": 0
+    }
+  },
+  "viewport": { "width": 1440, "height": 900, "deviceScaleFactor": 1 },
+  "fixture": {
+    "path": "artifacts/performance/007-hotspot-calibration-fixture.json",
+    "sha256": "3958d1fb5060a36a9e0db7374a6361abdc61770f74114c296418fab047485e4a"
+  },
+  "harnessSource": [
+    {
+      "path": "benchmarks/007-hotspot-calibration/index.html",
+      "sha256": "78a540afb881a332cbc1123c8552d30ca9d63a9b3345befc2e11d7da34ef6f54"
+    },
+    {
+      "path": "benchmarks/007-hotspot-calibration/main.ts",
+      "sha256": "e322b9ce1130429f60565e7079c8d8511f4b7dafac38bd0efb6ae0f706bd17c7"
+    },
+    {
+      "path": "benchmarks/007-hotspot-calibration/hotspot-overlay-candidate.ts",
+      "sha256": "404bac70194fff79bd907f244f3016a6ec236beffc2adf428a3750fa1d269119"
+    },
+    {
+      "path": "benchmarks/007-hotspot-calibration/hotspot-surface-index-candidate.ts",
+      "sha256": "08bd3f79cb0fe61feb891bb5cf87656a3c07c12ca3d8666d69586d10d3212231"
+    },
+    {
+      "path": "benchmarks/007-hotspot-calibration/run.mts",
+      "sha256": "85fb5f552461c0ee94eff266c498fc870ec3d292265cf2f3b3eeec742d6b4e22"
+    }
+  ],
+  "protocol": {
+    "markerCount": 200,
+    "warmupSamples": 30,
+    "measuredSamples": 300,
+    "traceFrames": 120,
+    "cpuFrameWorkP95LimitMs": 16.7,
+    "presentedFrameIntervalP95LimitMs": 17.5,
+    "markerCpuP95DeltaLimitMs": 2,
+    "markerPickP95LimitMs": 2,
+    "pointerPreviewP95LimitMs": 50,
+    "proxyErrorLimitCssPixels": 1,
+    "droppedFrameIntervalMs": 25,
+    "idleObservationMsPerMode": 2000
+  },
+  "result": {
+    "fixture": {
+      "version": 1,
+      "viewport": { "width": 1440, "height": 900, "dpr": 1 },
+      "camera": { "position": [0, 0, 12], "target": [0, 0, 0], "fov": 45 },
+      "rigidSurface": {
+        "entityId": "007-calibration-rigid-entity",
+        "assetHash": "007-calibration-rigid-surface-v1",
+        "nodeIndex": 1,
+        "size": [12.5, 7, 0.1]
+      },
+      "markers": [
+        {
+          "id": "surface-001",
+          "nodeLocalPosition": [-5.7, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-002",
+          "nodeLocalPosition": [-5.1000000000000005, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-003",
+          "nodeLocalPosition": [-4.5, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-004",
+          "nodeLocalPosition": [-3.9000000000000004, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-005",
+          "nodeLocalPosition": [-3.3000000000000003, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-006",
+          "nodeLocalPosition": [-2.7, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-007",
+          "nodeLocalPosition": [-2.1000000000000005, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-008",
+          "nodeLocalPosition": [-1.5, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-009",
+          "nodeLocalPosition": [-0.9000000000000004, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-010",
+          "nodeLocalPosition": [-0.3000000000000007, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-011",
+          "nodeLocalPosition": [0.2999999999999998, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-012",
+          "nodeLocalPosition": [0.8999999999999995, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-013",
+          "nodeLocalPosition": [1.4999999999999991, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-014",
+          "nodeLocalPosition": [2.0999999999999996, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-015",
+          "nodeLocalPosition": [2.7, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-016",
+          "nodeLocalPosition": [3.3, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-017",
+          "nodeLocalPosition": [3.8999999999999995, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-018",
+          "nodeLocalPosition": [4.499999999999999, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-019",
+          "nodeLocalPosition": [5.099999999999999, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-020",
+          "nodeLocalPosition": [5.7, -2.7, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-021",
+          "nodeLocalPosition": [-5.7, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-022",
+          "nodeLocalPosition": [-5.1000000000000005, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-023",
+          "nodeLocalPosition": [-4.5, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-024",
+          "nodeLocalPosition": [-3.9000000000000004, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-025",
+          "nodeLocalPosition": [-3.3000000000000003, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-026",
+          "nodeLocalPosition": [-2.7, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-027",
+          "nodeLocalPosition": [-2.1000000000000005, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-028",
+          "nodeLocalPosition": [-1.5, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-029",
+          "nodeLocalPosition": [-0.9000000000000004, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-030",
+          "nodeLocalPosition": [-0.3000000000000007, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-031",
+          "nodeLocalPosition": [0.2999999999999998, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-032",
+          "nodeLocalPosition": [0.8999999999999995, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-033",
+          "nodeLocalPosition": [1.4999999999999991, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-034",
+          "nodeLocalPosition": [2.0999999999999996, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-035",
+          "nodeLocalPosition": [2.7, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-036",
+          "nodeLocalPosition": [3.3, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-037",
+          "nodeLocalPosition": [3.8999999999999995, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-038",
+          "nodeLocalPosition": [4.499999999999999, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-039",
+          "nodeLocalPosition": [5.099999999999999, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-040",
+          "nodeLocalPosition": [5.7, -2.1, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-041",
+          "nodeLocalPosition": [-5.7, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-042",
+          "nodeLocalPosition": [-5.1000000000000005, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-043",
+          "nodeLocalPosition": [-4.5, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-044",
+          "nodeLocalPosition": [-3.9000000000000004, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-045",
+          "nodeLocalPosition": [-3.3000000000000003, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-046",
+          "nodeLocalPosition": [-2.7, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-047",
+          "nodeLocalPosition": [-2.1000000000000005, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-048",
+          "nodeLocalPosition": [-1.5, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-049",
+          "nodeLocalPosition": [-0.9000000000000004, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-050",
+          "nodeLocalPosition": [-0.3000000000000007, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-051",
+          "nodeLocalPosition": [0.2999999999999998, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-052",
+          "nodeLocalPosition": [0.8999999999999995, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-053",
+          "nodeLocalPosition": [1.4999999999999991, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-054",
+          "nodeLocalPosition": [2.0999999999999996, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-055",
+          "nodeLocalPosition": [2.7, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-056",
+          "nodeLocalPosition": [3.3, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-057",
+          "nodeLocalPosition": [3.8999999999999995, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-058",
+          "nodeLocalPosition": [4.499999999999999, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-059",
+          "nodeLocalPosition": [5.099999999999999, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-060",
+          "nodeLocalPosition": [5.7, -1.5000000000000002, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-061",
+          "nodeLocalPosition": [-5.7, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-062",
+          "nodeLocalPosition": [-5.1000000000000005, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-063",
+          "nodeLocalPosition": [-4.5, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-064",
+          "nodeLocalPosition": [-3.9000000000000004, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-065",
+          "nodeLocalPosition": [-3.3000000000000003, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-066",
+          "nodeLocalPosition": [-2.7, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-067",
+          "nodeLocalPosition": [-2.1000000000000005, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-068",
+          "nodeLocalPosition": [-1.5, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-069",
+          "nodeLocalPosition": [-0.9000000000000004, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-070",
+          "nodeLocalPosition": [-0.3000000000000007, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-071",
+          "nodeLocalPosition": [0.2999999999999998, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-072",
+          "nodeLocalPosition": [0.8999999999999995, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-073",
+          "nodeLocalPosition": [1.4999999999999991, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-074",
+          "nodeLocalPosition": [2.0999999999999996, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-075",
+          "nodeLocalPosition": [2.7, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-076",
+          "nodeLocalPosition": [3.3, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-077",
+          "nodeLocalPosition": [3.8999999999999995, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-078",
+          "nodeLocalPosition": [4.499999999999999, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-079",
+          "nodeLocalPosition": [5.099999999999999, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-080",
+          "nodeLocalPosition": [5.7, -0.9000000000000004, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-081",
+          "nodeLocalPosition": [-5.7, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-082",
+          "nodeLocalPosition": [-5.1000000000000005, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-083",
+          "nodeLocalPosition": [-4.5, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-084",
+          "nodeLocalPosition": [-3.9000000000000004, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-085",
+          "nodeLocalPosition": [-3.3000000000000003, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-086",
+          "nodeLocalPosition": [-2.7, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-087",
+          "nodeLocalPosition": [-2.1000000000000005, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-088",
+          "nodeLocalPosition": [-1.5, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-089",
+          "nodeLocalPosition": [-0.9000000000000004, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-090",
+          "nodeLocalPosition": [-0.3000000000000007, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-091",
+          "nodeLocalPosition": [0.2999999999999998, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-092",
+          "nodeLocalPosition": [0.8999999999999995, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-093",
+          "nodeLocalPosition": [1.4999999999999991, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-094",
+          "nodeLocalPosition": [2.0999999999999996, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-095",
+          "nodeLocalPosition": [2.7, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-096",
+          "nodeLocalPosition": [3.3, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-097",
+          "nodeLocalPosition": [3.8999999999999995, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-098",
+          "nodeLocalPosition": [4.499999999999999, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-099",
+          "nodeLocalPosition": [5.099999999999999, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-100",
+          "nodeLocalPosition": [5.7, -0.30000000000000027, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-101",
+          "nodeLocalPosition": [-5.7, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-102",
+          "nodeLocalPosition": [-5.1000000000000005, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-103",
+          "nodeLocalPosition": [-4.5, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-104",
+          "nodeLocalPosition": [-3.9000000000000004, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-105",
+          "nodeLocalPosition": [-3.3000000000000003, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-106",
+          "nodeLocalPosition": [-2.7, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-107",
+          "nodeLocalPosition": [-2.1000000000000005, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-108",
+          "nodeLocalPosition": [-1.5, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-109",
+          "nodeLocalPosition": [-0.9000000000000004, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-110",
+          "nodeLocalPosition": [-0.3000000000000007, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-111",
+          "nodeLocalPosition": [0.2999999999999998, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-112",
+          "nodeLocalPosition": [0.8999999999999995, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-113",
+          "nodeLocalPosition": [1.4999999999999991, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-114",
+          "nodeLocalPosition": [2.0999999999999996, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-115",
+          "nodeLocalPosition": [2.7, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-116",
+          "nodeLocalPosition": [3.3, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-117",
+          "nodeLocalPosition": [3.8999999999999995, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-118",
+          "nodeLocalPosition": [4.499999999999999, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-119",
+          "nodeLocalPosition": [5.099999999999999, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-120",
+          "nodeLocalPosition": [5.7, 0.2999999999999998, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-121",
+          "nodeLocalPosition": [-5.7, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-122",
+          "nodeLocalPosition": [-5.1000000000000005, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-123",
+          "nodeLocalPosition": [-4.5, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-124",
+          "nodeLocalPosition": [-3.9000000000000004, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-125",
+          "nodeLocalPosition": [-3.3000000000000003, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-126",
+          "nodeLocalPosition": [-2.7, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-127",
+          "nodeLocalPosition": [-2.1000000000000005, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-128",
+          "nodeLocalPosition": [-1.5, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-129",
+          "nodeLocalPosition": [-0.9000000000000004, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-130",
+          "nodeLocalPosition": [-0.3000000000000007, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-131",
+          "nodeLocalPosition": [0.2999999999999998, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-132",
+          "nodeLocalPosition": [0.8999999999999995, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-133",
+          "nodeLocalPosition": [1.4999999999999991, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-134",
+          "nodeLocalPosition": [2.0999999999999996, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-135",
+          "nodeLocalPosition": [2.7, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-136",
+          "nodeLocalPosition": [3.3, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-137",
+          "nodeLocalPosition": [3.8999999999999995, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-138",
+          "nodeLocalPosition": [4.499999999999999, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-139",
+          "nodeLocalPosition": [5.099999999999999, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-140",
+          "nodeLocalPosition": [5.7, 0.8999999999999995, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-141",
+          "nodeLocalPosition": [-5.7, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-142",
+          "nodeLocalPosition": [-5.1000000000000005, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-143",
+          "nodeLocalPosition": [-4.5, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-144",
+          "nodeLocalPosition": [-3.9000000000000004, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-145",
+          "nodeLocalPosition": [-3.3000000000000003, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-146",
+          "nodeLocalPosition": [-2.7, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-147",
+          "nodeLocalPosition": [-2.1000000000000005, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-148",
+          "nodeLocalPosition": [-1.5, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-149",
+          "nodeLocalPosition": [-0.9000000000000004, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-150",
+          "nodeLocalPosition": [-0.3000000000000007, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-151",
+          "nodeLocalPosition": [0.2999999999999998, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-152",
+          "nodeLocalPosition": [0.8999999999999995, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-153",
+          "nodeLocalPosition": [1.4999999999999991, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-154",
+          "nodeLocalPosition": [2.0999999999999996, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-155",
+          "nodeLocalPosition": [2.7, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-156",
+          "nodeLocalPosition": [3.3, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-157",
+          "nodeLocalPosition": [3.8999999999999995, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-158",
+          "nodeLocalPosition": [4.499999999999999, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-159",
+          "nodeLocalPosition": [5.099999999999999, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-160",
+          "nodeLocalPosition": [5.7, 1.5, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-161",
+          "nodeLocalPosition": [-5.7, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-162",
+          "nodeLocalPosition": [-5.1000000000000005, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-163",
+          "nodeLocalPosition": [-4.5, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-164",
+          "nodeLocalPosition": [-3.9000000000000004, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-165",
+          "nodeLocalPosition": [-3.3000000000000003, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-166",
+          "nodeLocalPosition": [-2.7, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-167",
+          "nodeLocalPosition": [-2.1000000000000005, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-168",
+          "nodeLocalPosition": [-1.5, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-169",
+          "nodeLocalPosition": [-0.9000000000000004, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-170",
+          "nodeLocalPosition": [-0.3000000000000007, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-171",
+          "nodeLocalPosition": [0.2999999999999998, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-172",
+          "nodeLocalPosition": [0.8999999999999995, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-173",
+          "nodeLocalPosition": [1.4999999999999991, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-174",
+          "nodeLocalPosition": [2.0999999999999996, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-175",
+          "nodeLocalPosition": [2.7, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-176",
+          "nodeLocalPosition": [3.3, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-177",
+          "nodeLocalPosition": [3.8999999999999995, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-178",
+          "nodeLocalPosition": [4.499999999999999, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-179",
+          "nodeLocalPosition": [5.099999999999999, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-180",
+          "nodeLocalPosition": [5.7, 2.0999999999999996, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-181",
+          "nodeLocalPosition": [-5.7, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-182",
+          "nodeLocalPosition": [-5.1000000000000005, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-183",
+          "nodeLocalPosition": [-4.5, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-184",
+          "nodeLocalPosition": [-3.9000000000000004, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-185",
+          "nodeLocalPosition": [-3.3000000000000003, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-186",
+          "nodeLocalPosition": [-2.7, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-187",
+          "nodeLocalPosition": [-2.1000000000000005, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-188",
+          "nodeLocalPosition": [-1.5, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-189",
+          "nodeLocalPosition": [-0.9000000000000004, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-190",
+          "nodeLocalPosition": [-0.3000000000000007, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-191",
+          "nodeLocalPosition": [0.2999999999999998, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-192",
+          "nodeLocalPosition": [0.8999999999999995, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-193",
+          "nodeLocalPosition": [1.4999999999999991, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-194",
+          "nodeLocalPosition": [2.0999999999999996, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-195",
+          "nodeLocalPosition": [2.7, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-196",
+          "nodeLocalPosition": [3.3, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-197",
+          "nodeLocalPosition": [3.8999999999999995, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-198",
+          "nodeLocalPosition": [4.499999999999999, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-199",
+          "nodeLocalPosition": [5.099999999999999, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        },
+        {
+          "id": "surface-200",
+          "nodeLocalPosition": [5.7, 2.6999999999999993, 0.06],
+          "nodeLocalNormal": [0, 0, 1]
+        }
+      ]
+    },
+    "construction": { "overlayMs": 0.8999999761581421, "compileMs": 15.799999952316284 },
+    "states": [
+      {
+        "state": "zero",
+        "warmupCount": 30,
+        "measuredCount": 300,
+        "cpuWork": {
+          "measuredCount": 300,
+          "medianMs": 0.19999992847442627,
+          "p95Ms": 0.3999999761581421,
+          "maxMs": 0.8999999761581421
+        },
+        "frameInterval": {
+          "measuredCount": 300,
+          "medianMs": 16.699999999999818,
+          "p95Ms": 16.799999999999955,
+          "maxMs": 16.899999999999864
+        },
+        "projectionOcclusion": {
+          "measuredCount": 300,
+          "medianMs": 0,
+          "p95Ms": 0.10000002384185791,
+          "maxMs": 0.20000004768371582
+        },
+        "domMarkerUpdate": {
+          "measuredCount": 300,
+          "medianMs": 0,
+          "p95Ms": 0.10000002384185791,
+          "maxMs": 0.10000002384185791
+        },
+        "drawCalls": 1,
+        "triangles": 12,
+        "visibleMarkers": 0,
+        "visibleDomProxies": 0,
+        "resolvedAnchorCount": 0,
+        "missedFrameCount": 0
+      },
+      {
+        "state": "surface-200",
+        "warmupCount": 30,
+        "measuredCount": 300,
+        "cpuWork": {
+          "measuredCount": 300,
+          "medianMs": 0.5,
+          "p95Ms": 1.399999976158142,
+          "maxMs": 4.199999928474426
+        },
+        "frameInterval": {
+          "measuredCount": 300,
+          "medianMs": 16.69999999999891,
+          "p95Ms": 16.800000000000182,
+          "maxMs": 16.900000000000546
+        },
+        "projectionOcclusion": {
+          "measuredCount": 300,
+          "medianMs": 0.10000002384185791,
+          "p95Ms": 0.40000009536743164,
+          "maxMs": 1.899999976158142
+        },
+        "domMarkerUpdate": {
+          "measuredCount": 300,
+          "medianMs": 0.20000004768371582,
+          "p95Ms": 0.6999999284744263,
+          "maxMs": 2.5
+        },
+        "drawCalls": 2,
+        "triangles": 3612,
+        "visibleMarkers": 200,
+        "visibleDomProxies": 200,
+        "resolvedAnchorCount": 200,
+        "missedFrameCount": 0
+      }
+    ],
+    "identityResolution": {
+      "expectedResolvedCount": 1,
+      "actualResolvedCount": 1,
+      "visibleIds": ["identity-valid"],
+      "unresolvedIds": ["identity-wrong-entity", "identity-wrong-hash", "identity-wrong-node"],
+      "unresolvedDomAbsent": true,
+      "unresolvedPicksAbsent": true
+    },
+    "markerCpuOverheadP95Ms": 1,
+    "markerFrameIntervalDeltaP95Ms": 2.2737367544323206e-13,
+    "projection": {
+      "measuredCount": 300,
+      "medianMs": 0.3999999761581421,
+      "p95Ms": 1.2000000476837158,
+      "maxMs": 3.899999976158142,
+      "maxProxyErrorCssPixels": 0.00004666350749363205,
+      "movedCameraProxyErrorCssPixels": 0.00005461314547568811,
+      "focusRetainedAfterCameraMove": true,
+      "accessibleNameCount": 200,
+      "uniqueAccessibleNameCount": 200
+    },
+    "picking": {
+      "measuredCount": 300,
+      "medianMs": 0,
+      "p95Ms": 0.10000002384185791,
+      "maxMs": 0.2999999523162842,
+      "correctPickCount": 300,
+      "expectedId": "surface-110",
+      "pickedId": "surface-110",
+      "overlapExpectedId": "overlap-near",
+      "overlapPickedId": "overlap-near",
+      "missPickedId": null
+    },
+    "occlusion": {
+      "measuredCount": 300,
+      "medianMs": 0.5,
+      "p95Ms": 1.6999999284744263,
+      "maxMs": 4.5,
+      "pairCount": 50,
+      "expectedVisibleIds": [
+        "pair-00-visible",
+        "pair-01-visible",
+        "pair-02-visible",
+        "pair-03-visible",
+        "pair-04-visible",
+        "pair-05-visible",
+        "pair-06-visible",
+        "pair-07-visible",
+        "pair-08-visible",
+        "pair-09-visible",
+        "pair-10-visible",
+        "pair-11-visible",
+        "pair-12-visible",
+        "pair-13-visible",
+        "pair-14-visible",
+        "pair-15-visible",
+        "pair-16-visible",
+        "pair-17-visible",
+        "pair-18-visible",
+        "pair-19-visible",
+        "pair-20-visible",
+        "pair-21-visible",
+        "pair-22-visible",
+        "pair-23-visible",
+        "pair-24-visible",
+        "pair-25-visible",
+        "pair-26-visible",
+        "pair-27-visible",
+        "pair-28-visible",
+        "pair-29-visible",
+        "pair-30-visible",
+        "pair-31-visible",
+        "pair-32-visible",
+        "pair-33-visible",
+        "pair-34-visible",
+        "pair-35-visible",
+        "pair-36-visible",
+        "pair-37-visible",
+        "pair-38-visible",
+        "pair-39-visible",
+        "pair-40-visible",
+        "pair-41-visible",
+        "pair-42-visible",
+        "pair-43-visible",
+        "pair-44-visible",
+        "pair-45-visible",
+        "pair-46-visible",
+        "pair-47-visible",
+        "pair-48-visible",
+        "pair-49-visible"
+      ],
+      "actualVisibleIds": [
+        "pair-00-visible",
+        "pair-01-visible",
+        "pair-02-visible",
+        "pair-03-visible",
+        "pair-04-visible",
+        "pair-05-visible",
+        "pair-06-visible",
+        "pair-07-visible",
+        "pair-08-visible",
+        "pair-09-visible",
+        "pair-10-visible",
+        "pair-11-visible",
+        "pair-12-visible",
+        "pair-13-visible",
+        "pair-14-visible",
+        "pair-15-visible",
+        "pair-16-visible",
+        "pair-17-visible",
+        "pair-18-visible",
+        "pair-19-visible",
+        "pair-20-visible",
+        "pair-21-visible",
+        "pair-22-visible",
+        "pair-23-visible",
+        "pair-24-visible",
+        "pair-25-visible",
+        "pair-26-visible",
+        "pair-27-visible",
+        "pair-28-visible",
+        "pair-29-visible",
+        "pair-30-visible",
+        "pair-31-visible",
+        "pair-32-visible",
+        "pair-33-visible",
+        "pair-34-visible",
+        "pair-35-visible",
+        "pair-36-visible",
+        "pair-37-visible",
+        "pair-38-visible",
+        "pair-39-visible",
+        "pair-40-visible",
+        "pair-41-visible",
+        "pair-42-visible",
+        "pair-43-visible",
+        "pair-44-visible",
+        "pair-45-visible",
+        "pair-46-visible",
+        "pair-47-visible",
+        "pair-48-visible",
+        "pair-49-visible"
+      ],
+      "movedExpectedVisibleIds": [
+        "pair-00-occluded",
+        "pair-01-occluded",
+        "pair-02-occluded",
+        "pair-03-occluded",
+        "pair-04-occluded",
+        "pair-05-occluded",
+        "pair-06-occluded",
+        "pair-07-occluded",
+        "pair-08-occluded",
+        "pair-09-occluded",
+        "pair-10-occluded",
+        "pair-11-occluded",
+        "pair-12-occluded",
+        "pair-13-occluded",
+        "pair-14-occluded",
+        "pair-15-occluded",
+        "pair-16-occluded",
+        "pair-17-occluded",
+        "pair-18-occluded",
+        "pair-19-occluded",
+        "pair-20-occluded",
+        "pair-21-occluded",
+        "pair-22-occluded",
+        "pair-23-occluded",
+        "pair-24-occluded",
+        "pair-25-occluded",
+        "pair-26-occluded",
+        "pair-27-occluded",
+        "pair-28-occluded",
+        "pair-29-occluded",
+        "pair-30-occluded",
+        "pair-31-occluded",
+        "pair-32-occluded",
+        "pair-33-occluded",
+        "pair-34-occluded",
+        "pair-35-occluded",
+        "pair-36-occluded",
+        "pair-37-occluded",
+        "pair-38-occluded",
+        "pair-39-occluded",
+        "pair-40-occluded",
+        "pair-41-occluded",
+        "pair-42-occluded",
+        "pair-43-occluded",
+        "pair-44-occluded",
+        "pair-45-occluded",
+        "pair-46-occluded",
+        "pair-47-occluded",
+        "pair-48-occluded",
+        "pair-49-occluded"
+      ],
+      "movedActualVisibleIds": [
+        "pair-00-occluded",
+        "pair-01-occluded",
+        "pair-02-occluded",
+        "pair-03-occluded",
+        "pair-04-occluded",
+        "pair-05-occluded",
+        "pair-06-occluded",
+        "pair-07-occluded",
+        "pair-08-occluded",
+        "pair-09-occluded",
+        "pair-10-occluded",
+        "pair-11-occluded",
+        "pair-12-occluded",
+        "pair-13-occluded",
+        "pair-14-occluded",
+        "pair-15-occluded",
+        "pair-16-occluded",
+        "pair-17-occluded",
+        "pair-18-occluded",
+        "pair-19-occluded",
+        "pair-20-occluded",
+        "pair-21-occluded",
+        "pair-22-occluded",
+        "pair-23-occluded",
+        "pair-24-occluded",
+        "pair-25-occluded",
+        "pair-26-occluded",
+        "pair-27-occluded",
+        "pair-28-occluded",
+        "pair-29-occluded",
+        "pair-30-occluded",
+        "pair-31-occluded",
+        "pair-32-occluded",
+        "pair-33-occluded",
+        "pair-34-occluded",
+        "pair-35-occluded",
+        "pair-36-occluded",
+        "pair-37-occluded",
+        "pair-38-occluded",
+        "pair-39-occluded",
+        "pair-40-occluded",
+        "pair-41-occluded",
+        "pair-42-occluded",
+        "pair-43-occluded",
+        "pair-44-occluded",
+        "pair-45-occluded",
+        "pair-46-occluded",
+        "pair-47-occluded",
+        "pair-48-occluded",
+        "pair-49-occluded"
+      ],
+      "staticFlickerCount": 0,
+      "occludedPickId": null,
+      "transparentMaterialPolicy": "not-an-occluder",
+      "transparentProbeVisible": true,
+      "cameraMotionProbe": {
+        "id": "camera-motion-occluded",
+        "visibleBeforeMove": false,
+        "visibleAfterMove": true
+      }
+    },
+    "gpu": {
+      "supported": true,
+      "warmupCount": 30,
+      "metric": { "measuredCount": 300, "medianMs": 0.495616, "p95Ms": 2.16576, "maxMs": 3.300352 }
+    },
+    "resources": {
+      "markerDrawCalls": 1,
+      "markerTriangles": 3600,
+      "domProxyCount": 200,
+      "geometries": 2,
+      "textures": 1
+    },
+    "longTasks": { "count": 0, "totalMs": 0, "maxMs": 0 },
+    "canvas": {
+      "width": 1440,
+      "height": 900,
+      "distinctColors": 19,
+      "expectedMarkerLocations": 200,
+      "detectedMarkerLocations": 200
+    }
+  },
+  "browserEvidence": {
+    "trace": {
+      "zero": {
+        "state": "zero",
+        "frameCount": 120,
+        "style": { "count": 1, "totalMs": 1.309, "maxMs": 1.309, "perFrame": 0.008333333333333333 },
+        "layout": {
+          "count": 1,
+          "totalMs": 0.082,
+          "maxMs": 0.082,
+          "perFrame": 0.008333333333333333
+        },
+        "paint": {
+          "count": 121,
+          "totalMs": 5.9670000000000005,
+          "maxMs": 0.324,
+          "perFrame": 1.0083333333333333
+        },
+        "composite": {
+          "count": 356,
+          "totalMs": 0.4300000000000002,
+          "maxMs": 0.171,
+          "perFrame": 2.966666666666667
+        },
+        "runTasksOver50Ms": 0
+      },
+      "markers": {
+        "state": "surface-200",
+        "frameCount": 120,
+        "style": { "count": 1, "totalMs": 1.279, "maxMs": 1.279, "perFrame": 0.008333333333333333 },
+        "layout": {
+          "count": 1,
+          "totalMs": 0.191,
+          "maxMs": 0.191,
+          "perFrame": 0.008333333333333333
+        },
+        "paint": { "count": 321, "totalMs": 5.927999999999996, "maxMs": 0.352, "perFrame": 2.675 },
+        "composite": {
+          "count": 356,
+          "totalMs": 0.5360000000000001,
+          "maxMs": 0.296,
+          "perFrame": 2.966666666666667
+        },
+        "runTasksOver50Ms": 0
+      }
+    },
+    "idle": {
+      "editIdle": {
+        "mode": "edit-idle",
+        "durationMs": 2051,
+        "beforeRaycasts": 0,
+        "afterRaycasts": 0
+      },
+      "placementDisabled": {
+        "mode": "placement-disabled",
+        "durationMs": 2050,
+        "beforeRaycasts": 0,
+        "afterRaycasts": 0
+      },
+      "run": { "mode": "run", "durationMs": 2046, "beforeRaycasts": 0, "afterRaycasts": 0 }
+    },
+    "pointerPreview": {
+      "warmupCount": 30,
+      "measuredCount": 300,
+      "process": {
+        "measuredCount": 300,
+        "medianMs": 0.2999999523162842,
+        "p95Ms": 0.40000009536743164,
+        "maxMs": 1.7999999523162842
+      },
+      "eventToNextRaf": {
+        "measuredCount": 300,
+        "medianMs": 0.30000007152557373,
+        "p95Ms": 0.5,
+        "maxMs": 1.899999976158142
+      },
+      "validHitCount": 165,
+      "invalidHitCount": 165,
+      "surfaceRaycastCount": 330,
+      "latestPointerErrorCssPixels": 0,
+      "eventToPaint": { "measuredCount": 300, "medianMs": 1.817, "p95Ms": 2.681, "maxMs": 6.199 },
+      "paintCorrelationCount": 330
+    },
+    "activation": {
+      "ids": ["surface-110"],
+      "callback": {
+        "measuredCount": 1,
+        "medianMs": 0.3999999761581421,
+        "p95Ms": 0.3999999761581421,
+        "maxMs": 0.3999999761581421
+      }
+    },
+    "cleanup": {
+      "cycleCount": 5,
+      "baseline": { "sceneChildren": 4, "proxyCount": 200, "geometries": 2, "textures": 1 },
+      "after": { "sceneChildren": 4, "proxyCount": 200, "geometries": 2, "textures": 1 },
+      "cycleLiveProxyCounts": [200, 200, 200, 200, 200],
+      "cycleDisposedProxyCounts": [0, 0, 0, 0, 0],
+      "pointerCaptureActive": false,
+      "pointerListenerAttached": false,
+      "pendingPointerRafCount": 0
+    }
+  },
+  "rawEvidence": {
+    "samples": {
+      "path": "artifacts/performance/007-hotspot-calibration-samples.jsonl",
+      "sha256": "284b35fe6f5b6a3e6af2f0d4ac825e99933ab7571d41a3ea6f555c9bcee7776b"
+    },
+    "traceEvents": {
+      "path": "artifacts/performance/007-hotspot-calibration-trace-events.jsonl",
+      "sha256": "8ea704a8c643ad9c0427c9ebc7abe1346397e3508b50b6e00a4409eee79d29d9"
+    }
+  }
+}

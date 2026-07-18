@@ -104,6 +104,8 @@ preference keys, and non-strict Studio port configuration.
 - [Product and interaction design](specs/001-product-foundation/product-design.md)
 - [Technical design](specs/001-product-foundation/technical-design.md)
 - [Single Studio data-binding specification](specs/005-single-studio-data-binding/spec.md)
+- [Calibrated hotspot interaction design](specs/007-hotspots-interactions/technical-design.md)
+- [Hotspot implementation plan](specs/007-hotspots-interactions/plan.md)
 - [Scene document contract](specs/001-product-foundation/contracts/scene-document.md)
 - [Archive manifest contract](specs/001-product-foundation/contracts/archive-manifest.md)
 - [Data adapter contract](specs/001-product-foundation/contracts/data-adapter.md)
