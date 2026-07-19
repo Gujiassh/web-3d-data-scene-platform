@@ -1,6 +1,6 @@
 # 发布与嵌入
 
-> 状态：Feature 008 规格完成，等待实现
+> 状态：Feature 008 publish package 已完成；Studio 与 minimal host 集成待实现
 >
 > 日期：2026-07-19
 
@@ -25,4 +25,6 @@
 
 ## 下一步
 
-按 `specs/008-publish-embed/tasks.md` 实现 publish package，再接 Studio、minimal host、CSP/教程和 Critical 验收。
+`@web3d/publish` 已交付 exact readiness、严格 manifest/schema、确定性静态文件/ZIP 和 abortable loader；聚焦
+测试 3 文件 / 26 测试，全仓 112 文件 / 754 测试及完整静态/构建门禁通过。下一步接 Studio publish command，
+保持 save/export revision 不变，然后实现 minimal host、CSP/教程和 Critical 验收。

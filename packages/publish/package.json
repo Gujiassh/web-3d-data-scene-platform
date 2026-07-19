@@ -1,0 +1,19 @@
+{
+  "name": "@web3d/publish",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --root ../.. --config vitest.config.ts packages/publish/src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@web3d/document": "workspace:*",
+    "@web3d/runtime": "workspace:*",
+    "fflate": "0.8.3"
+  }
+}

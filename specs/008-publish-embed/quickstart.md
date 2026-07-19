@@ -1,6 +1,6 @@
 # Quickstart: Publish And Embed Development
 
-**Status**: Specification complete; implementation pending
+**Status**: Publish package T010-T015 complete; Studio and embed integration pending
 
 ## Review Order
 
@@ -22,4 +22,11 @@ pnpm format:check
 git diff --check
 ```
 
-Dedicated publish and minimal-host commands will be added by the implementation tasks and recorded here before T046.
+Publish package verification:
+
+```bash
+pnpm --filter @web3d/publish typecheck
+pnpm --filter @web3d/publish test
+```
+
+Minimal-host commands will be added by T031-T034 and recorded here before T046.

@@ -13,12 +13,12 @@
 
 ## Publish Package
 
-- [ ] T010 Add strict publish types, stable blocker/error codes and public exports.
-- [ ] T011 Implement current-document and exact Runtime Surface-evidence readiness.
-- [ ] T012 Implement strict publish manifest build/parse and machine-readable schema.
-- [ ] T013 Implement asset byte verification, deterministic static file map and ZIP output.
-- [ ] T014 Implement abortable static published-scene loader and verified AssetResolver.
-- [ ] T015 Add determinism, rejection, security, limits, cancellation and loader tests.
+- [x] T010 Add strict publish types, stable blocker/error codes and public exports.
+- [x] T011 Implement current-document and exact Runtime Surface-evidence readiness.
+- [x] T012 Implement strict publish manifest build/parse and machine-readable schema.
+- [x] T013 Implement asset byte verification, deterministic static file map and ZIP output.
+- [x] T014 Implement abortable static published-scene loader and verified AssetResolver.
+- [x] T015 Add determinism, rejection, security, limits, cancellation and loader tests.
 
 ## Studio
 

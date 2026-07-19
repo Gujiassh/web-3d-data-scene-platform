@@ -2,6 +2,8 @@
 
 **File**: `publish-manifest.json`
 
+**Machine-readable schema**: `publish-manifest.schema.json`
+
 **Encoding**: canonical UTF-8 JSON plus one trailing LF
 
 ## Shape

@@ -119,6 +119,18 @@ importers:
         specifier: 0.8.3
         version: 0.8.3
 
+  packages/publish:
+    dependencies:
+      '@web3d/document':
+        specifier: workspace:*
+        version: link:../document
+      '@web3d/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
+
   packages/react:
     dependencies:
       '@web3d/document':
