@@ -7,6 +7,7 @@ import {
   exportSceneArchive,
   importCanonicalSceneJson,
   importSceneArchive,
+  LOCAL_ASSET_URI_PREFIX,
   redoHistoryCommand,
   undoHistoryCommand,
   type DocumentCommand,
@@ -14,12 +15,14 @@ import {
   type SceneAsset,
   type SceneDocument,
 } from "@web3d/document";
+import type { PublishBlocker, PublishSurfaceEvidence } from "@web3d/publish";
 import { inspectGltf, type AssetResolver, type GltfInspectionSummary } from "@web3d/runtime";
 
 import { isStudioAppError, studioAppErrors } from "../errors";
 import type { ModelImportSummary } from "../features/ImportDialog";
 import { formatStudioError } from "../i18n/error-presentation";
 import { useStudioI18n } from "../i18n/I18nProvider";
+import { buildStudioPublish } from "../publish/studio-publish";
 import {
   createAutosaveController,
   createIndexedDbProjectRepository,
@@ -53,6 +56,10 @@ export type ModelImportState =
   | { readonly status: "ready"; readonly summary: ModelImportSummary }
   | { readonly status: "committing"; readonly summary: ModelImportSummary }
   | { readonly status: "failed"; readonly fileName: string; readonly message: string };
+
+export type StudioPublishOutcome =
+  | { readonly status: "blocked"; readonly blockers: readonly PublishBlocker[] }
+  | { readonly status: "published"; readonly fileName: string };
 
 interface ImportCandidate {
   readonly bytes: ArrayBuffer;
@@ -97,6 +104,10 @@ export interface StudioWorkspace {
   readonly importArchive: (file: File) => Promise<void>;
   readonly exportJson: () => Promise<void>;
   readonly exportArchive: () => Promise<void>;
+  readonly publishScene: (
+    surfaceEvidence: readonly PublishSurfaceEvidence[],
+    signal: AbortSignal,
+  ) => Promise<StudioPublishOutcome>;
   readonly addDiagnostic: (message: string) => void;
 }
 
@@ -632,6 +643,59 @@ export function useStudioWorkspace(): StudioWorkspace {
     }
   }, [addDiagnostic, formatters, markExported, presentError, project, t.defaults.fileNameScene]);
 
+  const publishScene = useCallback(
+    async (
+      surfaceEvidence: readonly PublishSurfaceEvidence[],
+      signal: AbortSignal,
+    ): Promise<StudioPublishOutcome> => {
+      if (project === null) {
+        return {
+          status: "blocked",
+          blockers: [
+            {
+              code: "PUBLISH_DOCUMENT_INVALID",
+              message: t.publishDialog.blockers.PUBLISH_DOCUMENT_INVALID,
+            },
+          ],
+        };
+      }
+      try {
+        const repository = requireRepository(repositoryRef.current);
+        const result = await buildStudioPublish({
+          document: project.document,
+          surfaceEvidence,
+          signal,
+          async resolveAssetBytes(sha256, assetSignal) {
+            assetSignal.throwIfAborted();
+            const pending = project.assets.find((candidate) => candidate.sha256 === sha256);
+            const blob =
+              pending?.blob ??
+              (await repository.resolveAsset(`${LOCAL_ASSET_URI_PREFIX}${sha256}`));
+            assetSignal.throwIfAborted();
+            return new Uint8Array(await blob.arrayBuffer());
+          },
+        });
+        if (result.status === "blocked") return result;
+        signal.throwIfAborted();
+        const fileName = `${formatters.safeFileStem(project.document.name, t.defaults.fileNameScene)}.web3d.zip`;
+        downloadBytes(result.bytes, fileName, "application/zip");
+        return { status: "published", fileName };
+      } catch (error) {
+        signal.throwIfAborted();
+        addDiagnostic(presentError(error));
+        throw error;
+      }
+    },
+    [
+      addDiagnostic,
+      formatters,
+      presentError,
+      project,
+      t.defaults.fileNameScene,
+      t.publishDialog.blockers.PUBLISH_DOCUMENT_INVALID,
+    ],
+  );
+
   const assetResolver = useMemo<AssetResolver>(
     () => ({
       async resolve(asset: SceneAsset, signal: AbortSignal) {
@@ -683,6 +747,7 @@ export function useStudioWorkspace(): StudioWorkspace {
     importArchive,
     exportJson,
     exportArchive,
+    publishScene,
     addDiagnostic,
   };
 }

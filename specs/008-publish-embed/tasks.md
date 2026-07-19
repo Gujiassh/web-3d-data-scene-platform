@@ -22,10 +22,10 @@
 
 ## Studio
 
-- [ ] T020 Add dedicated publish workspace service without changing project export/save state.
-- [ ] T021 Add localized Publish command, progress, blockers and success feedback.
-- [ ] T022 Bind publish readiness to exact current AuthoringScene hotspot view states.
-- [ ] T023 Prove success/rejection/cancel leaves document, history, save/export revision and Runtime state unchanged.
+- [x] T020 Add dedicated publish workspace service without changing project export/save state.
+- [x] T021 Add localized Publish command, progress, blockers and success feedback.
+- [x] T022 Bind publish readiness to exact current AuthoringScene hotspot view states.
+- [x] T023 Prove success/rejection/cancel leaves document, history, save/export revision and Runtime state unchanged.
 
 ## Embed Boundaries
 

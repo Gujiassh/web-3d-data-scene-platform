@@ -13,6 +13,7 @@
     "@fontsource/ibm-plex-sans": "5.2.8",
     "@web3d/demo-support": "workspace:*",
     "@web3d/document": "workspace:*",
+    "@web3d/publish": "workspace:*",
     "@web3d/react": "workspace:*",
     "@web3d/runtime": "workspace:*",
     "lucide-react": "1.24.0",

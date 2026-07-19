@@ -808,7 +808,8 @@
 }
 
 .import-dialog,
-.scene-name-dialog {
+.scene-name-dialog,
+.publish-dialog {
   width: min(520px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);
   overflow: auto;
@@ -822,8 +823,13 @@
   width: min(420px, calc(100vw - 40px));
 }
 
+.publish-dialog {
+  width: min(480px, calc(100vw - 40px));
+}
+
 .import-dialog > header,
-.scene-name-dialog > header {
+.scene-name-dialog > header,
+.publish-dialog > header {
   min-height: 52px;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) 30px;
@@ -844,7 +850,8 @@
 }
 
 .import-dialog h2,
-.scene-name-dialog h2 {
+.scene-name-dialog h2,
+.publish-dialog h2 {
   margin: 0;
   font-size: 12px;
 }
@@ -1008,6 +1015,56 @@
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
+  padding: 0 10px;
+  border-top: 1px solid var(--border);
+}
+
+.publish-result {
+  min-height: 128px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-content: center;
+  gap: 8px;
+  padding: 20px 18px;
+  font-size: 11px;
+}
+
+.publish-result strong {
+  align-self: center;
+  font-size: 12px;
+}
+
+.publish-result ul,
+.publish-result .mono {
+  grid-column: 2;
+  margin: 0;
+}
+
+.publish-result ul {
+  display: grid;
+  gap: 5px;
+  padding-left: 16px;
+  color: var(--ink-muted);
+}
+
+.publish-result .mono {
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+}
+
+.publish-result.is-blocked > svg {
+  color: var(--warning);
+}
+
+.publish-result.is-published > svg {
+  color: var(--success);
+}
+
+.publish-dialog > footer {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   padding: 0 10px;
   border-top: 1px solid var(--border);
 }

@@ -41,6 +41,9 @@ importers:
       fake-indexeddb:
         specifier: 6.2.5
         version: 6.2.5
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       prettier:
         specifier: 3.9.5
         version: 3.9.5
@@ -84,6 +87,9 @@ importers:
       '@web3d/document':
         specifier: workspace:*
         version: link:../../packages/document
+      '@web3d/publish':
+        specifier: workspace:*
+        version: link:../../packages/publish
       '@web3d/react':
         specifier: workspace:*
         version: link:../../packages/react

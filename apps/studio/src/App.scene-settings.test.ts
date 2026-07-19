@@ -114,6 +114,10 @@ const harness = vi.hoisted(() => ({
     importArchive: vi.fn(async () => undefined),
     exportJson: vi.fn(async () => undefined),
     exportArchive: vi.fn(async () => undefined),
+    publishScene: vi.fn(async () => ({
+      status: "published" as const,
+      fileName: "scene.web3d.zip",
+    })),
     addDiagnostic: vi.fn(),
   },
 }));

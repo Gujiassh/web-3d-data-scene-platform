@@ -8,6 +8,7 @@ import {
   MousePointer2,
   Move3d,
   Pause,
+  PackageCheck,
   Play,
   Redo2,
   Rotate3d,
@@ -52,6 +53,7 @@ interface StudioToolbarProps {
   readonly onToolChange: (tool: AuthoringTool) => void;
   readonly onImport: () => void;
   readonly onExport: () => void;
+  readonly onPublish: () => void;
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
   readonly onOpenHelp: () => void;
@@ -222,6 +224,15 @@ export function StudioToolbar(props: StudioToolbarProps) {
       <button className="export-command" type="button" onClick={props.onExport}>
         <Download size={15} />
         {t.toolbar.export}
+      </button>
+      <button
+        className="primary-command"
+        data-testid="publish-button"
+        type="button"
+        onClick={props.onPublish}
+      >
+        <PackageCheck size={15} />
+        {t.toolbar.publish}
       </button>
     </header>
   );

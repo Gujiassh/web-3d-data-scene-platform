@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Box, FolderTree, MapPin, TriangleAlert } from "lucide-react";
 
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
+import type { PublishSurfaceEvidence } from "@web3d/publish";
 import { useTheme } from "@web3d/demo-support/theme-provider";
 
 import { AssetList } from "./features/AssetList";
@@ -21,6 +22,7 @@ import { HotspotTitleEditor } from "./hotspots/HotspotTitleEditor";
 import { hotspotStatusMessage } from "./hotspots/hotspotStatus";
 import type { TrustedHotspotContentItem } from "./hotspots/trustedContentCatalog";
 import { useStudioHotspots } from "./hotspots/useStudioHotspots";
+import { PublishDialog, type PublishDialogState } from "./publish/PublishDialog";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
@@ -50,11 +52,13 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
   const archiveInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const publishAbortRef = useRef<AbortController | null>(null);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("scene");
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [sceneNameDialogMode, setSceneNameDialogMode] = useState<SceneNameDialogMode | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [lightingMenuOpen, setLightingMenuOpen] = useState(false);
+  const [publishState, setPublishState] = useState<PublishDialogState | null>(null);
   const [smartAlignEnabled, toggleSmartAlign] = useSmartAlignPreference();
 
   const selectedEntityId = workspace.session?.primaryEntityId ?? null;
@@ -139,6 +143,53 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
   };
+  const closePublish = useCallback((): void => {
+    publishAbortRef.current?.abort();
+    publishAbortRef.current = null;
+    setPublishState(null);
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLButtonElement>('[data-testid="publish-button"]')?.focus(),
+    );
+  }, []);
+
+  const startPublish = (): void => {
+    if (project === null) return;
+    publishAbortRef.current?.abort();
+    const controller = new AbortController();
+    publishAbortRef.current = controller;
+    const surfaceEvidence: PublishSurfaceEvidence[] = project.document.annotations.flatMap(
+      (annotation) => {
+        if (annotation.anchor.kind !== "surface") return [];
+        const state = viewerRef.current?.getHotspotViewState(annotation.id);
+        if (state === undefined) return [];
+        return [
+          {
+            annotationId: annotation.id,
+            documentId: project.document.id,
+            documentRevision: project.document.revision,
+            resolution: state.resolution,
+          },
+        ];
+      },
+    );
+    setPublishState({ status: "checking" });
+    void workspace
+      .publishScene(surfaceEvidence, controller.signal)
+      .then((outcome) => {
+        if (publishAbortRef.current !== controller || controller.signal.aborted) return;
+        publishAbortRef.current = null;
+        setPublishState(
+          outcome.status === "blocked"
+            ? { status: "blocked", blockers: outcome.blockers }
+            : { status: "published", fileName: outcome.fileName },
+        );
+      })
+      .catch(() => {
+        if (publishAbortRef.current !== controller || controller.signal.aborted) return;
+        publishAbortRef.current = null;
+        setPublishState({ status: "failed" });
+      });
+  };
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -155,6 +206,21 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
   useLayoutEffect(() => {
     syncStudioThemeColor(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const controller = publishAbortRef.current;
+    if (controller === null) return;
+    controller.abort();
+    publishAbortRef.current = null;
+    setPublishState(null);
+  }, [project?.document.id, project?.document.revision]);
+
+  useEffect(
+    () => () => {
+      publishAbortRef.current?.abort();
+    },
+    [],
+  );
 
   const focusSelection = (): void => {
     if (hotspots.selectedId !== null) {
@@ -243,7 +309,8 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
       settings.open ||
       lightingMenuOpen ||
       workspace.importState !== null ||
-      sceneNameDialogMode !== null,
+      sceneNameDialogMode !== null ||
+      publishState !== null,
     viewerRef,
   });
 
@@ -307,6 +374,7 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
         onDelete={deleteSelection}
         onDuplicate={duplicateSelection}
         onExport={() => void workspace.exportArchive()}
+        onPublish={startPublish}
         onImport={openModelPicker}
         onModeChange={changeMode}
         onOpenProjectMenu={() => {
@@ -617,6 +685,8 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
           onConfirm={() => void workspace.confirmImport()}
         />
       )}
+
+      {publishState !== null && <PublishDialog state={publishState} onClose={closePublish} />}
 
       {sceneNameDialogMode !== null && project !== null && (
         <SceneNameDialog

@@ -90,11 +90,22 @@ describe("StudioToolbar", () => {
     expect(mark?.querySelector('path[fill="#4CC4BA"]')).not.toBeNull();
   });
 
+  it("exposes one explicit Publish command", () => {
+    const onPublish = vi.fn();
+    renderToolbar(null, () => undefined, true, false, onPublish);
+
+    const publish = container.querySelector<HTMLButtonElement>('[data-testid="publish-button"]');
+    expect(publish?.textContent).toContain("Publish");
+    act(() => publish?.click());
+    expect(onPublish).toHaveBeenCalledOnce();
+  });
+
   function renderToolbar(
     duplicateDisabledReason: string | null,
     onToggleSmartAlign: () => void = () => undefined,
     canEdit = false,
     hotspotPlacementActive = false,
+    onPublish: () => void = () => undefined,
   ): void {
     const noop = () => undefined;
     act(() => {
@@ -131,6 +142,7 @@ describe("StudioToolbar", () => {
               onToolChange: noop,
               onImport: noop,
               onExport: noop,
+              onPublish,
               onDuplicate: noop,
               onDelete: noop,
               onOpenHelp: noop,

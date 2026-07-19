@@ -1,6 +1,6 @@
 # Critical Review: Publish And Embed
 
-**Status**: T010-T015 publish package PASS; Studio/embed acceptance pending
+**Status**: T010-T023 publish package and Studio integration PASS; embed acceptance pending
 
 **Date**: 2026-07-19
 
@@ -19,8 +19,9 @@
 | P2  | P1       | Raw asset resolver errors could expose host URL or credential-bearing detail   | Stable missing-asset blocker omits the external error text               |
 | P3  | P2       | Asset reads continued after a Legacy/unresolved hotspot already blocked output | Annotation blockers return before any asset resolution                   |
 | P4  | P1       | Duplicate or unknown Surface evidence could be silently ignored                | Both cases have explicit closed blocker codes and direct tests           |
+| P5  | P1       | Global authoring shortcuts remained active while the Publish dialog was open   | Publish state now participates in the existing modal shortcut gate       |
 
-All four findings are closed before the first implementation push.
+P1-P4 were closed before the publish-package push; P5 was closed before the Studio-slice push.
 
 ## Risk Matrix
 
@@ -32,17 +33,21 @@ All four findings are closed before the first implementation push.
 | Asset integrity              | pass    | missing/length/hash/undeclared/tampered paths reject         |
 | Security/transient exclusion | pass    | forbidden-key scan and credential-bearing base rejection     |
 | Loader transaction/cancel    | pass    | canonical scene gate, verified AssetResolver and abort tests |
-| Studio integration           | pending | T020-T023                                                    |
+| Studio integration           | pass    | service/UI tests plus success/block/cancel Chromium evidence |
 | Minimal host/CSP/tutorial    | pending | T031-T045                                                    |
 
 ## Verification
 
 - publish focused: 3 files / 26 tests passed;
-- repository: 112 files / 754 tests passed;
-- publish and root typecheck: passed;
-- root ESLint, build, product design, topology, Prettier and diff check: passed;
+- Studio focused: 5 files / 27 tests passed;
+- repository: 114 files / 760 tests passed;
+- hotspot Chromium: 24/24 passed, including ready, blocked and in-flight-cancel publish paths;
+- M0 Chromium: 1/1 passed at 1440x900 and the 768x1024 narrow-viewport gate;
+- publish, Studio, E2E and root typecheck: passed;
+- root ESLint, build, i18n, product design, topology, Prettier and diff check: passed;
 - production build retains the pre-existing non-blocking Vite chunk-size warning.
 
 Controller judgment: the publish package is acceptable now and points toward the intended Feature 008 architecture.
-The feature is not complete until Studio, minimal host, CSP/tutorial, browser evidence and final Critical reverse review
-pass.
+The Studio slice is also acceptable: Publish reads exact current Runtime evidence, remains separate from project export,
+and leaves document/history/save/export/selection state unchanged on success, rejection and cancellation. The feature is
+not complete until the minimal host, CSP/tutorial, browser evidence and final Critical reverse review pass.
