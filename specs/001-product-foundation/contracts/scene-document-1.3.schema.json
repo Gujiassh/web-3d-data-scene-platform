@@ -1,0 +1,603 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/web-3d-data-scene/scene-document.schema.json",
+  "title": "Web 3D Data Scene Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "revision",
+    "assets",
+    "entities",
+    "targets",
+    "dataSources",
+    "bindings",
+    "ruleSets",
+    "annotations",
+    "views",
+    "environment"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.3.0"
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "$ref": "#/$defs/name"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity"
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/target"
+      }
+    },
+    "dataSources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataSource"
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
+    },
+    "ruleSets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ruleSet"
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/annotation"
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/view"
+      }
+    },
+    "environment": {
+      "$ref": "#/$defs/environment"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9._:-]*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[A-Fa-f0-9]{6}$"
+    },
+    "environmentColor": {
+      "type": "string",
+      "pattern": "^#[A-F0-9]{6}$"
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "quat": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "rotation", "scale"],
+      "properties": {
+        "position": { "$ref": "#/$defs/vec3" },
+        "rotation": { "$ref": "#/$defs/quat" },
+        "scale": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "uri", "mediaType", "sha256", "byteLength"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "mediaType": {
+          "enum": ["model/gltf-binary", "model/gltf+json"]
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nodeCount", "meshCount", "materialCount", "triangleCount"],
+          "properties": {
+            "nodeCount": { "type": "integer", "minimum": 0 },
+            "meshCount": { "type": "integer", "minimum": 0 },
+            "materialCount": { "type": "integer", "minimum": 0 },
+            "triangleCount": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "parentId", "name", "visible", "locked", "transform", "metadata"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["group", "asset", "light"] },
+        "parentId": {
+          "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }]
+        },
+        "name": { "$ref": "#/$defs/name" },
+        "visible": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "transform": { "$ref": "#/$defs/transform" },
+        "assetId": { "$ref": "#/$defs/id" },
+        "light": { "$ref": "#/$defs/lightProperties" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "asset" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["assetId"] },
+          "else": {
+            "not": { "required": ["assetId"] }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "light" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["light"],
+            "properties": { "parentId": { "type": "null" } }
+          },
+          "else": {
+            "not": { "required": ["light"] }
+          }
+        }
+      ]
+    },
+    "lightProperties": {
+      "oneOf": [
+        { "$ref": "#/$defs/pointLightProperties" },
+        { "$ref": "#/$defs/spotLightProperties" }
+      ]
+    },
+    "pointLightProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "color", "intensity", "range"],
+      "properties": {
+        "kind": { "const": "point" },
+        "color": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "range": {
+          "oneOf": [{ "type": "null" }, { "type": "number", "exclusiveMinimum": 0 }]
+        }
+      }
+    },
+    "spotLightProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "color", "intensity", "range", "angleRadians", "penumbra"],
+      "properties": {
+        "kind": { "const": "spot" },
+        "color": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "range": {
+          "oneOf": [{ "type": "null" }, { "type": "number", "exclusiveMinimum": 0 }]
+        },
+        "angleRadians": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.5707963267948966
+        },
+        "penumbra": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "entityId", "name", "assetHash", "nodeIndex", "metadata"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "entityId": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "businessId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "assetHash": { "$ref": "#/$defs/sha256" },
+        "nodeIndex": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    },
+    "dataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "adapter", "staleAfterMs", "offlineAfterMs", "options"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "adapter": { "enum": ["mock", "websocket"] },
+        "staleAfterMs": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "offlineAfterMs": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "options": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "adapter": { "const": "mock" } },
+            "required": ["adapter"]
+          },
+          "then": {
+            "properties": {
+              "options": { "$ref": "#/$defs/mockDataSourceOptions" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "adapter": { "const": "websocket" } },
+            "required": ["adapter"]
+          },
+          "then": {
+            "properties": {
+              "options": { "$ref": "#/$defs/websocketDataSourceOptions" }
+            }
+          }
+        }
+      ]
+    },
+    "mockDataSourceOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario"],
+      "properties": {
+        "scenario": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "defaultSpeed": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 16
+        }
+      }
+    },
+    "websocketDataSourceOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "protocolVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "targetId", "sourceId", "pointer", "ruleSetId", "writes", "enabled"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "targetId": { "$ref": "#/$defs/id" },
+        "sourceId": { "$ref": "#/$defs/id" },
+        "pointer": {
+          "type": "string",
+          "pattern": "^($|/)",
+          "maxLength": 1024
+        },
+        "ruleSetId": { "$ref": "#/$defs/id" },
+        "writes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["color", "visibility", "label", "alarm", "animation"]
+          }
+        },
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact", "operator"],
+      "properties": {
+        "fact": { "enum": ["value", "quality", "connection"] },
+        "operator": {
+          "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "exists", "notExists"]
+        },
+        "expected": {}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operator": { "enum": ["exists", "notExists"] }
+            },
+            "required": ["operator"]
+          },
+          "then": {
+            "not": { "required": ["expected"] }
+          },
+          "else": {
+            "required": ["expected"]
+          }
+        }
+      ]
+    },
+    "colorEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "color" },
+        "value": { "$ref": "#/$defs/color" }
+      }
+    },
+    "visibilityEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "visibility" },
+        "value": { "type": "boolean" }
+      }
+    },
+    "labelEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "template"],
+      "properties": {
+        "type": { "const": "label" },
+        "template": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    },
+    "alarmEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "level", "message"],
+      "properties": {
+        "type": { "const": "alarm" },
+        "level": { "enum": ["none", "info", "warning", "critical"] },
+        "message": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    },
+    "animationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "clip", "playing"],
+      "properties": {
+        "type": { "const": "animation" },
+        "clip": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "playing": { "type": "boolean" }
+      }
+    },
+    "effect": {
+      "oneOf": [
+        { "$ref": "#/$defs/colorEffect" },
+        { "$ref": "#/$defs/visibilityEffect" },
+        { "$ref": "#/$defs/labelEffect" },
+        { "$ref": "#/$defs/alarmEffect" },
+        { "$ref": "#/$defs/animationEffect" }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "when", "effects"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "priority": { "type": "integer" },
+        "when": { "$ref": "#/$defs/condition" },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/effect" }
+        }
+      }
+    },
+    "ruleSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "rules", "fallback"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rule" }
+        },
+        "fallback": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/effect" }
+        }
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "targetId", "title", "contentKey", "localOffset"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "targetId": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/name" },
+        "contentKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "localOffset": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "position", "target", "fov"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "position": { "$ref": "#/$defs/vec3" },
+        "target": { "$ref": "#/$defs/vec3" },
+        "fov": {
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "exclusiveMaximum": 120
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backgroundMode", "background", "grid", "unit", "upAxis", "lighting"],
+      "properties": {
+        "backgroundMode": { "enum": ["theme", "custom"] },
+        "background": { "$ref": "#/$defs/environmentColor" },
+        "grid": { "type": "boolean" },
+        "unit": { "enum": ["mm", "cm", "m"] },
+        "upAxis": { "const": "Y" },
+        "lighting": { "$ref": "#/$defs/lighting" }
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fill", "key"],
+      "properties": {
+        "fill": { "$ref": "#/$defs/lightingFill" },
+        "key": { "$ref": "#/$defs/lightingKey" }
+      }
+    },
+    "lightingFill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skyColor", "groundColor", "intensity"],
+      "properties": {
+        "skyColor": { "$ref": "#/$defs/environmentColor" },
+        "groundColor": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "lightingKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["color", "intensity", "directionToLight"],
+      "properties": {
+        "color": { "$ref": "#/$defs/environmentColor" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 5 },
+        "directionToLight": { "$ref": "#/$defs/vec3" }
+      }
+    }
+  }
+}

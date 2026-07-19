@@ -185,11 +185,48 @@ export interface RuleSet {
 
 export interface Annotation {
   readonly id: string;
-  readonly targetId: string;
   readonly title: string;
-  readonly contentKey: string;
+  readonly visible: boolean;
+  readonly locked: boolean;
+  readonly anchor: AnnotationAnchor;
+  readonly content: AnnotationContent;
+  readonly action: AnnotationAction;
+}
+
+export type AnnotationAnchor = SurfaceAnchor | LegacyAnnotationAnchor;
+
+export interface SurfaceAnchor {
+  readonly kind: "surface";
+  readonly entityId: string;
+  readonly assetHash: string;
+  readonly nodeIndex: number;
+  readonly nodeLocalPosition: Vec3;
+  readonly nodeLocalNormal: Vec3;
+}
+
+export interface LegacyAnnotationAnchor {
+  readonly kind: "legacy";
+  readonly targetId: string;
   readonly localOffset: Vec3;
 }
+
+export interface PlainTextContent {
+  readonly kind: "plain-text";
+  readonly text: string;
+}
+
+export interface HostContentReference {
+  readonly kind: "host-content";
+  readonly key: string;
+}
+
+export type AnnotationContent = PlainTextContent | HostContentReference;
+
+export type AnnotationAction =
+  | { readonly type: "show-content" }
+  | { readonly type: "focus-hotspot" }
+  | { readonly type: "focus-target"; readonly targetId: string }
+  | { readonly type: "open-link"; readonly href: string };
 
 export interface SceneView {
   readonly id: string;
@@ -222,7 +259,7 @@ export interface SceneLighting {
 }
 
 export interface SceneDocument {
-  readonly schemaVersion: "1.3.0";
+  readonly schemaVersion: "1.4.0";
   readonly id: string;
   readonly name: string;
   readonly revision: number;

@@ -212,7 +212,8 @@ async function layoutArchive(): Promise<Uint8Array> {
     ([sceneJson, assetBuffer]) => {
       const document = {
         ...(JSON.parse(sceneJson) as SceneDocument),
-        schemaVersion: "1.3.0" as const,
+        schemaVersion: "1.4.0" as const,
+        annotations: [],
       };
       const bytes = new Uint8Array(
         assetBuffer.buffer.slice(

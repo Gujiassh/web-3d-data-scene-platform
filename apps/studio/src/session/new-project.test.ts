@@ -13,7 +13,7 @@ describe("createNewStudioProject", () => {
     });
 
     expect(project.document).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       id: "project-a",
       name: "Assembly Review",
       revision: 0,

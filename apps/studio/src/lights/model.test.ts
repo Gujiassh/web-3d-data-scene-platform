@@ -85,7 +85,7 @@ describe("Studio light authoring model", () => {
 
 function scene(entities: readonly LightEntity[] = []): SceneDocument {
   return {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id: "scene-a",
     name: "Scene A",
     revision: 0,

@@ -50,7 +50,7 @@ describe("resolveSelectedRootTarget", () => {
 
 function emptyDocument(): SceneDocument {
   return {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id: "scene-a",
     name: "Project A",
     revision: 0,

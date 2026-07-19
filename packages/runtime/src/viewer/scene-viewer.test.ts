@@ -22,6 +22,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataAdapter } from "../types";
+import { createHotspotTestContainer } from "../hotspots/hotspot-test-dom";
+import { HotspotOverlay } from "../hotspots/hotspot-overlay";
 import { AuthoredLightController } from "./authored-light-controller";
 import type * as RuntimeGenerationModule from "./runtime-generation";
 import { SelectionOverlay } from "./selection-overlay";
@@ -406,6 +408,40 @@ describe("SceneViewer lifecycle", () => {
       revision: scene.revision,
     });
     await viewer.dispose();
+  });
+
+  it("restores old hotspot authority and markers when replacement loading fails", async () => {
+    const { asset, scene } = await fixture();
+    const accepted = withSurfaceHotspot(scene);
+    const markerSets = vi.spyOn(HotspotOverlay.prototype, "setMarkers");
+    const viewer = createSceneViewer(fakeContainer(), {
+      assetResolver: { resolve: () => Promise.resolve(new Blob([asset])) },
+      reducedMotion: true,
+    });
+    await viewer.load(accepted);
+    flushFrames();
+    expect(markerSets.mock.calls.at(-1)?.[0]).toMatchObject([{ id: "runtime-hotspot" }]);
+    await expect(
+      viewer.focusHotspot("runtime-hotspot", { durationMs: 0 }),
+    ).resolves.toBeUndefined();
+
+    await expect(viewer.load(invalidHash(accepted, accepted.revision + 1))).rejects.toMatchObject({
+      diagnostic: { code: "ASSET_HASH_MISMATCH" },
+    });
+    flushFrames();
+
+    expect(viewer.getSnapshot()).toMatchObject({
+      documentId: accepted.id,
+      lifecycle: "ready",
+      revision: accepted.revision,
+    });
+    expect(markerSets.mock.calls.some(([markers]) => markers.length === 0)).toBe(true);
+    expect(markerSets.mock.calls.at(-1)?.[0]).toMatchObject([{ id: "runtime-hotspot" }]);
+    await expect(
+      viewer.focusHotspot("runtime-hotspot", { durationMs: 0 }),
+    ).resolves.toBeUndefined();
+    await viewer.dispose();
+    markerSets.mockRestore();
   });
 
   it("validates before load classification and preserves the accepted Runtime", async () => {
@@ -1074,6 +1110,38 @@ function invalidHash(scene: SceneDocument, revision: number): SceneDocument {
     revision,
     assets: scene.assets.map((asset) => ({ ...asset, sha256: hash })),
     targets: scene.targets.map((target) => ({ ...target, assetHash: hash })),
+    annotations: scene.annotations.map((annotation) =>
+      annotation.anchor.kind === "surface"
+        ? { ...annotation, anchor: { ...annotation.anchor, assetHash: hash } }
+        : annotation,
+    ),
+  };
+}
+
+function withSurfaceHotspot(scene: SceneDocument): SceneDocument {
+  const entity = scene.entities.find((candidate) => candidate.type === "asset");
+  const asset = scene.assets.find((candidate) => candidate.id === entity?.assetId);
+  if (entity?.type !== "asset" || asset === undefined) throw new Error("M0 asset is missing.");
+  return {
+    ...scene,
+    annotations: [
+      {
+        id: "runtime-hotspot",
+        title: "Runtime hotspot",
+        visible: true,
+        locked: false,
+        anchor: {
+          kind: "surface",
+          entityId: entity.id,
+          assetHash: asset.sha256,
+          nodeIndex: 0,
+          nodeLocalPosition: [0, 0.5, 0],
+          nodeLocalNormal: [0, 1, 0],
+        },
+        content: { kind: "plain-text", text: "Runtime" },
+        action: { type: "show-content" },
+      },
+    ],
   };
 }
 
@@ -1258,9 +1326,5 @@ function fakeCanvas() {
 }
 
 function fakeContainer(): HTMLElement {
-  return {
-    clientHeight: 600,
-    clientWidth: 800,
-    replaceChildren(): void {},
-  } as unknown as HTMLElement;
+  return createHotspotTestContainer();
 }

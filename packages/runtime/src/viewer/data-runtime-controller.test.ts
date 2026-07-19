@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BindingStateChangeEvent, Diagnostic, ViewerEvent } from "../types";
 import { ViewerDataRuntimeController } from "./data-runtime-controller";
 import type { RuntimeGeneration, RuntimeTarget } from "./runtime-generation";
+import { HotspotSurfaceIndex } from "../hotspots/surface-index";
 
 describe("ViewerDataRuntimeController", () => {
   it("preserves value, rule, alarm, cleanup, and duplicate-event ordering", () => {
@@ -181,7 +182,7 @@ function viewerEvent(event: Extract<ViewerEvent, { type: "alarm" | "connection-c
 
 function document(): SceneDocument {
   return {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id: "scene-1",
     name: "Scene",
     revision: 0,
@@ -272,6 +273,7 @@ function generation(target: RuntimeTarget): RuntimeGeneration {
       entityForObject: vi.fn(),
       dispose: vi.fn(),
     },
+    hotspotSurfaces: new HotspotSurfaceIndex(),
     entities: new Map(),
     targets: new Map([["target-1", target]]),
     diagnostics: [],

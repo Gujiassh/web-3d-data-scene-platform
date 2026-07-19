@@ -1,6 +1,6 @@
 import type { SceneAsset } from "@web3d/document";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
-import { Group, type Object3D } from "three";
+import { Group, Mesh, type Object3D } from "three";
 
 import { disposeObject3D } from "./dispose-object";
 import {
@@ -14,6 +14,7 @@ export interface LoadedGltfAsset {
   readonly gltf: GLTF;
   readonly root: Object3D;
   readonly nodesByIndex: ReadonlyMap<number, Object3D>;
+  readonly nodeIndexByObject: ReadonlyMap<Object3D, number>;
   readonly diagnostics: readonly Diagnostic[];
 }
 
@@ -99,10 +100,13 @@ export async function loadGltfAsset(
 
     const punctualLights = replaceImportedPunctualLights(gltf);
     const nodesByIndex = new Map<number, Object3D>();
-    gltf.scene.traverse((object) => {
-      const nodeIndex = gltf.parser.associations.get(object)?.nodes;
-      if (nodeIndex !== undefined) nodesByIndex.set(nodeIndex, object);
-    });
+    const nodeIndexByObject = new Map<Object3D, number>();
+    collectFormalNodeEvidence(
+      gltf.scene,
+      gltf.parser.associations,
+      nodesByIndex,
+      nodeIndexByObject,
+    );
     const diagnostics =
       punctualLights.total === 0
         ? []
@@ -116,12 +120,35 @@ export async function loadGltfAsset(
             ),
           ];
 
-    return { gltf, root: gltf.scene, nodesByIndex, diagnostics };
+    return { gltf, root: gltf.scene, nodesByIndex, nodeIndexByObject, diagnostics };
   } catch (error) {
     const cleanupRoot = new Group();
     gltf.scenes.forEach((scene) => cleanupRoot.add(scene));
     disposeObject3D(cleanupRoot);
     throw error;
+  }
+}
+
+function collectFormalNodeEvidence(
+  object: Object3D,
+  associations: GLTF["parser"]["associations"],
+  nodesByIndex: Map<number, Object3D>,
+  nodeIndexByObject: Map<Object3D, number>,
+  inheritedNodeIndex?: number,
+): void {
+  const association = associations.get(object);
+  const formalNodeIndex = association?.nodes;
+  const nodeIndex = formalNodeIndex ?? inheritedNodeIndex;
+  if (formalNodeIndex !== undefined) nodesByIndex.set(formalNodeIndex, object);
+  if (
+    nodeIndex !== undefined &&
+    object instanceof Mesh &&
+    (formalNodeIndex !== undefined || association?.meshes !== undefined)
+  ) {
+    nodeIndexByObject.set(object, nodeIndex);
+  }
+  for (const child of object.children) {
+    collectFormalNodeEvidence(child, associations, nodesByIndex, nodeIndexByObject, nodeIndex);
   }
 }
 

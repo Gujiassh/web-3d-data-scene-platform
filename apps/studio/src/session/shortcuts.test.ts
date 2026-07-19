@@ -26,12 +26,14 @@ describe("Studio shortcut registry", () => {
     expect(studioCommandShortcut("history.undo", "other")).toBe("Ctrl+Z");
     expect(studioCommandShortcut("reset.rotation", "mac")).toBe("Option+R");
     expect(studioCommandShortcut("help.open", "other")).toBe("?");
+    expect(studioCommandShortcut("hotspot.add", "other")).toBe("H");
   });
 });
 
 describe("resolveStudioShortcut", () => {
   it("resolves tools, reset, history and platform aliases", () => {
     expect(resolveStudioShortcut({ ...input, key: "W" }, context)).toBe("tool.translate");
+    expect(resolveStudioShortcut({ ...input, key: "H" }, context)).toBe("hotspot.add");
     expect(resolveStudioShortcut({ ...input, key: "S" }, context)).toBe("smart-align.toggle");
     expect(resolveStudioShortcut({ ...input, key: "r", altKey: true }, context)).toBe(
       "reset.rotation",
@@ -80,6 +82,9 @@ describe("resolveStudioShortcut", () => {
       resolveStudioShortcut({ ...input, key: "w", targetTagName: "input" }, context),
     ).toBeNull();
     expect(
+      resolveStudioShortcut({ ...input, key: "h", targetTagName: "input" }, context),
+    ).toBeNull();
+    expect(
       resolveStudioShortcut({ ...input, key: "w" }, { ...context, modalOpen: true }),
     ).toBeNull();
     expect(
@@ -96,6 +101,9 @@ describe("resolveStudioShortcut", () => {
     ).toBeNull();
     expect(
       resolveStudioShortcut({ ...input, key: "w" }, { ...context, canEdit: false }),
+    ).toBeNull();
+    expect(
+      resolveStudioShortcut({ ...input, key: "h" }, { ...context, canEdit: false }),
     ).toBeNull();
     expect(
       resolveStudioShortcut({ ...input, key: "s" }, { ...context, canEdit: false }),

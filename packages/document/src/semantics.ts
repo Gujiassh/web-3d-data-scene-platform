@@ -1,4 +1,5 @@
 import { sortDiagnostics, type DocumentDiagnostic } from "./diagnostics.js";
+import { isValidAnnotationOpenLinkHref } from "./annotation-link.js";
 import type {
   Annotation,
   Binding,
@@ -19,7 +20,7 @@ export interface SceneDocumentSemanticsInput {
   readonly dataSources: readonly DataSource[];
   readonly bindings: readonly Binding[];
   readonly ruleSets: readonly RuleSet[];
-  readonly annotations: readonly Annotation[];
+  readonly annotations: readonly (Annotation | LegacyAnnotationSemanticsInput)[];
   readonly views: readonly SceneView[];
   readonly environment?: {
     readonly lighting?: {
@@ -28,6 +29,14 @@ export interface SceneDocumentSemanticsInput {
       };
     };
   };
+}
+
+interface LegacyAnnotationSemanticsInput {
+  readonly id: string;
+  readonly targetId: string;
+  readonly title: string;
+  readonly contentKey: string;
+  readonly localOffset: Vec3;
 }
 
 interface LocatedId {
@@ -166,11 +175,43 @@ export function validateSceneDocumentSemantics(
   diagnostics.push(...findInvalidLabelTokens(document));
 
   document.annotations.forEach((annotation, index) => {
-    if (!targets.has(annotation.targetId)) {
+    if ("targetId" in annotation) {
+      if (targets.has(annotation.targetId)) return;
       diagnostics.push({
         code: "ANNOTATION_TARGET_NOT_FOUND",
         path: `/annotations/${index}/targetId`,
         message: `Annotation target '${annotation.targetId}' does not exist.`,
+      });
+      return;
+    }
+
+    if (annotation.anchor.kind === "legacy") {
+      if (!targets.has(annotation.anchor.targetId)) {
+        diagnostics.push({
+          code: "ANNOTATION_TARGET_NOT_FOUND",
+          path: `/annotations/${index}/anchor/targetId`,
+          message: `Annotation target '${annotation.anchor.targetId}' does not exist.`,
+        });
+      }
+    } else {
+      validateSurfaceAnchor(annotation, index, assets, entities, diagnostics);
+    }
+
+    if (annotation.action.type === "focus-target" && !targets.has(annotation.action.targetId)) {
+      diagnostics.push({
+        code: "ANNOTATION_ACTION_TARGET_NOT_FOUND",
+        path: `/annotations/${index}/action/targetId`,
+        message: `Annotation action target '${annotation.action.targetId}' does not exist.`,
+      });
+    }
+    if (
+      annotation.action.type === "open-link" &&
+      !isValidAnnotationOpenLinkHref(annotation.action.href)
+    ) {
+      diagnostics.push({
+        code: "ANNOTATION_LINK_INVALID",
+        path: `/annotations/${index}/action/href`,
+        message: "Annotation link must be an absolute HTTPS URL without credentials.",
       });
     }
   });
@@ -188,6 +229,55 @@ export function validateSceneDocumentSemantics(
   }
 
   return sortDiagnostics(diagnostics);
+}
+
+function validateSurfaceAnchor(
+  annotation: Annotation,
+  index: number,
+  assets: ReadonlyMap<string, SceneAsset>,
+  entities: ReadonlyMap<string, SceneEntity>,
+  diagnostics: DocumentDiagnostic[],
+): void {
+  if (annotation.anchor.kind !== "surface") return;
+  const anchor = annotation.anchor;
+  const entity = entities.get(anchor.entityId);
+  if (entity === undefined) {
+    diagnostics.push({
+      code: "ANNOTATION_SURFACE_ENTITY_NOT_FOUND",
+      path: `/annotations/${index}/anchor/entityId`,
+      message: `Annotation surface entity '${anchor.entityId}' does not exist.`,
+    });
+  } else if (entity.type !== "asset") {
+    diagnostics.push({
+      code: "ANNOTATION_SURFACE_ENTITY_NOT_ASSET",
+      path: `/annotations/${index}/anchor/entityId`,
+      message: `Annotation surface entity '${anchor.entityId}' is not an asset instance.`,
+    });
+  } else {
+    const asset = assets.get(entity.assetId);
+    if (asset === undefined) {
+      diagnostics.push({
+        code: "ANNOTATION_SURFACE_ASSET_NOT_FOUND",
+        path: `/annotations/${index}/anchor/entityId`,
+        message: `Annotation surface asset '${entity.assetId}' does not exist.`,
+      });
+    } else if (asset.sha256 !== anchor.assetHash) {
+      diagnostics.push({
+        code: "ANNOTATION_SURFACE_ASSET_HASH_MISMATCH",
+        path: `/annotations/${index}/anchor/assetHash`,
+        message: `Annotation surface hash does not match asset '${asset.id}'.`,
+      });
+    }
+  }
+
+  const normalLength = Math.hypot(...anchor.nodeLocalNormal);
+  if (!Number.isFinite(normalLength) || Math.abs(normalLength - 1) > 1e-6) {
+    diagnostics.push({
+      code: "ANNOTATION_SURFACE_NORMAL_NOT_UNIT",
+      path: `/annotations/${index}/anchor/nodeLocalNormal`,
+      message: "Annotation surface normal must be a finite unit vector within 1e-6.",
+    });
+  }
 }
 
 const IDENTITY_ROTATION = [0, 0, 0, 1] as const;

@@ -250,8 +250,9 @@ interface StateResult {
   readonly measuredCount: number;
   readonly cpuWork: MetricResult;
   readonly frameInterval: MetricResult;
-  readonly projectionOcclusion: MetricResult;
-  readonly domMarkerUpdate: MetricResult;
+  readonly surfaceResolution: MetricResult;
+  readonly markerSync: MetricResult;
+  readonly overlayUpdate: MetricResult;
   readonly drawCalls: number;
   readonly visibleMarkers: number;
   readonly visibleDomProxies: number;
@@ -991,9 +992,9 @@ async function hashHarnessSources() {
   const relativePaths = [
     "benchmarks/007-hotspot-calibration/index.html",
     "benchmarks/007-hotspot-calibration/main.ts",
-    "benchmarks/007-hotspot-calibration/hotspot-overlay-candidate.ts",
-    "benchmarks/007-hotspot-calibration/hotspot-surface-index-candidate.ts",
     "benchmarks/007-hotspot-calibration/run.mts",
+    "packages/runtime/src/hotspots/hotspot-overlay.ts",
+    "packages/runtime/src/hotspots/surface-index.ts",
   ];
   return Promise.all(
     relativePaths.map(async (path) => {

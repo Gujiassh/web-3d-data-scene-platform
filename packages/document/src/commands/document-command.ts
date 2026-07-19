@@ -1,5 +1,6 @@
 import { validateSceneDocument } from "../validate.js";
 import type {
+  Annotation,
   AssetEntity,
   GroupEntity,
   LightEntity,
@@ -78,6 +79,12 @@ function applyCommand(document: SceneDocument, command: DocumentCommand): SceneD
       return updateLightEntity(document, command.before, command.after);
     case "remove-light-entity":
       return removeLightEntity(document, command.before);
+    case "add-annotation":
+      return addAnnotation(document, command.after);
+    case "update-annotation":
+      return updateAnnotation(document, command.before, command.after);
+    case "remove-annotation":
+      return removeAnnotation(document, command.before);
     case "create-group":
     case "reparent-entities":
     case "transform-entities":
@@ -358,6 +365,100 @@ function lockedLightUpdateAllowed(before: LightEntity, after: LightEntity): bool
   return deepEqual({ ...before, visible: after.visible, locked: after.locked }, after);
 }
 
+function addAnnotation(document: SceneDocument, after: Annotation): SceneDocument {
+  assertAnnotationTitleAllowed(after, undefined);
+  assertUnusedId(document, after.id, "annotation");
+  const candidate = reviseDocument(document, {
+    annotations: [...document.annotations, cloneAnnotation(after)],
+  });
+  validateAnnotationCommandCandidate(candidate, "Annotation after snapshot");
+  return candidate;
+}
+
+function updateAnnotation(
+  document: SceneDocument,
+  before: Annotation,
+  after: Annotation,
+): SceneDocument {
+  const current = requireAnnotation(document, before?.id);
+  assertValidAnnotationReplacement(document, current.id, before, "Annotation before snapshot");
+  if (!deepEqual(current, before)) {
+    throw new Error(`Annotation before snapshot does not match annotation '${current.id}'.`);
+  }
+  if (after?.id !== current.id) {
+    throw new Error("Annotation after snapshot must retain the same annotation ID.");
+  }
+  assertAnnotationTitleAllowed(after, before);
+  assertValidAnnotationReplacement(document, current.id, after, "Annotation after snapshot");
+  if (deepEqual(before, after)) {
+    throw new Error(`Annotation update '${current.id}' has no changes.`);
+  }
+  if (current.locked && !lockedAnnotationUpdateAllowed(before, after)) {
+    throw new Error(`Locked annotation '${current.id}' may only change visibility or unlock.`);
+  }
+  return reviseDocument(document, {
+    annotations: document.annotations.map((annotation) =>
+      annotation.id === current.id ? cloneAnnotation(after) : annotation,
+    ),
+  });
+}
+
+function removeAnnotation(document: SceneDocument, before: Annotation): SceneDocument {
+  const current = requireAnnotation(document, before?.id);
+  assertValidAnnotationReplacement(document, current.id, before, "Annotation before snapshot");
+  if (!deepEqual(current, before)) {
+    throw new Error(`Annotation before snapshot does not match annotation '${current.id}'.`);
+  }
+  if (current.locked) throw new Error(`Locked annotation '${current.id}' cannot be removed.`);
+  return reviseDocument(document, {
+    annotations: document.annotations.filter((annotation) => annotation.id !== current.id),
+  });
+}
+
+function assertAnnotationTitleAllowed(after: Annotation, before: Annotation | undefined): void {
+  if (typeof after?.title !== "string") return;
+  if (before !== undefined && after.title === before.title) return;
+  if (after.title.trim().length === 0) {
+    throw new Error("Annotation title must not be whitespace-only.");
+  }
+}
+
+function assertValidAnnotationReplacement(
+  document: SceneDocument,
+  currentId: string,
+  snapshot: Annotation,
+  label: string,
+): void {
+  const candidate: SceneDocument = {
+    ...document,
+    annotations: document.annotations.map((annotation) =>
+      annotation.id === currentId ? snapshot : annotation,
+    ),
+  };
+  validateAnnotationCommandCandidate(candidate, label);
+}
+
+function validateAnnotationCommandCandidate(document: SceneDocument, label: string): void {
+  const result = validateSceneDocument(document);
+  if (result.ok) return;
+  const detail = result.diagnostics
+    .map((diagnostic) => `${diagnostic.code}@${diagnostic.path}`)
+    .join(", ");
+  throw new Error(`${label} is invalid: ${detail}`);
+}
+
+function requireAnnotation(document: SceneDocument, annotationId: string | undefined): Annotation {
+  const annotation = document.annotations.find((candidate) => candidate.id === annotationId);
+  if (annotation === undefined) {
+    throw new Error(`Annotation '${String(annotationId)}' does not exist.`);
+  }
+  return annotation;
+}
+
+function lockedAnnotationUpdateAllowed(before: Annotation, after: Annotation): boolean {
+  return deepEqual({ ...before, visible: after.visible, locked: after.locked }, after);
+}
+
 function assertGenericEntityMutationAllowed(
   document: SceneDocument,
   entityId: string,
@@ -384,7 +485,14 @@ function deleteSubtree(document: SceneDocument, rootEntityId: string): SceneDocu
     targets: document.targets.filter((target) => !removedTargetIds.has(target.id)),
     bindings: document.bindings.filter((binding) => !removedTargetIds.has(binding.targetId)),
     annotations: document.annotations.filter(
-      (annotation) => !removedTargetIds.has(annotation.targetId),
+      (annotation) =>
+        !(
+          (annotation.anchor.kind === "surface" && subtreeIds.has(annotation.anchor.entityId)) ||
+          (annotation.anchor.kind === "legacy" &&
+            removedTargetIds.has(annotation.anchor.targetId)) ||
+          (annotation.action.type === "focus-target" &&
+            removedTargetIds.has(annotation.action.targetId))
+        ),
     ),
   });
 }
@@ -588,6 +696,22 @@ function cloneTarget(target: SceneTarget, overrides: Partial<SceneTarget> = {}):
     ...target,
     metadata: { ...target.metadata },
     ...overrides,
+  };
+}
+
+function cloneAnnotation(annotation: Annotation): Annotation {
+  return {
+    ...annotation,
+    anchor:
+      annotation.anchor.kind === "surface"
+        ? {
+            ...annotation.anchor,
+            nodeLocalPosition: [...annotation.anchor.nodeLocalPosition],
+            nodeLocalNormal: [...annotation.anchor.nodeLocalNormal],
+          }
+        : { ...annotation.anchor, localOffset: [...annotation.anchor.localOffset] },
+    content: { ...annotation.content },
+    action: { ...annotation.action },
   };
 }
 

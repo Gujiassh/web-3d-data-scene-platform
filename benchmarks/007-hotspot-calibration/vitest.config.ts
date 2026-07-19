@@ -11,6 +11,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["hotspot-surface-index-candidate.test.ts"],
+    include: ["production-runtime-wiring.test.ts"],
   },
 });

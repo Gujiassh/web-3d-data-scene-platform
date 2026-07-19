@@ -76,7 +76,8 @@ SceneTarget field, ProjectRecord field or archive container field is added.
 - Legacy-anchor Target and focus-target Target must exist.
 - Plain text is at most 2,000 characters and is never interpreted as HTML/Markdown.
 - Host key is non-empty and at most 256 characters. It is opaque and need not resolve during document validation.
-- Open-link is an absolute `https:` URL, at most 2,048 characters and contains no username/password.
+- Open-link starts with the exact lower-case `https://` prefix, parses as an absolute HTTPS URL, is at most 2,048
+  characters and contains no username/password. The original string need not equal the parser's canonical `href`.
 - Every Annotation has exactly one content variant and exactly one action variant.
 - No action contains scripts, host routes, commands, arbitrary payloads, conditions or nested action lists.
 

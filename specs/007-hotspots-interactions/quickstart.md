@@ -1,6 +1,6 @@
 # Quickstart: Review And Verify Hotspots
 
-**Status**: Calibrated design approved for implementation on 2026-07-18
+**Status**: Implementation and automated production acceptance passed on 2026-07-19; five-user usability remains open
 
 ## Review Order
 
@@ -22,8 +22,8 @@ One approval authorizes the complete package only:
 - dynamic no-cap marker rendering, DOM proxies and opaque depth-writing occlusion policy;
 - implementation plan and calibrated performance gates.
 
-The user explicitly approved this complete scope on 2026-07-18. SceneDocument 1.3 remains production authority until
-the approved migration is implemented and accepted.
+The user explicitly approved this complete scope on 2026-07-18. The migration and native Chromium acceptance now pass,
+so SceneDocument 1.4 is the production authority.
 
 ## Run Calibration
 
@@ -78,6 +78,15 @@ pnpm exec eslint benchmarks/007-hotspot-calibration
 pnpm typecheck
 git diff --check
 ```
+
+The production acceptance sequence also runs the dedicated Chromium suite and native IndexedDB proof:
+
+```bash
+pnpm exec playwright test --config tests/e2e/hotspots.playwright.config.ts
+pnpm exec playwright test tests/e2e/indexeddb-migration.spec.ts --workers=1
+```
+
+Automated acceptance does not close the five-person protocol in `usability-protocol.md`.
 
 ## Stop Conditions
 

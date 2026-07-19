@@ -264,7 +264,7 @@ async function migrateStoredProjects(db: IDBDatabase): Promise<void> {
     const rewrites = records.flatMap((record) => {
       const declaredVersion = readStoredSchemaVersion(record.documentJson);
       const document = parseStoredDocument(record.documentJson, record.id);
-      if (declaredVersion === "1.3.0") return [];
+      if (declaredVersion === document.schemaVersion) return [];
       const documentJson = serializeProjectDocument(document);
       return [{ ...record, lastExportedRevision: null, documentJson }];
     });

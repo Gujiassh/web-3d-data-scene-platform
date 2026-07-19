@@ -19,6 +19,7 @@ import {
   type GltfInspectionSummary,
 } from "../index";
 import type { AuthoringViewerEvent, DataAdapter, DataEnvelope } from "../types";
+import { createHotspotTestContainer } from "../hotspots/hotspot-test-dom";
 import { AuthoredLightController } from "../viewer/authored-light-controller";
 
 const runtime = vi.hoisted(() => ({
@@ -2099,11 +2100,7 @@ function fakeView(): FakeView {
 }
 
 function fakeContainer(): HTMLElement {
-  return {
-    clientHeight: 600,
-    clientWidth: 800,
-    replaceChildren(): void {},
-  } as unknown as HTMLElement;
+  return createHotspotTestContainer();
 }
 
 type FakeTransformControls = {

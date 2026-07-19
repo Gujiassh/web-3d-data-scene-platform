@@ -12,7 +12,7 @@ import {
 } from "./index";
 
 const source = {
-  schemaVersion: "1.3.0",
+  schemaVersion: "1.4.0",
   id: "scene-1",
   name: "Scene",
   revision: 0,
@@ -86,6 +86,12 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneHandle["isTransformDragging"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["getEntitySpatialSnapshots"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["setAuthoringMode"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["startHotspotPlacement"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["startHotspotReposition"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["acknowledgeHotspotCancellation"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["focusHotspot"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["focusHotspotProxy"]>().toBeFunction();
+    expectTypeOf<AuthoringSceneHandle["activateHotspot"]>().toBeFunction();
     expectTypeOf<AuthoringSceneHandle["getLightCreationFrame"]>().toBeFunction();
     expectTypeOf<
       ReturnType<AuthoringSceneHandle["getEntitySpatialSnapshots"]>[number]
@@ -99,13 +105,21 @@ describe("react runtime wrappers", () => {
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("gridPreview");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("lightingPreview");
     expectTypeOf<AuthoringSceneProps>().toHaveProperty("authoringMode");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("hotspotAuthority");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("hotspotOrder");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("onHotspotPlacementPreview");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("onHotspotSessionStart");
+    expectTypeOf<AuthoringSceneProps>().toHaveProperty("onHotspotSessionCancel");
     expectTypeOf<SceneViewerHandle["setThemeBackground"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setBackgroundPreview"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setGridPreview"]>().toBeFunction();
     expectTypeOf<SceneViewerHandle["setLightingPreview"]>().toBeFunction();
+    expectTypeOf<SceneViewerHandle["focusHotspot"]>().toBeFunction();
+    expectTypeOf<SceneViewerHandle["activateHotspot"]>().toBeFunction();
     expectTypeOf<SceneViewerProps>().toHaveProperty("themeBackground");
     expectTypeOf<SceneViewerProps>().toHaveProperty("backgroundPreview");
     expectTypeOf<SceneViewerProps>().toHaveProperty("gridPreview");
     expectTypeOf<SceneViewerProps>().toHaveProperty("lightingPreview");
+    expectTypeOf<SceneViewerProps>().toHaveProperty("onHotspotActivation");
   });
 });

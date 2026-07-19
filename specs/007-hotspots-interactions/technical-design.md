@@ -87,6 +87,23 @@ React forwards stable controlled mode/tool state, transient Runtime events and n
 methods. Studio owns command construction, selected hotspot ID, title/editor/popover/Inspector state, list focus and
 localized feedback. The Hotspots list is separate from SceneTree.
 
+### Transient Hotspot View State
+
+Studio reads marker availability and popover placement through a narrow Runtime/React authoring getter. The returned
+`HotspotViewState` is transient and contains the Annotation ID, typed available/unavailable and resolved/unresolved
+state, a bounded unresolved reason, current marker visibility and an optional screen anchor. A missing Annotation
+returns an explicit unavailable state rather than throwing or guessing against stale Studio state.
+
+Screen anchors use client viewport CSS pixels. `null` means the marker is not visible in the overlay's latest completed
+projection because it is hidden, unresolved, offscreen or occluded. Runtime derives this value from the same overlay
+projection snapshot that positions DOM proxies; Studio does not query overlay DOM or independently project world
+coordinates. Placement preview and accept events carry the corresponding transient screen anchor from that snapshot.
+Camera, rigid transform, visibility and resize updates refresh the snapshot through the existing single projection pass
+without a second per-frame projection or marker-structure reconciliation.
+
+This API is not part of SceneDocument, ProjectRecord, command history, archive data or save semantics. It carries no
+asset hash, node index, raycast object or arbitrary diagnostic string to Studio.
+
 ## Document And Persistence Boundary
 
 The complete proposed 1.4 contract remains in [data-model.md](data-model.md) and

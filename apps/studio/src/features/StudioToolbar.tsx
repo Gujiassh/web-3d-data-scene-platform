@@ -4,6 +4,7 @@ import {
   FolderOpen,
   CircleHelp,
   Magnet,
+  MapPinPlus,
   MousePointer2,
   Move3d,
   Pause,
@@ -38,6 +39,7 @@ interface StudioToolbarProps {
   readonly duplicateDisabledReason: string | null;
   readonly hasSelection: boolean;
   readonly smartAlignEnabled: boolean;
+  readonly hotspotPlacementActive: boolean;
   readonly lightCount: number;
   readonly lightingMenuOpen: boolean;
   readonly lightAddDisabledReason: string | null;
@@ -53,6 +55,7 @@ interface StudioToolbarProps {
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
   readonly onOpenHelp: () => void;
+  readonly onAddHotspot: () => void;
   readonly onOpenSettings: () => void;
   readonly onToggleSmartAlign: () => void;
   readonly onAddLight: (kind: StudioLightKind) => boolean;
@@ -173,6 +176,16 @@ export function StudioToolbar(props: StudioToolbarProps) {
           {t.toolbar.runMode}
         </button>
       </div>
+
+      <IconCommand
+        active={props.hotspotPlacementActive}
+        disabled={!props.canEdit}
+        icon={<MapPinPlus size={16} />}
+        label={t.toolbar.addHotspot}
+        shortcut={studioCommandShortcut("hotspot.add", platform)}
+        testId="add-hotspot-button"
+        onClick={props.onAddHotspot}
+      />
 
       <span className="toolbar-spacer" />
       <IconCommand

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { SceneAsset } from "@web3d/document";
-import { BoxGeometry, Group, Light, Mesh, MeshBasicMaterial } from "three";
+import { BoxGeometry, Group, Light, Mesh, MeshBasicMaterial, type Object3D } from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,6 +49,68 @@ describe("loadGltfAsset", () => {
         new AbortController().signal,
       ),
     ).rejects.toMatchObject({ diagnostic: { code: "ASSET_HASH_MISMATCH" } });
+  });
+
+  it("expands formal node identity across primitive meshes and nested formal nodes", async () => {
+    const bytes = Uint8Array.from([4, 3, 2, 1]);
+    const scene = new Group();
+    const parentNode = new Group();
+    const firstPrimitive = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    const secondPrimitive = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    const runtimeAttachment = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    const childNode = new Group();
+    const childPrimitive = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    const formalMeshNode = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    const unrelated = new Mesh(new BoxGeometry(), new MeshBasicMaterial());
+    parentNode.add(firstPrimitive, secondPrimitive, runtimeAttachment, childNode);
+    childNode.add(childPrimitive);
+    scene.add(parentNode, formalMeshNode, unrelated);
+    const associations = new Map<Object3D, Record<string, number>>([
+      [parentNode, { meshes: 4, nodes: 7 }],
+      [firstPrimitive, { meshes: 4, primitives: 0 }],
+      [secondPrimitive, { meshes: 4, primitives: 1 }],
+      [childNode, { nodes: 8 }],
+      [childPrimitive, { meshes: 5, primitives: 0 }],
+      [formalMeshNode, { nodes: 9 }],
+      [unrelated, { meshes: 9, primitives: 0 }],
+    ]);
+    const parse = vi.spyOn(GLTFLoader.prototype, "parseAsync").mockResolvedValue({
+      parser: { associations },
+      scene,
+      scenes: [scene],
+    } as unknown as GLTF);
+    const asset: SceneAsset = {
+      id: "multi-primitive",
+      name: "Multi primitive",
+      uri: "/multi-primitive.glb",
+      mediaType: "model/gltf-binary",
+      sha256: await sha256Hex(bytes.buffer),
+      byteLength: bytes.byteLength,
+    };
+
+    try {
+      const loaded = await loadGltfAsset(
+        asset,
+        { resolve: () => Promise.resolve(new Blob([bytes])) },
+        new AbortController().signal,
+      );
+
+      expect(loaded.nodesByIndex).toEqual(
+        new Map<number, Object3D>([
+          [7, parentNode],
+          [8, childNode],
+          [9, formalMeshNode],
+        ]),
+      );
+      expect(loaded.nodeIndexByObject.get(firstPrimitive)).toBe(7);
+      expect(loaded.nodeIndexByObject.get(secondPrimitive)).toBe(7);
+      expect(loaded.nodeIndexByObject.get(childPrimitive)).toBe(8);
+      expect(loaded.nodeIndexByObject.get(formalMeshNode)).toBe(9);
+      expect(loaded.nodeIndexByObject.has(runtimeAttachment)).toBe(false);
+      expect(loaded.nodeIndexByObject.has(unrelated)).toBe(false);
+    } finally {
+      parse.mockRestore();
+    }
   });
 
   it("disposes a parsed scene when the load is aborted after parsing", async () => {

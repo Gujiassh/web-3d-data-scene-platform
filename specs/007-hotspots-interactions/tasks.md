@@ -1,6 +1,6 @@
 # Tasks: Hotspots And Declarative Interactions
 
-**Status**: Calibrated implementation approved; production tasks in progress
+**Status**: Implementation, automated acceptance and Critical review complete; blocked on five-user usability evidence
 
 **Date**: 2026-07-18
 
@@ -18,45 +18,45 @@ T007 completed on 2026-07-18. Production tasks may proceed in the approved order
 
 ## Document And Persistence
 
-- [ ] T010 Add frozen 1.3 validator entry and current 1.4 schema/type/semantic validation.
-- [ ] T011 Implement deterministic 1.3 Annotation -> opaque Legacy anchor migration with invalid-intermediate tests.
-- [ ] T012 Add complete-snapshot add/update/remove Annotation commands, lock rules and no-op/stale/history tests.
-- [ ] T013 Extend delete-subtree cascades and prove duplicate-subtree never copies annotations.
-- [ ] T014 Extend raw JSON/ZIP import through 1.4 and current-only export without changing archive container 1.0.0.
-- [ ] T015 Rewrite every legacy ProjectRecord in one IndexedDB transaction, null rewritten export revisions and retain
+- [x] T010 Add frozen 1.3 validator entry and current 1.4 schema/type/semantic validation.
+- [x] T011 Implement deterministic 1.3 Annotation -> opaque Legacy anchor migration with invalid-intermediate tests.
+- [x] T012 Add complete-snapshot add/update/remove Annotation commands, lock rules and no-op/stale/history tests.
+- [x] T013 Extend delete-subtree cascades and prove duplicate-subtree never copies annotations.
+- [x] T014 Extend raw JSON/ZIP import through 1.4 and current-only export without changing archive container 1.0.0.
+- [x] T015 Rewrite every legacy ProjectRecord in one IndexedDB transaction, null rewritten export revisions and retain
       already-current bytes exactly.
 
 ## Runtime
 
-- [ ] T020 Implement exact rigid surface index and unsupported-surface classification.
-- [ ] T021 Implement dynamic InstancedMesh marker overlay, stable ID mapping and complete resource disposal.
-- [ ] T022 Implement DOM proxy projection, roving focus, frustum/opaque occlusion and pointer-pick parity.
-- [ ] T023 Implement placement/reposition session controller, active-only raycasts and authority cancellation handshake.
-- [ ] T024 Implement closed action interpreter, point focus and bounded Viewer activation/error events.
-- [ ] T025 Add thin viewport lifecycle/render forwarding without hotspot policy accumulation.
-- [ ] T026 Add exact resolution, occlusion, overlap, stale-session, mode-race, StrictMode and disposal tests.
+- [x] T020 Implement exact rigid surface index and unsupported-surface classification.
+- [x] T021 Implement dynamic InstancedMesh marker overlay, stable ID mapping and complete resource disposal.
+- [x] T022 Implement DOM proxy projection, roving focus, frustum/opaque occlusion and pointer-pick parity.
+- [x] T023 Implement placement/reposition session controller, active-only raycasts and authority cancellation handshake.
+- [x] T024 Implement closed action interpreter, point focus and bounded Viewer activation/error events.
+- [x] T025 Add thin viewport lifecycle/render forwarding without hotspot policy accumulation.
+- [x] T026 Add exact resolution, occlusion, overlap, stale-session, mode-race, StrictMode and disposal tests.
 
 ## React And Studio
 
-- [ ] T030 Add stable React hotspot handle/events and controlled mode/session forwarding.
-- [ ] T031 Add canonical `H` command, toolbar button, Help entry and direct placement cursor/reticle state.
-- [ ] T032 Add adjacent one-line create/rename editor with Enter/confirm and Escape/cancel atomic semantics.
-- [ ] T033 Add marker selection, compact popover, drag reposition and lock/visibility/delete actions.
-- [ ] T034 Add separate Hotspots rail view with roving keyboard focus and hidden/unresolved parity.
-- [ ] T035 Add progressive Hotspot Inspector for plain/trusted content and four dedicated action controls.
-- [ ] T036 Add Run marker/DOM/list activation surfaces and prove zero mutation reachability.
-- [ ] T037 Add exact English/Chinese copy, accessible names, live regions and reduced-motion behavior.
+- [x] T030 Add stable React hotspot handle/events and controlled mode/session forwarding.
+- [x] T031 Add canonical `H` command, toolbar button, Help entry and direct placement cursor/reticle state.
+- [x] T032 Add adjacent one-line create/rename editor with Enter/confirm and Escape/cancel atomic semantics.
+- [x] T033 Add marker selection, compact popover, drag reposition and lock/visibility/delete actions.
+- [x] T034 Add separate Hotspots rail view with roving keyboard focus and hidden/unresolved parity.
+- [x] T035 Add progressive Hotspot Inspector for plain/trusted content and four dedicated action controls.
+- [x] T036 Add Run marker/DOM/list activation surfaces and prove zero mutation reachability.
+- [x] T037 Add exact English/Chinese copy, accessible names, live regions and reduced-motion behavior.
 
 ## Acceptance
 
-- [ ] T040 Add document/persistence unit and rollback coverage for every version and write failure.
-- [ ] T041 Add Runtime/React integration coverage for every semantic oracle and race.
-- [ ] T042 Add desktop bilingual/theme/reduced-motion pointer and keyboard E2E at 1280x720 and 1440x900.
-- [ ] T043 Rewire `bench:hotspot-007` to production controllers and rerun the fixed hardware protocol.
+- [x] T040 Add document/persistence unit and rollback coverage for every version and write failure.
+- [x] T041 Add Runtime/React integration coverage for every semantic oracle and race.
+- [x] T042 Add desktop bilingual/theme/reduced-motion pointer and keyboard E2E at 1280x720 and 1440x900.
+- [x] T043 Rewire `bench:hotspot-007` to production controllers and rerun the fixed hardware protocol.
 - [ ] T044 Run five-user usability protocol and record first-attempt completion and task times.
-- [ ] T045 Run full typecheck, lint, tests, build, i18n, design, topology, format and diff gates sequentially.
-- [ ] T046 Return implementation findings to original owners, close rework and obtain independent Critical PASS.
-- [ ] T047 Update SSoT/spec/acceptance artifacts and prepare Feature 008 publish/embed handoff.
+- [x] T045 Run full typecheck, lint, tests, build, i18n, design, topology, format and diff gates sequentially.
+- [x] T046 Return implementation findings to original owners, close rework and obtain independent Critical PASS.
+- [x] T047 Update SSoT/spec/acceptance artifacts and prepare Feature 008 publish/embed handoff.
 
 ## Required Production Evidence
 

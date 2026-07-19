@@ -1,0 +1,403 @@
+.hotspots-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.hotspots-panel > header {
+  min-height: 36px;
+  padding: 0 10px;
+  display: grid;
+  grid-template-columns: 1fr auto 28px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.hotspots-panel > header > span {
+  color: var(--ink-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+}
+
+.hotspot-add-button,
+.hotspot-title-editor button,
+.hotspot-popover button,
+.hotspot-run-content button {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.hotspot-add-button:hover,
+.hotspot-title-editor button:hover,
+.hotspot-popover button:hover,
+.hotspot-run-content button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.hotspot-rows {
+  min-height: 0;
+  overflow: auto;
+}
+
+.hotspot-row {
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.hotspot-row-main {
+  width: 100%;
+  min-width: 0;
+  min-height: 37px;
+  padding: 5px 4px 5px 8px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 16px 16px;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.hotspot-row:hover,
+.hotspot-row.is-selected,
+.hotspot-row-main:focus-visible {
+  background: var(--surface-hover);
+}
+
+.hotspot-row.is-selected {
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+.hotspot-row-main > span {
+  min-width: 0;
+  display: grid;
+}
+
+.hotspot-row-main strong,
+.hotspot-row-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotspot-row-main strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hotspot-row-main small,
+.hotspots-empty {
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+.hotspot-row-actions {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.hotspot-row-actions:hover,
+.hotspot-row-actions:focus-visible {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.hotspots-empty {
+  margin: 0;
+  padding: 14px 10px;
+}
+
+.studio-viewport.is-hotspot-placement canvas {
+  cursor: crosshair;
+}
+
+.hotspot-title-editor,
+.hotspot-popover,
+.hotspot-run-content {
+  position: fixed;
+  z-index: 70;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.hotspot-title-editor {
+  width: min(280px, calc(100vw - 24px));
+  min-height: 38px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  gap: 3px;
+}
+
+.hotspot-title-editor input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: inherit;
+  padding: 0 8px;
+}
+
+.hotspot-title-editor [role="alert"] {
+  grid-column: 1 / -1;
+  padding: 2px 5px;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.hotspot-popover {
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+  animation: hotspot-popover-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hotspot-popover button:disabled {
+  opacity: 0.4;
+}
+
+.hotspot-run-content {
+  right: 18px;
+  bottom: 44px;
+  width: min(320px, calc(100vw - 36px));
+  padding: 10px 12px;
+}
+
+.hotspot-run-content header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hotspot-run-content p {
+  white-space: pre-wrap;
+}
+
+.hotspot-run-content small {
+  color: var(--ink-muted);
+}
+
+.hotspot-inspector {
+  padding: 10px;
+  display: grid;
+  gap: 12px;
+}
+
+.hotspot-inspector > header {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hotspot-inspector > header strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotspot-inspector > header button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.hotspot-live-region {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hotspot-inspector label,
+.hotspot-behavior label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.hotspot-inspector textarea,
+.hotspot-inspector input,
+.hotspot-inspector select {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px;
+  font: inherit;
+}
+
+.hotspot-inspector label > small {
+  justify-self: end;
+  color: var(--ink-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+}
+
+.hotspot-segment,
+.hotspot-action-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.hotspot-segment button,
+.hotspot-action-options button {
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+}
+
+.hotspot-segment button[aria-pressed="true"],
+.hotspot-action-options button.is-active {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.hotspot-behavior {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.hotspot-behavior summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hotspot-behavior > * + * {
+  margin-top: 8px;
+}
+
+.hotspot-search-select {
+  display: grid;
+  gap: 6px;
+}
+
+.hotspot-search-input {
+  position: relative;
+  display: block;
+}
+
+.hotspot-search-input svg {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.hotspot-search-input input {
+  padding-left: 27px;
+}
+
+.hotspot-current-selection,
+.hotspot-unavailable-selection {
+  min-height: 26px;
+  margin: 0;
+  padding: 5px 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.hotspot-unavailable-selection {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+.hotspot-search-results {
+  max-height: 132px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.hotspot-search-results > p {
+  margin: 0;
+  padding: 8px 2px;
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+.hotspot-search-results button {
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.hotspot-search-results button:hover,
+.hotspot-search-results button:focus-visible {
+  background: var(--surface-hover);
+}
+
+@keyframes hotspot-popover-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot-popover {
+    animation: none;
+  }
+}

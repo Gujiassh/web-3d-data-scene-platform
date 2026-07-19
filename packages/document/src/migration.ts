@@ -47,6 +47,34 @@ export function migrateSceneDocument1_2(value: unknown): unknown {
   return { ...document, schemaVersion: "1.3.0" };
 }
 
+export function migrateSceneDocument1_3(value: unknown): unknown {
+  const document = requireRecord(value, "Legacy SceneDocument");
+  const annotations = requireArray(document["annotations"], "Legacy SceneDocument annotations");
+  return {
+    ...document,
+    schemaVersion: "1.4.0",
+    annotations: annotations.map((value, index) => {
+      const annotation = requireRecord(value, `Legacy annotation ${index}`);
+      return {
+        id: annotation["id"],
+        title: annotation["title"],
+        visible: true,
+        locked: false,
+        anchor: {
+          kind: "legacy",
+          targetId: annotation["targetId"],
+          localOffset: annotation["localOffset"],
+        },
+        content: {
+          kind: "host-content",
+          key: annotation["contentKey"],
+        },
+        action: { type: "show-content" },
+      };
+    }),
+  };
+}
+
 function cloneStandardLighting(): SceneLighting {
   return {
     fill: { ...STANDARD_SCENE_LIGHTING.fill },
@@ -69,4 +97,9 @@ function requireRecord(value: unknown, label: string): Readonly<Record<string, u
     throw new TypeError(`${label} must be an object.`);
   }
   return value as Readonly<Record<string, unknown>>;
+}
+
+function requireArray(value: unknown, label: string): readonly unknown[] {
+  if (!Array.isArray(value)) throw new TypeError(`${label} must be an array.`);
+  return value;
 }

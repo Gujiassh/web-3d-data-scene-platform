@@ -13,6 +13,7 @@ import { StudioI18nProvider } from "./i18n/I18nProvider";
 import "./styles.css";
 import "./data-binding/data-binding.css";
 import "./help/shortcut-help.css";
+import "./hotspots/hotspots.css";
 import "./layout/scene-layout.css";
 import "./scene-settings/scene-settings.css";
 import "./settings/app-settings.css";

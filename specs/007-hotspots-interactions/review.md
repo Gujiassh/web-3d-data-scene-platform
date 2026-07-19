@@ -58,18 +58,18 @@ performance evolution
 The final accepted run used Windows Chrome 150, RTX 3090/ANGLE D3D11, 1440x900 DPR1. The benchmark report is
 `acceptanceEligible=true` and binds the fixture, raw sidecars and all five harness source files by SHA-256.
 
-- 200-marker CPU p95 `1.40ms`; zero-marker p95 `0.40ms`; delta `1.00ms`.
-- RAF interval p95 `16.80ms`; GPU p95 `2.16576ms`; zero intervals above `25ms`; zero long tasks.
-- Projection/occlusion p95 `0.40ms`; DOM/marker update p95 `0.70ms`.
+- 200-marker CPU p95 `1.00ms`; zero-marker p95 `0.30ms`; delta `0.70ms`.
+- RAF interval p95 `16.80ms`; GPU p95 `1.709056ms`; zero intervals above `25ms`; zero long tasks.
+- Projection and opaque occlusion p95 `0.70ms`; DOM/marker update p95 `0.70ms`.
 - Pick p95 `0.10ms`, 300/300 exact; wrong entity/hash/node probes remain unresolved with no proxy or pick.
 - 330 unique sequential pointer mark/Paint rows persist; after 30 warmups, 300 samples independently reproduce median
-  `1.817ms`, p95 `2.681ms` and max `6.199ms` exactly.
+  `0.617ms`, p95 `0.836ms` and max `1.525ms` exactly.
 - Five create/update/dispose cycles restore scene/DOM/geometry/texture baselines; listener/session/RAF counts and GC heap
   delta are zero.
 - Fixture SHA `3958d1fb5060a36a9e0db7374a6361abdc61770f74114c296418fab047485e4a`; samples SHA
-  `284b35fe6f5b6a3e6af2f0d4ac825e99933ab7571d41a3ea6f555c9bcee7776b`; trace-events SHA
-  `8ea704a8c643ad9c0427c9ebc7abe1346397e3508b50b6e00a4409eee79d29d9`; runner SHA
-  `85fb5f552461c0ee94eff266c498fc870ec3d292265cf2f3b3eeec742d6b4e22`.
+  `f3564d978fa4c30f0f9c101fc1e32c9a9e58b2c3a8318255fcc5bd206d209f91`; trace-events SHA
+  `7f64ab57f877c5f7f3c5863de2a7927dbd188a0a4adf0f72616134aa5a71d1a7`; runner SHA
+  `9fc77098389deded1fdc03d06837e4f1e02f4d2c228d9589b2a3de25aeee6a2d`.
 
 | Critical area                              | Status         | Evidence                                                               |
 | ------------------------------------------ | -------------- | ---------------------------------------------------------------------- |
@@ -90,8 +90,136 @@ Final verification: benchmark test 1 file/5 tests; repository tests 92 files/560
 topology, design, Prettier and diff checks all pass. The existing build chunk-size warning is unrelated to this
 non-production slice.
 
-## Approval Closure
+## Document And Persistence Implementation Review
 
-The user explicitly approved the reviewed calibrated implementation package on 2026-07-18, closing CHK032. Production
-implementation may proceed in the approved order. SceneDocument 1.3 remains production authority until the approved
-migration is implemented and accepted.
+The approved T010-T015 production slice was implemented and independently reviewed on 2026-07-18. The P0 oracle was:
+
+1. Valid 1.0-1.3 input reaches current 1.4 through every frozen stage and preserves every 1.3 Annotation value.
+2. A valid current 1.4 ProjectRecord remains byte-identical, including non-canonical JSON and all eight fields.
+3. Any read, parse, intermediate, current-validation or write failure leaves every ProjectRecord unchanged.
+4. JSON/ZIP import accepts raw 1.0-1.4, export emits only 1.4, manifest comparison uses the raw pre-migration version,
+   and archive/database/ProjectRecord shapes remain unchanged.
+5. Annotation commands, locks, no-ops, stale snapshots, history, redo, cascades and duplicate behavior match the
+   approved complete-snapshot contract.
+
+The first independent review reported ambiguous URL wording and a weak current-byte fixture. Re-review against the
+calibrated approval record withdrew the URL finding: the approved oracle requires the exact lower-case `https://`
+prefix, accepts non-canonical `https://example.com`, and Runtime reuses the Document helper. The human-readable
+contract now states that rule explicitly. The original IndexedDB owner replaced the current seed with valid,
+non-canonical 1.4 JSON using reordered keys, four-space formatting and a legal Unicode escape, then proved that no
+`projects.put` occurs and all bytes and fields remain exact.
+
+Controller verification after rework: Document 9 files/138 tests, IndexedDB 1 file/12 tests, standalone current and
+1.0-1.3 validators, Document typecheck, scoped ESLint, Prettier and diff checks pass. The frozen 1.3 schema is
+byte-identical to the prior production schema; the current schema changes only `schemaVersion` and Annotation shape;
+IndexedDB remains version 1 with the same three stores and the archive container remains 1.0.0. Native-browser
+IndexedDB evidence remains part of final T040/T042 acceptance rather than this fake-indexeddb unit gate.
+
+Independent Critical re-review status: **PASS** with no open findings. Residual risk is limited to non-exhaustive JSON
+lexical variants in unit tests; the version-equality no-write branch plus a representative non-canonical current
+fixture provide the required P0 evidence.
+
+## Runtime And React Implementation Review
+
+Controller review of the initial T020-T030 Runtime/React delivery opened these findings and returned them to the
+original Runtime owner:
+
+| ID  | Severity | Finding                                                                                       | Required oracle                                                                                                      |
+| --- | -------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| R1  | P1       | Multi-primitive glTF nodes put `nodes` on the parent Group and primitive identity on children | Every primitive Mesh inherits the explicit formal node mapping; nested formal nodes override it; no runtime guessing |
+| R2  | P1       | Three.js raycasting includes Object3D instances hidden by self or ancestor visibility         | Hidden hits cannot receive placement or block a visible rear surface                                                 |
+| R3  | P1       | Resolved annotations on hidden nodes could retain Canvas markers and Run activation           | Resolution remains available, but hidden node/ancestor state removes marker/proxy activation until visible again     |
+| R4  | P1       | Unsupported foreground hits could fall through to a supported rear surface                    | Foreground unsupported surfaces reject without fallback and emit a bounded non-technical typed reason                |
+| R5  | P1       | Non-interactive ghost IDs entered proxy focus order and button reconciliation was quadratic   | Ghosts have no DOM/focus/activation entry; stable marker reconciliation remains linear                               |
+| R6  | P1       | Runtime-local string sorting could diverge from the localized Studio list order               | React forwards a controlled ordered-ID list; proxy roving order matches it without persistence                       |
+| R7  | P1       | Stable renders performed projection/occlusion twice and reconciled DOM structure every frame  | One projection update per frame; DOM identity/order changes reconcile only when marker metadata changes              |
+
+The rework refined only transient Runtime/React placement outcomes and controlled accessibility order. It did not
+change SceneDocument, ProjectRecord, archive, save semantics or persisted anchor/action meaning.
+
+Controller verification closed R1-R7 with 12 focused Runtime/React files and 114 tests, Runtime and React typecheck,
+scoped ESLint, Prettier and diff checks. The controller then added the bounded transient `HotspotViewState` and client
+CSS-pixel screen-anchor API required by Studio without exposing overlay DOM or adding a second projection pass; the
+expanded focused set passes 12 files and 116 tests.
+
+Independent Critical reviewer session `019f75ef-cf6b-7ad0-bb28-c6f17dd57332` returned **PASS** with no P0-P2
+findings. It independently checked R1-R7, failed-load authority restoration, rejected pointerup propagation, StrictMode,
+disposal and unresolved TS imports. Residual risk is the pending production hardware performance rerun in T043; the
+existing `authoring-scene-viewer.test.ts` is also over 2,000 lines, so hotspot tests remain in dedicated files.
+
+## Studio And Browser Implementation Review
+
+Controller review rejected the first Studio delivery and real Chromium run. The original implementation session was no
+longer resumable when work continued on 2026-07-19, so the main controller took over the bounded rework and retained the
+findings here rather than opening a second overlapping implementation lane.
+
+| ID  | Severity | Finding                                                                                | Closure oracle                                                                                 |
+| --- | -------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| S1  | P1       | Keyboard placement did not match the frozen visible-reticle protocol                   | `H`, visible reticle, `8/32` CSS-pixel steps, Enter accept and Escape byte-identical cancel    |
+| S2  | P1       | Marker reposition was not proven as direct manipulation with the exact drag threshold  | Under `4px` remains a click; `4px` starts one preview; one valid release creates one Undo step |
+| S3  | P1       | Lock, list keyboard and Inspector paths lacked complete pre-mutation evidence          | Locked rename/reposition/delete are unavailable; list roves; Inspector stays read-only         |
+| S4  | P1       | Detached RAF defaults lost their browser receiver and emitted Runtime page errors      | Default RAF/cancel methods are invocation-safe and StrictMode disposal leaves zero page errors |
+| S5  | P1       | Initial E2E could pass business assertions while ignoring page/console errors          | Every hotspot and IndexedDB browser test records and rejects `pageerror` and console error     |
+| S6  | P1       | Keyboard constants and their tests drifted to `1/10` after the first rework            | Runtime, unit and Chromium evidence use the approved `8/32` constants                          |
+| S7  | P1       | Inspector counted UTF-16 code units instead of the approved Unicode scalar-value limit | One non-BMP scalar counts once and valid 2,000-scalar content commits exactly                  |
+| S8  | P2       | A trusted-content E2E assertion matched both selected display value and list option    | The test asserts the exact semantic option with `aria-selected=true`                           |
+| S9  | P1       | Studio trimmed authored title bytes and counted its 160 limit as UTF-16 code units     | Trim rejects blanks only; accepted bytes stay exact and one non-BMP scalar counts once         |
+| S10 | P1       | Rejected Add/rename commands still closed the title editor and reported completion     | Rejection preserves editor/draft context and announces one localized error without mutation    |
+| S11 | P1       | Studio used a random UUID where the approved creation projection required a stable ID  | Lowest-free `annotation-n` scans the complete document namespace only at confirmed Add         |
+
+S1-S11 are closed. None changed SceneDocument, ProjectRecord, archive, database, anchor, action or save semantics.
+Runtime remains the geometric/session authority; Studio remains the command/editor/list/Inspector authority.
+
+Controller evidence on 2026-07-19:
+
+- focused hotspot regression: 17 files / 158 tests passed after S11, including the document-wide deterministic ID
+  allocator;
+- full repository gate: 109 files / 728 tests, typecheck, lint, build, i18n, design, topology, Prettier and diff check
+  passed sequentially; the pre-existing Vite chunk-size warning remains non-blocking;
+- dedicated Chromium hotspot suite: 21/21 passed at 1280x720 and 1440x900 across English/Chinese, light/dark and
+  reduced motion, including deterministic IDs, keyboard, direct drag, Run actions and zero page/console errors;
+- native Chromium IndexedDB: 4/4 passed for mixed 1.0-1.3 migration, current 1.4 exact bytes/no put, invalid-record
+  rollback and an enqueued-write rollback, with zero page/console errors;
+- production benchmark wiring: 1 file / 5 tests passed; the retained Windows Chrome 150 / RTX 3090 report is
+  `acceptanceEligible=true` and all five source hashes plus raw sidecar hashes match the current files;
+- nine hotspot screenshots under `artifacts/e2e/` are retained by the repository ignore policy; their exact hashes are
+  listed in `e2e-artifacts.sha256`.
+
+Independent Critical reverse review returned **PASS** with no open P0-P2 findings. The reviewer independently bound the
+post-S11 21/21 Chromium result and judged goal alignment, user-visible timing, architecture boundaries, persistence/save
+contracts, unresolved TypeScript imports, browser-test honesty, S10 rejection context, S11 deterministic IDs and the
+Feature 008 handoff boundary as passing. T046 is closed.
+
+| Final Critical area                  | Status  | Evidence                                                                  |
+| ------------------------------------ | ------- | ------------------------------------------------------------------------- |
+| Goal alignment and user-visible flow | pass    | Frozen Canvas-first create/manage/Run semantics and post-S11 Chromium     |
+| Architecture and timing boundaries   | pass    | Runtime geometry/session authority; Studio command/editor authority       |
+| Persistence and save contracts       | pass    | No S1-S11 change to document, database, archive, anchor or action meaning |
+| Type/import integrity                | pass    | Project typechecks plus unresolved identifier/import review               |
+| Browser-test honesty                 | pass    | 21/21 hotspot and 4/4 IndexedDB tests reject page/console errors          |
+| S10 and S11                          | pass    | Rejection context retained; document-wide lowest-free ID is deterministic |
+| Feature 008 handoff                  | pass    | Reuse 1.4, Runtime controllers and four-action interpreter                |
+| Feature 007 completion               | blocked | T044 requires five real representative users                              |
+
+Controller status: implementation, automated acceptance and Critical reverse review **PASS**. T044 remains explicitly
+blocked on five real representative-user runs; automated agents cannot manufacture that evidence.
+
+## Delivery Ledger
+
+- Source branch/ref: `main` at `9149cd9`, equal to `origin/main` when Feature 007 implementation began.
+- Repair branch: the same `main` working tree; the approved implementation and S1-S11 rework remain uncommitted and
+  unpushed because no commit or push was requested.
+- Symptom/root cause record: Document/Persistence, Runtime/React and Studio findings are preserved above as the P0
+  current-byte fixture correction, R1-R7 and S1-S11 with their closure oracles.
+- Changed scope: SceneDocument 1.4 migration/commands/archive/IndexedDB; Runtime/React hotspot controllers and lifecycle;
+  Studio authoring/Run UX; E2E, production benchmark and acceptance documentation.
+- Verification: 17/158 focused, 109/728 full Vitest, 21/21 hotspot Chromium, 4/4 native IndexedDB, 5/5 production wiring,
+  accepted hardware calibration, nine checked screenshot hashes and all sequential repository gates.
+- Downstream target: `main`. No merge, cherry-pick, commit or push step exists until explicitly requested; Feature 008
+  must wait for Feature 007 to pass T044.
+
+## Approval And Implementation Closure
+
+The user explicitly approved the reviewed calibrated implementation package on 2026-07-18, closing CHK032. The
+approved migration and automated production acceptance now pass, so SceneDocument 1.4 is the production authority.
+T046 and T047 are closed; Feature 007 completion waits only for the real-user T044 evidence.

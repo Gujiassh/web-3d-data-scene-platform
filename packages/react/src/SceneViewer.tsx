@@ -12,6 +12,8 @@ import {
   type AssetResolver,
   type DataAdapter,
   type Diagnostic,
+  type HotspotActivationEvent,
+  type HotspotActivationOrigin,
   type SceneSource,
   type SceneViewer as RuntimeViewer,
   type ViewerEvent,
@@ -22,10 +24,17 @@ import type { SceneLighting } from "@web3d/document";
 type ReadyEvent = Extract<ViewerEvent, { type: "ready" }>;
 type SelectionEvent = Extract<ViewerEvent, { type: "selection-change" }>;
 type AlarmEvent = Extract<ViewerEvent, { type: "alarm" }>;
+type HotspotContentEvent = Extract<ViewerEvent, { type: "hotspot-content" }>;
+type HotspotHostContentEvent = Extract<ViewerEvent, { type: "hotspot-host-content-request" }>;
 
 export interface SceneViewerHandle {
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string): Promise<void>;
+  focusHotspot(annotationId: string): Promise<void>;
+  activateHotspot(
+    annotationId: string,
+    origin?: HotspotActivationOrigin,
+  ): Promise<HotspotActivationEvent>;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
@@ -50,6 +59,9 @@ export interface SceneViewerProps {
   readonly onReady?: (event: ReadyEvent) => void;
   readonly onSelectionChange?: (event: SelectionEvent) => void;
   readonly onAlarm?: (event: AlarmEvent) => void;
+  readonly onHotspotActivation?: (event: HotspotActivationEvent) => void;
+  readonly onHotspotContent?: (event: HotspotContentEvent) => void;
+  readonly onHotspotHostContentRequest?: (event: HotspotHostContentEvent) => void;
   readonly onDiagnostic?: (diagnostic: Diagnostic) => void;
   readonly onEvent?: (event: ViewerEvent) => void;
 }
@@ -130,6 +142,12 @@ export const SceneViewer = forwardRef<SceneViewerHandle, SceneViewerProps>(
         focusTarget(targetId) {
           return requiredViewer(viewerRef).focusTarget(targetId, { select: true });
         },
+        focusHotspot(annotationId) {
+          return requiredViewer(viewerRef).focusHotspot(annotationId);
+        },
+        activateHotspot(annotationId, origin) {
+          return requiredViewer(viewerRef).activateHotspot(annotationId, origin);
+        },
         setThemeBackground(color) {
           requiredViewer(viewerRef).setThemeBackground(color);
         },
@@ -167,6 +185,9 @@ interface ViewerCallbacks {
   readonly onReady: SceneViewerProps["onReady"];
   readonly onSelectionChange: SceneViewerProps["onSelectionChange"];
   readonly onAlarm: SceneViewerProps["onAlarm"];
+  readonly onHotspotActivation: SceneViewerProps["onHotspotActivation"];
+  readonly onHotspotContent: SceneViewerProps["onHotspotContent"];
+  readonly onHotspotHostContentRequest: SceneViewerProps["onHotspotHostContentRequest"];
   readonly onDiagnostic: SceneViewerProps["onDiagnostic"];
   readonly onEvent: SceneViewerProps["onEvent"];
 }
@@ -176,6 +197,9 @@ function callbacks(props: SceneViewerProps): ViewerCallbacks {
     onReady: props.onReady,
     onSelectionChange: props.onSelectionChange,
     onAlarm: props.onAlarm,
+    onHotspotActivation: props.onHotspotActivation,
+    onHotspotContent: props.onHotspotContent,
+    onHotspotHostContentRequest: props.onHotspotHostContentRequest,
     onDiagnostic: props.onDiagnostic,
     onEvent: props.onEvent,
   };
@@ -186,6 +210,11 @@ function dispatch(callbacks: ViewerCallbacks, event: ViewerEvent): void {
   if (event.type === "ready") callbacks.onReady?.(event);
   if (event.type === "selection-change") callbacks.onSelectionChange?.(event);
   if (event.type === "alarm") callbacks.onAlarm?.(event);
+  if (event.type === "hotspot-activation") callbacks.onHotspotActivation?.(event);
+  if (event.type === "hotspot-content") callbacks.onHotspotContent?.(event);
+  if (event.type === "hotspot-host-content-request") {
+    callbacks.onHotspotHostContentRequest?.(event);
+  }
   if (event.type === "diagnostic") callbacks.onDiagnostic?.(event.diagnostic);
 }
 

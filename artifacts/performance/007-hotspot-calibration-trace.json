@@ -2,18 +2,18 @@
   "zero": {
     "state": "zero",
     "frameCount": 120,
-    "style": { "count": 1, "totalMs": 1.309, "maxMs": 1.309, "perFrame": 0.008333333333333333 },
-    "layout": { "count": 1, "totalMs": 0.082, "maxMs": 0.082, "perFrame": 0.008333333333333333 },
+    "style": { "count": 1, "totalMs": 0.401, "maxMs": 0.401, "perFrame": 0.008333333333333333 },
+    "layout": { "count": 1, "totalMs": 0.275, "maxMs": 0.275, "perFrame": 0.008333333333333333 },
     "paint": {
       "count": 121,
-      "totalMs": 5.9670000000000005,
-      "maxMs": 0.324,
+      "totalMs": 4.597999999999997,
+      "maxMs": 0.138,
       "perFrame": 1.0083333333333333
     },
     "composite": {
       "count": 356,
-      "totalMs": 0.4300000000000002,
-      "maxMs": 0.171,
+      "totalMs": 0.3300000000000002,
+      "maxMs": 0.091,
       "perFrame": 2.966666666666667
     },
     "runTasksOver50Ms": 0
@@ -21,19 +21,19 @@
   "markers": {
     "state": "surface-200",
     "frameCount": 120,
-    "style": { "count": 1, "totalMs": 1.279, "maxMs": 1.279, "perFrame": 0.008333333333333333 },
-    "layout": { "count": 1, "totalMs": 0.191, "maxMs": 0.191, "perFrame": 0.008333333333333333 },
-    "paint": { "count": 321, "totalMs": 5.927999999999996, "maxMs": 0.352, "perFrame": 2.675 },
+    "style": { "count": 2, "totalMs": 2.649, "maxMs": 1.722, "perFrame": 0.016666666666666666 },
+    "layout": { "count": 1, "totalMs": 0.153, "maxMs": 0.153, "perFrame": 0.008333333333333333 },
+    "paint": { "count": 321, "totalMs": 4.732999999999996, "maxMs": 0.299, "perFrame": 2.675 },
     "composite": {
       "count": 356,
-      "totalMs": 0.5360000000000001,
-      "maxMs": 0.296,
+      "totalMs": 0.40200000000000014,
+      "maxMs": 0.227,
       "perFrame": 2.966666666666667
     },
     "runTasksOver50Ms": 0
   },
   "rawEvents": {
     "path": "artifacts/performance/007-hotspot-calibration-trace-events.jsonl",
-    "sha256": "8ea704a8c643ad9c0427c9ebc7abe1346397e3508b50b6e00a4409eee79d29d9"
+    "sha256": "7f64ab57f877c5f7f3c5863de2a7927dbd188a0a4adf0f72616134aa5a71d1a7"
   }
 }

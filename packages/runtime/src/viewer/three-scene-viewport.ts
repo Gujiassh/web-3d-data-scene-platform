@@ -31,6 +31,9 @@ import {
 import { createEntitySpatialSnapshots } from "../authoring/spatial-snapshot";
 import { defaultAssetResolver } from "../assets/asset-loader";
 import { diagnostic, diagnosticError, RuntimeDiagnosticError } from "../diagnostics";
+import type { HotspotActivationOrigin } from "../hotspots/hotspot-action-interpreter";
+import type { HotspotAuthorityContext } from "../hotspots/hotspot-interaction-controller";
+import { HotspotRuntimeController } from "../hotspots/hotspot-runtime-controller";
 import { AnimationFrameSlot } from "../lifecycle/idempotent-disposer";
 import type {
   AuthoringMode,
@@ -75,6 +78,8 @@ export interface AuthoringViewportOptions {
   readonly dataRuntimeEnabled: boolean;
   readonly initialTool: AuthoringTool;
   readonly onEvent: ((event: AuthoringViewerEvent) => void) | undefined;
+  readonly initialHotspotAuthority: HotspotAuthorityContext;
+  readonly initialHotspotOrder: readonly string[];
   readonly createTransformController: TransformAuthoringControllerFactory;
 }
 
@@ -84,6 +89,8 @@ interface ReadonlyViewportOptions {
   readonly dataRuntimeEnabled: true;
   readonly initialTool: "select";
   readonly onEvent: undefined;
+  readonly initialHotspotAuthority: HotspotAuthorityContext;
+  readonly initialHotspotOrder: readonly string[];
 }
 
 interface PendingEntitySelection {
@@ -110,6 +117,7 @@ class ThreeSceneViewport {
   readonly #renderSlot = new AnimationFrameSlot();
   readonly #selectionOverlay: SelectionOverlay;
   readonly #lighting: SceneLightingController;
+  readonly #hotspots: HotspotRuntimeController;
   readonly #assetResolver;
   readonly #adapterRuntime: ViewerAdapterRuntime;
   readonly #dataRuntime: ViewerDataRuntimeController;
@@ -152,6 +160,8 @@ class ThreeSceneViewport {
       dataRuntimeEnabled: true,
       initialTool: "select",
       onEvent: undefined,
+      initialHotspotAuthority: { projectId: null, sourceId: null },
+      initialHotspotOrder: [],
     };
     this.#authoringMode = this.#authoring.initialMode;
     this.#dataRuntimeEnabled = this.#authoring.dataRuntimeEnabled;
@@ -180,6 +190,22 @@ class ThreeSceneViewport {
     this.#scene.background = new Color("#F4F6F5");
 
     this.#selectionOverlay = new SelectionOverlay(this.#scene);
+    this.#hotspots = new HotspotRuntimeController({
+      scene: this.#scene,
+      camera: this.#camera,
+      container: this.#container,
+      surface: this.#renderer.domElement,
+      initialMode: this.#authoringMode,
+      initialAuthority: this.#authoring.initialHotspotAuthority,
+      initialOrder: this.#authoring.initialHotspotOrder,
+      reducedMotion: this.#reducedMotion,
+      emitViewer: (event) => this.#emitViewer(event),
+      emitAuthoring: (event) => this.#emitAuthoring(event),
+      recordDiagnostic: (value) => this.#recordDiagnostic(value),
+      focusPoint: (point, focusOptions) => this.#focusPoint(point, focusOptions),
+      focusTarget: (targetId, focusOptions) => this.focusTarget(targetId, focusOptions),
+      requestRender: this.#requestRender,
+    });
     this.#transformAuthoring = this.#authoring.enabled
       ? this.#authoring.createTransformController({
           camera: this.#camera,
@@ -274,6 +300,8 @@ class ThreeSceneViewport {
       }
     }
 
+    this.#hotspots.prepareSource(validation.value.id, validation.value.revision);
+
     const lightOnlyUpdate =
       current === null ? null : classifyLightOnlySourceUpdate(current, validation.value);
     const supersededController = this.#loadController;
@@ -348,7 +376,10 @@ class ThreeSceneViewport {
       }
       if (!committed && this.#loadController === controller && !this.#disposing) {
         this.#lifecycle = previousLifecycle;
-        if (this.#generation !== null) await this.#adapterRuntime.applyDocumentAdapters();
+        if (this.#generation !== null && this.#document !== null) {
+          this.#hotspots.sync(this.#document, this.#generation);
+          await this.#adapterRuntime.applyDocumentAdapters();
+        }
       }
       if (!isAbortError(error)) {
         const value =
@@ -399,6 +430,7 @@ class ThreeSceneViewport {
       staged.commit(this.#authoringMode);
       committed = true;
       this.#document = source;
+      this.#hotspots.sync(source, generation);
       this.#dataRuntime.refreshDocumentAuthority(source, generation);
       this.#entitySelection = nextSelection;
       this.#syncSelectionOverlay();
@@ -422,6 +454,9 @@ class ThreeSceneViewport {
       if (!committed) staged?.dispose();
       if (this.#loadController === controller && !this.#disposing) {
         this.#lifecycle = previousLifecycle;
+        if (this.#generation !== null && this.#document !== null) {
+          this.#hotspots.sync(this.#document, this.#generation);
+        }
       }
       if (!isAbortError(error)) {
         const value = diagnostic(
@@ -473,6 +508,7 @@ class ThreeSceneViewport {
     this.#pendingGenerations.delete(next);
     this.#document = source;
     this.#scene.add(next.root);
+    this.#hotspots.sync(source, next);
     transferOwnership();
     if (this.#pendingEntitySelection?.controller === controller) {
       this.#pendingEntitySelection = null;
@@ -523,6 +559,7 @@ class ThreeSceneViewport {
     this.#ensureActive();
     if (!this.#authoring.enabled || this.#authoringMode === mode) return;
     this.#authoringMode = mode;
+    this.#hotspots.setMode(mode);
     this.#pointerStart = null;
     if (mode === "run") this.#generation?.authoredLights.clearPreview();
     this.#transformAuthoring?.setAuthoringMode(mode);
@@ -530,6 +567,16 @@ class ThreeSceneViewport {
     if (mode === "run") this.#selectionOverlay.clear();
     else this.#syncSelectionOverlay();
     this.#requestRender();
+  }
+
+  setHotspotAuthority(context: HotspotAuthorityContext): void {
+    this.#ensureActive();
+    this.#hotspots.setAuthorityContext(context);
+  }
+
+  setHotspotOrder(annotationIds: readonly string[]): void {
+    this.#ensureActive();
+    this.#hotspots.setOrder(annotationIds);
   }
 
   setCanvasLabel(label: string): void {
@@ -631,6 +678,61 @@ class ThreeSceneViewport {
     }
     if (options.select === true) this.#selectEntities([entityId], entityId, "api");
     await this.#focusObject(entity.object, options);
+  }
+
+  focusHotspot(annotationId: string, options: FocusOptions = {}): Promise<void> {
+    this.#ensureActive();
+    return this.#hotspots.focus(annotationId, options);
+  }
+
+  focusHotspotProxy(annotationId: string): boolean {
+    this.#ensureActive();
+    return this.#hotspots.focusProxy(annotationId);
+  }
+
+  getHotspotViewState(annotationId: string) {
+    this.#ensureActive();
+    return this.#hotspots.getViewState(annotationId);
+  }
+
+  activateHotspot(annotationId: string, origin: HotspotActivationOrigin = "list") {
+    this.#ensureActive();
+    return this.#hotspots.activate(annotationId, origin);
+  }
+
+  startHotspotPlacement() {
+    this.#ensureActive();
+    return this.#hotspots.startPlacement();
+  }
+
+  startHotspotReposition(annotationId: string) {
+    this.#ensureActive();
+    return this.#hotspots.startReposition(annotationId);
+  }
+
+  updateHotspotReticle(clientX: number, clientY: number): void {
+    this.#ensureActive();
+    this.#hotspots.updateReticle(clientX, clientY);
+  }
+
+  acceptHotspotReticle(): boolean {
+    this.#ensureActive();
+    return this.#hotspots.acceptReticle();
+  }
+
+  cancelHotspotSession(): void {
+    this.#ensureActive();
+    this.#hotspots.cancelSession();
+  }
+
+  finishHotspotDraft(sessionId: number): boolean {
+    this.#ensureActive();
+    return this.#hotspots.finishDraft(sessionId);
+  }
+
+  acknowledgeHotspotCancellation(sessionId: number): boolean {
+    this.#ensureActive();
+    return this.#hotspots.acknowledgeCancellation(sessionId);
   }
 
   setTool(tool: AuthoringTool): void {
@@ -740,6 +842,7 @@ class ThreeSceneViewport {
     this.#camera.aspect = width / height;
     this.#camera.updateProjectionMatrix();
     this.#renderer.setSize(width, height, false);
+    this.#hotspots.resize();
     this.#requestRender();
   }
 
@@ -770,6 +873,7 @@ class ThreeSceneViewport {
     this.#controls.removeEventListener("change", this.#requestRender);
     this.#controls.dispose();
     this.#transformAuthoring?.dispose();
+    this.#hotspots.dispose();
     this.#selectionOverlay.dispose();
     this.#lighting.dispose();
     this.#disposeGrid();
@@ -788,6 +892,7 @@ class ThreeSceneViewport {
   #render(): void {
     if (this.#disposing) return;
     this.#selectionOverlay.update();
+    this.#hotspots.render();
     const start = performance.now();
     this.#renderer.render(this.#scene, this.#camera);
     const info = this.#renderer.info.render;
@@ -992,6 +1097,14 @@ class ThreeSceneViewport {
     await this.#animateCamera(destination, center, options.durationMs ?? 240);
   }
 
+  #focusPoint(point: Vector3, options: FocusOptions = {}): Promise<void> {
+    const direction = this.#camera.position.clone().sub(this.#controls.target);
+    if (direction.lengthSq() < 0.0001) direction.set(1, 0.8, 1);
+    const distance = Math.max(1.5, this.#camera.position.distanceTo(this.#controls.target) * 0.45);
+    const destination = point.clone().addScaledVector(direction.normalize(), distance);
+    return this.#animateCamera(destination, point, options.durationMs ?? 240);
+  }
+
   #animateCamera(destination: Vector3, target: Vector3, durationMs: number): Promise<void> {
     this.#cancelFocus();
     if (this.#reducedMotion || durationMs <= 0) {
@@ -1042,6 +1155,7 @@ class ThreeSceneViewport {
     const start = this.#pointerStart;
     this.#pointerStart = null;
     if (!ObjectPicker.isClick(start, { x: event.clientX, y: event.clientY })) return;
+    if (this.#hotspots.activateAt(event.clientX, event.clientY)) return;
     const generation = this.#generation;
     if (generation === null) return;
     if (this.#authoring.enabled) {
@@ -1070,6 +1184,7 @@ class ThreeSceneViewport {
 
   readonly #handleContextLost = (event: Event): void => {
     event.preventDefault();
+    this.#hotspots.invalidateContext();
     this.#recordDiagnostic(
       diagnostic(
         "RENDERER_CONTEXT_LOST",
@@ -1081,6 +1196,7 @@ class ThreeSceneViewport {
   };
 
   readonly #handleContextRestored = (): void => {
+    this.#hotspots.invalidateContext();
     this.#requestRender();
   };
 

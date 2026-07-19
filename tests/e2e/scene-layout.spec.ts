@@ -147,7 +147,7 @@ function currentLayoutDocument(sceneJson: string): SceneDocument {
   const fixture = JSON.parse(sceneJson) as Omit<SceneDocument, "schemaVersion"> & {
     readonly schemaVersion: "1.2.0";
   };
-  return { ...fixture, schemaVersion: "1.3.0" };
+  return { ...fixture, schemaVersion: "1.4.0", annotations: [] };
 }
 
 async function importLayoutArchive(page: Page): Promise<Locator> {

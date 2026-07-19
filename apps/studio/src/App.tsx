@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Box, FolderTree, TriangleAlert } from "lucide-react";
+import { Box, FolderTree, MapPin, TriangleAlert } from "lucide-react";
 
 import { AuthoringScene, type AuthoringSceneHandle } from "@web3d/react";
 import { useTheme } from "@web3d/demo-support/theme-provider";
@@ -13,6 +13,14 @@ import { StudioToolbar } from "./features/StudioToolbar";
 import { StudioInspector } from "./features/StudioInspector";
 import { syncStudioThemeColor } from "./branding/theme-color";
 import { ShortcutHelpDialog } from "./help/ShortcutHelpDialog";
+import { HotspotInspector } from "./hotspots/HotspotInspector";
+import { HotspotPopover } from "./hotspots/HotspotPopover";
+import { HotspotRunContent } from "./hotspots/HotspotRunContent";
+import { HotspotsPanel } from "./hotspots/HotspotsPanel";
+import { HotspotTitleEditor } from "./hotspots/HotspotTitleEditor";
+import { hotspotStatusMessage } from "./hotspots/hotspotStatus";
+import type { TrustedHotspotContentItem } from "./hotspots/trustedContentCatalog";
+import { useStudioHotspots } from "./hotspots/useStudioHotspots";
 import { useStudioDataBinding } from "./data-binding/useStudioDataBinding";
 import { useStudioI18n } from "./i18n/I18nProvider";
 import { useStudioSceneLayout } from "./layout/useStudioSceneLayout";
@@ -25,11 +33,15 @@ import { StudioSettingsDialog } from "./settings/StudioSettingsDialog";
 import { useStudioSettingsDialog } from "./settings/useStudioSettingsDialog";
 import { useStudioWorkspace } from "./workspace/useStudioWorkspace";
 
-type LeftPanel = "scene" | "assets";
+type LeftPanel = "scene" | "assets" | "hotspots";
 
-export function App() {
+export interface StudioAppProps {
+  readonly trustedHotspotContentCatalog?: readonly TrustedHotspotContentItem[];
+}
+
+export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
   const desktopViewport = useDesktopViewport();
-  const { t } = useStudioI18n();
+  const { locale, t } = useStudioI18n();
   const { theme } = useTheme();
   const workspace = useStudioWorkspace();
   const viewerRef = useRef<AuthoringSceneHandle>(null);
@@ -76,6 +88,22 @@ export function App() {
     selectedEntityId,
     execute: workspace.execute,
   });
+  const mode = session?.mode ?? "edit";
+  const effectiveTrustedContentCatalog = trustedHotspotContentCatalog ?? [];
+  const hotspotCommon = {
+    document: project?.document ?? null,
+    projectId: project?.record.id ?? null,
+    viewerRef,
+    clearEntitySelection: () => workspace.selectEntity(null),
+    addDiagnostic: workspace.addDiagnostic,
+    defaultTitle: t.hotspots.defaultTitle,
+    locale,
+  } as const;
+  const hotspots = useStudioHotspots(
+    mode === "edit"
+      ? { ...hotspotCommon, mode: "edit", execute: workspace.execute }
+      : { ...hotspotCommon, mode: "run" },
+  );
   const sceneLayout = useStudioSceneLayout({
     projectId: project?.record.id ?? null,
     document: project?.document ?? null,
@@ -129,18 +157,27 @@ export function App() {
   }, [theme]);
 
   const focusSelection = (): void => {
+    if (hotspots.selectedId !== null) {
+      hotspots.focus(hotspots.selectedId);
+      return;
+    }
     if (selectedEntityId === null) return;
     void viewerRef.current?.focusEntity(selectedEntityId).catch((error: unknown) => {
       workspace.addDiagnostic(error instanceof Error ? error.message : String(error));
     });
   };
   const deleteSelection = (): void => {
+    if (hotspots.mode === "edit" && hotspots.selectedId !== null) {
+      hotspots.remove(hotspots.selectedId);
+      return;
+    }
     if (selectedEntityId === null) return;
     if (lightAuthoring.deleteSelection()) return;
     workspace.deleteEntity(selectedEntityId);
     workspace.selectEntity(null);
   };
   const changeMode = (mode: "edit" | "run"): void => {
+    if (hotspots.mode === "edit") hotspots.cancelDraft();
     lightAuthoring.clearPreview();
     viewerRef.current?.setAuthoringMode(mode);
     if (mode === "run") viewerRef.current?.setTool("select");
@@ -155,11 +192,13 @@ export function App() {
     sceneLayout.duplicateSelection();
   };
   const undo = (): void => {
+    if (hotspots.mode === "edit") hotspots.cancelDraft();
     settings.clearScenePreview();
     lightAuthoring.clearPreview();
     workspace.undo();
   };
   const redo = (): void => {
+    if (hotspots.mode === "edit") hotspots.cancelDraft();
     settings.clearScenePreview();
     lightAuthoring.clearPreview();
     workspace.redo();
@@ -183,7 +222,13 @@ export function App() {
     "history.redo": redo,
     "selection.duplicate": duplicateSelection,
     "selection.delete": deleteSelection,
-    "selection.clear": () => workspace.selectEntity(null),
+    "selection.clear": () => {
+      if (hotspots.selectedId !== null) hotspots.clearSelection();
+      else workspace.selectEntity(null);
+    },
+    "hotspot.add": () => {
+      if (hotspots.mode === "edit") hotspots.startPlacement();
+    },
     "project.save": () => void workspace.save().catch(() => undefined),
     "view.focus": focusSelection,
     "help.open": () => setHelpOpen(true),
@@ -192,7 +237,7 @@ export function App() {
     actions: shortcutActions,
     canEdit: workspace.canEdit,
     canResetSelection: sceneLayout.resetCapability.enabled,
-    hasSelection: selectedEntityId !== null,
+    hasSelection: selectedEntityId !== null || hotspots.selectedId !== null,
     modalOpen:
       helpOpen ||
       settings.open ||
@@ -238,11 +283,12 @@ export function App() {
               : t.layout.reasons[sceneLayout.capabilities.duplicate.reason]
         }
         exportOutdated={workspace.exportOutdated}
-        hasSelection={selectedEntityId !== null}
+        hasSelection={selectedEntityId !== null || hotspots.selectedId !== null}
         mode={session?.mode ?? "edit"}
         projectName={project?.record.name ?? t.app.openingProject}
         save={session?.save ?? { status: "saving", revision: 0 }}
         smartAlignEnabled={smartAlignEnabled}
+        hotspotPlacementActive={hotspots.placementActive}
         lightCount={lightAuthoring.lightCount}
         lightingMenuOpen={lightingMenuOpen}
         lightAddDisabledReason={
@@ -271,6 +317,9 @@ export function App() {
           setProjectMenuOpen(false);
           setLightingMenuOpen(false);
           setHelpOpen(true);
+        }}
+        onAddHotspot={() => {
+          if (hotspots.mode === "edit") hotspots.startPlacement();
         }}
         onOpenSettings={() => {
           setProjectMenuOpen(false);
@@ -346,6 +395,13 @@ export function App() {
             >
               <Box size={14} /> {t.app.sourceSummary.assetsTab}
             </button>
+            <button
+              className={leftPanel === "hotspots" ? "is-active" : ""}
+              type="button"
+              onClick={() => setLeftPanel("hotspots")}
+            >
+              <MapPin size={14} /> {t.app.sourceSummary.hotspotsTab}
+            </button>
           </div>
           {leftPanel === "scene" ? (
             <SceneTree
@@ -357,18 +413,23 @@ export function App() {
                 lightAuthoring.updateLock(entityId, locked) ||
                 workspace.execute({ type: "set-entity-lock", entityId, locked })
               }
-              onSelect={sceneLayout.selectFromTree}
+              onSelect={(entityId, operation) => {
+                hotspots.clearSelection();
+                sceneLayout.selectFromTree(entityId, operation);
+              }}
               onVisibilityChange={(entityId, visible) =>
                 lightAuthoring.updateVisibility(entityId, visible) ||
                 workspace.execute({ type: "set-entity-visibility", entityId, visible })
               }
             />
-          ) : (
+          ) : leftPanel === "assets" ? (
             <AssetList
               assets={project?.document.assets ?? []}
               editable={workspace.canEdit}
               onImport={openModelPicker}
             />
+          ) : (
+            <HotspotsPanel hotspots={hotspots} />
           )}
           <div className="source-summary">
             <span className="status-dot" />
@@ -388,7 +449,10 @@ export function App() {
           </div>
         </aside>
 
-        <section className="studio-viewport" aria-label={t.app.viewport.label}>
+        <section
+          className={`studio-viewport ${hotspots.placementActive ? "is-hotspot-placement" : ""}`}
+          aria-label={t.app.viewport.label}
+        >
           {workspace.loading || project === null ? (
             <div className="viewport-loading">{t.app.openingLocalProject}</div>
           ) : (
@@ -397,6 +461,8 @@ export function App() {
               adapters={dataBinding.adapters}
               backgroundPreview={settings.preview?.background ?? null}
               authoringMode={session?.mode ?? "edit"}
+              hotspotAuthority={{ projectId: project.record.id, sourceId: project.document.id }}
+              hotspotOrder={hotspots.orderedIds}
               dataRuntimeEnabled={session?.mode === "run"}
               canvasLabel={t.app.viewport.canvasLabel}
               assetResolver={workspace.assetResolver}
@@ -415,6 +481,14 @@ export function App() {
                 workspace.addDiagnostic(`${diagnostic.code} ${diagnostic.message}`)
               }
               onEvent={dataBinding.handleViewerEvent}
+              onHotspotActivation={hotspots.handleActivation}
+              onHotspotContent={hotspots.handleContent}
+              onHotspotHostContentRequest={hotspots.handleHostContent}
+              onHotspotPlacementAccept={hotspots.handlePlacementAccept}
+              onHotspotPlacementPreview={hotspots.handlePlacementPreview}
+              onHotspotSessionStart={hotspots.handleSessionStart}
+              onHotspotSelectionRequest={hotspots.handleSelectionRequest}
+              onHotspotSessionCancel={hotspots.handleSessionCancel}
               onReady={(event) => {
                 settings.handleReady(event.documentId, event.revision);
                 lightAuthoring.handleReady(event.documentId, event.revision);
@@ -423,8 +497,14 @@ export function App() {
                 viewer.setTool(activeTool);
                 lightAuthoring.refreshCreationAvailability();
                 sceneLayout.handleReady();
+                hotspots.handleViewerReady();
               }}
-              onSelectionChange={sceneLayout.handleSelectionChange}
+              onSelectionChange={(event) => {
+                if (event.origin === "viewport" || event.entityId !== null) {
+                  hotspots.clearSelection();
+                }
+                sceneLayout.handleSelectionChange(event);
+              }}
               onTransformPreview={(event) => {
                 if (!lightAuthoring.handleTransformPreview(event)) {
                   sceneLayout.handleTransformPreview(event);
@@ -437,6 +517,30 @@ export function App() {
               }}
             />
           )}
+          {hotspots.titleEditor !== null && hotspots.mode === "edit" && (
+            <HotspotTitleEditor
+              editor={hotspots.titleEditor}
+              onCancel={hotspots.cancelDraft}
+              onConfirm={hotspots.confirmTitle}
+            />
+          )}
+          {hotspots.mode === "edit" &&
+            hotspots.selected !== null &&
+            hotspots.popoverAnchor !== null && (
+              <HotspotPopover
+                anchor={hotspots.popoverAnchor}
+                annotation={hotspots.selected}
+                onDelete={() => hotspots.remove(hotspots.selected!.id)}
+                onMore={hotspots.openInspector}
+                onRename={() => hotspots.startRename(hotspots.selected!.id)}
+                onReposition={() => hotspots.startReposition(hotspots.selected!.id)}
+                onToggleLock={() => hotspots.toggleLock(hotspots.selected!.id)}
+                onToggleVisibility={() => hotspots.toggleVisibility(hotspots.selected!.id)}
+              />
+            )}
+          {hotspots.mode === "run" && hotspots.runContent !== null && (
+            <HotspotRunContent content={hotspots.runContent} onClose={hotspots.closeRunContent} />
+          )}
           <div className="viewport-mode mono" data-testid="viewport-mode">
             {t.app.viewport.modeStatus[session?.mode ?? "edit"]} /{" "}
             {t.app.viewport.toolStatus[activeTool]} /{" "}
@@ -444,7 +548,22 @@ export function App() {
           </div>
         </section>
 
-        {project !== null && (
+        {project !== null &&
+        hotspots.mode === "edit" &&
+        hotspots.selected !== null &&
+        hotspots.inspectorOpen ? (
+          <aside aria-label={t.inspector.ariaLabel} className="studio-inspector">
+            <HotspotInspector
+              annotation={hotspots.selected}
+              document={project.document}
+              editable={!hotspots.selected.locked}
+              trustedContentCatalog={effectiveTrustedContentCatalog}
+              key={`${hotspots.selected.id}:${project.document.revision}`}
+              onClose={hotspots.closeInspector}
+              onUpdate={hotspots.update}
+            />
+          </aside>
+        ) : project !== null ? (
           <StudioInspector
             document={project.document}
             projectId={project.record.id}
@@ -474,7 +593,7 @@ export function App() {
               workspace.execute({ type: "rename-entity", entityId, name })
             }
           />
-        )}
+        ) : null}
 
         {workspace.diagnostics.length > 0 && (
           <section className="studio-diagnostics" aria-label={t.app.diagnostics.label}>
@@ -486,6 +605,10 @@ export function App() {
           </section>
         )}
       </main>
+
+      <div aria-live="polite" className="hotspot-live-region">
+        {hotspotStatusMessage(hotspots.status, t.hotspots)}
+      </div>
 
       {workspace.importState !== null && (
         <ImportDialog

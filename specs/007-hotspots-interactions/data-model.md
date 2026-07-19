@@ -155,7 +155,8 @@ not persisted and cannot carry an authored arbitrary payload.
 - Surface `entityId` resolves to an AssetEntity whose SceneAsset SHA-256 equals `assetHash`.
 - `assetHash` uses the existing canonical lowercase SHA-256 representation.
 - Legacy-anchor and focus-target references resolve to existing SceneTargets.
-- Open-link `href` is an absolute URL with exact `https:` scheme and at most 2,048 characters. User info is rejected.
+- Open-link `href` is an absolute URL with the exact lower-case `https://` prefix and at most 2,048 characters. User
+  info is rejected.
 - Unknown fields and unknown union variants are rejected.
 - Annotation and Surface-anchor counts have no schema/product hard cap. Existing JSON/ZIP input-size limits remain the
   security boundary. Runtime must not select only a first subset by ID or array order.
@@ -309,7 +310,7 @@ invalidates it before command construction.
 
 ## Approval Boundary
 
-Every type, migration, command, cascade, performance baseline and ProjectRecord consequence in this file is proposed. Direction
-approval permits non-production calibration and planning. None may enter production until the calibrated complete
-contract and implementation plan receive explicit final approval. Approval of only the Canvas UX does not approve
-these save semantics.
+Every type, migration, command, cascade, performance baseline and ProjectRecord consequence in this file received
+explicit implementation approval on 2026-07-18 as one complete package. Implementation must not alter these save
+semantics piecemeal. Any change to persistence meaning, archive or ProjectRecord shape, anchor/action semantics or count
+policy requires a new explicit decision before coding.

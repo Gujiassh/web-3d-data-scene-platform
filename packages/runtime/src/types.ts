@@ -1,6 +1,18 @@
 import type { LightEntity, SceneLighting, Transform, Vec3 } from "@web3d/document";
 
 import type { SceneAsset, SceneDocument } from "./document-contract";
+import type {
+  HotspotActivationEvent,
+  HotspotActivationOrigin,
+} from "./hotspots/hotspot-action-interpreter";
+import type {
+  HotspotAuthorityContext,
+  HotspotPlacementRejectionReason,
+  HotspotSessionCancellationReason,
+  HotspotSessionEvidence,
+} from "./hotspots/hotspot-interaction-controller";
+import type { HotspotSurfaceHitEvidence } from "./hotspots/surface-hit-tester";
+import type { HotspotScreenAnchor, HotspotViewState } from "./hotspots/hotspot-view-state";
 
 export type JsonPrimitive = boolean | number | string | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -50,6 +62,7 @@ export type DiagnosticCode =
   | "ASSET_NODE_MISSING"
   | "ASSET_PUNCTUAL_LIGHTS_REMOVED"
   | "AUTHORED_LIGHT_RECONCILE_FAILED"
+  | "ANNOTATION_SURFACE_UNRESOLVED"
   | "DATASOURCE_CONNECTION_FAILED"
   | "DATASOURCE_PATCH_INVALID"
   | "DATASOURCE_PATCH_OUT_OF_ORDER"
@@ -79,6 +92,7 @@ export interface Diagnostic {
   sourceId?: string;
   bindingId?: string;
   ruleId?: string;
+  annotationId?: string;
   nodeIndex?: number;
 }
 
@@ -143,7 +157,20 @@ export type ViewerEvent =
   | { type: "alarm"; transition: "opened" | "updated" | "cleared"; alarm: RuntimeAlarm }
   | { type: "connection-change"; sourceId: string; status: ConnectionStatus }
   | { type: "diagnostic"; diagnostic: Diagnostic }
-  | { type: "performance"; sample: PerformanceSample };
+  | { type: "performance"; sample: PerformanceSample }
+  | HotspotActivationEvent
+  | {
+      type: "hotspot-content";
+      annotationId: string;
+      title: string;
+      text: string;
+    }
+  | {
+      type: "hotspot-host-content-request";
+      annotationId: string;
+      title: string;
+      key: string;
+    };
 
 export type AuthoringTool = "select" | "translate" | "rotate" | "scale";
 export type AuthoringMode = "edit" | "run";
@@ -196,13 +223,42 @@ export interface EntitySpatialSnapshot {
   readonly locked: boolean;
 }
 
+export type HotspotPlacementPreviewResult =
+  | { readonly status: "valid" }
+  | { readonly status: "rejected"; readonly reason: HotspotPlacementRejectionReason };
+
 export type AuthoringViewerEvent =
   | ViewerEvent
   | BindingStateChangeEvent
   | { type: "entity-selection-change"; entityId: string | null; origin: "viewport" | "api" }
   | { type: "tool-change"; tool: AuthoringTool }
   | { type: "transform-preview"; entityId: string; transform: Transform }
-  | { type: "transform-commit"; entityId: string; before: Transform; after: Transform };
+  | { type: "transform-commit"; entityId: string; before: Transform; after: Transform }
+  | {
+      type: "hotspot-session-start";
+      session: HotspotSessionEvidence;
+      origin: "direct-pointer";
+    }
+  | {
+      type: "hotspot-placement-preview";
+      session: HotspotSessionEvidence;
+      result: HotspotPlacementPreviewResult;
+      screenAnchor: HotspotScreenAnchor | null;
+    }
+  | {
+      type: "hotspot-placement-accept";
+      session: HotspotSessionEvidence;
+      hit: HotspotSurfaceHitEvidence;
+      screenAnchor: HotspotScreenAnchor | null;
+    }
+  | {
+      type: "hotspot-session-cancel";
+      session: HotspotSessionEvidence;
+      reason: HotspotSessionCancellationReason;
+      requiresAcknowledgment: boolean;
+      rejectionReason?: HotspotPlacementRejectionReason;
+    }
+  | { type: "hotspot-selection-request"; annotationId: string; origin: "viewport" };
 
 export interface FocusOptions {
   select?: boolean;
@@ -251,6 +307,8 @@ export interface CreateAuthoringViewerOptions extends Omit<CreateViewerOptions, 
   authoringMode?: AuthoringMode;
   initialTool?: AuthoringTool;
   dataRuntimeEnabled?: boolean;
+  hotspotAuthority?: HotspotAuthorityContext;
+  hotspotOrder?: readonly string[];
   onEvent?: (event: AuthoringViewerEvent) => void;
 }
 
@@ -264,6 +322,11 @@ export interface SceneViewer {
   setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
+  focusHotspot(annotationId: string, options?: FocusOptions): Promise<void>;
+  activateHotspot(
+    annotationId: string,
+    origin?: HotspotActivationOrigin,
+  ): Promise<HotspotActivationEvent>;
   setView(viewId: string): Promise<void>;
   getSnapshot(): ViewerSnapshot;
   getDiagnostics(): readonly Diagnostic[];
@@ -276,6 +339,8 @@ export interface AuthoringSceneViewer {
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
   setDataRuntimeEnabled(enabled: boolean): Promise<void>;
   setAuthoringMode(mode: AuthoringMode): void;
+  setHotspotAuthority(context: HotspotAuthorityContext): void;
+  setHotspotOrder(annotationIds: readonly string[]): void;
   setThemeBackground(color: string | null): void;
   setBackgroundPreview(color: string | null): void;
   setGridPreview(visible: boolean | null): void;
@@ -285,6 +350,20 @@ export interface AuthoringSceneViewer {
   selectEntity(entityId: string | null): void;
   selectEntities(entityIds: readonly string[], primaryEntityId: string | null): void;
   focusEntity(entityId: string, options?: FocusOptions): Promise<void>;
+  focusHotspot(annotationId: string, options?: FocusOptions): Promise<void>;
+  focusHotspotProxy(annotationId: string): boolean;
+  getHotspotViewState(annotationId: string): HotspotViewState;
+  activateHotspot(
+    annotationId: string,
+    origin?: HotspotActivationOrigin,
+  ): Promise<HotspotActivationEvent>;
+  startHotspotPlacement(): HotspotSessionEvidence;
+  startHotspotReposition(annotationId: string): HotspotSessionEvidence;
+  updateHotspotReticle(clientX: number, clientY: number): void;
+  acceptHotspotReticle(): boolean;
+  cancelHotspotSession(): void;
+  finishHotspotDraft(sessionId: number): boolean;
+  acknowledgeHotspotCancellation(sessionId: number): boolean;
   setTool(tool: AuthoringTool): void;
   getTool(): AuthoringTool;
   isTransformDragging(): boolean;

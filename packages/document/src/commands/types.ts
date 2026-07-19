@@ -1,4 +1,5 @@
 import type {
+  Annotation,
   Binding,
   GroupEntity,
   LightEntity,
@@ -73,6 +74,22 @@ export interface UpdateLightEntityCommand {
 export interface RemoveLightEntityCommand {
   readonly type: "remove-light-entity";
   readonly before: LightEntity;
+}
+
+export interface AddAnnotationCommand {
+  readonly type: "add-annotation";
+  readonly after: Annotation;
+}
+
+export interface UpdateAnnotationCommand {
+  readonly type: "update-annotation";
+  readonly before: Annotation;
+  readonly after: Annotation;
+}
+
+export interface RemoveAnnotationCommand {
+  readonly type: "remove-annotation";
+  readonly before: Annotation;
 }
 
 export interface EntityPlacement {
@@ -196,6 +213,9 @@ export type DocumentCommand =
   | AddLightEntityCommand
   | UpdateLightEntityCommand
   | RemoveLightEntityCommand
+  | AddAnnotationCommand
+  | UpdateAnnotationCommand
+  | RemoveAnnotationCommand
   | DeleteSubtreeCommand
   | ImportAssetInstanceCommand
   | LayoutDocumentCommand

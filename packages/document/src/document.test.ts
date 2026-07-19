@@ -6,6 +6,7 @@ import {
   parseSceneDocument,
   serializeSceneDocument,
   validateSceneDocument,
+  validateSceneDocument1_3,
   type SceneDocument,
 } from "./index.js";
 import * as validationModule from "./validate.js";
@@ -26,7 +27,7 @@ describe("SceneDocument", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.id).toBe("factory-demo");
-      expect(result.value.schemaVersion).toBe("1.3.0");
+      expect(result.value.schemaVersion).toBe("1.4.0");
     }
   });
 
@@ -36,13 +37,13 @@ describe("SceneDocument", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.schemaVersion).toBe("1.3.0");
+      expect(result.value.schemaVersion).toBe("1.4.0");
       expect(result.value.environment.lighting).toEqual(standardLighting());
       expect(result.value.targets.map((target) => target.id)).toEqual(["press-01", "conveyor-01"]);
     }
   });
 
-  it("migrates a valid 1.1 document to 1.3 without changing revision or authored fields", () => {
+  it("migrates a valid 1.1 document to 1.4 without changing revision or authored fields", () => {
     const current = loadFixture();
     const legacy = loadLegacy1_1Fixture();
     const result = parseSceneDocument(JSON.stringify(legacy));
@@ -52,7 +53,7 @@ describe("SceneDocument", () => {
     if (!result.ok) return;
     expect(result.value).toEqual({
       ...legacy,
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       environment: {
         ...(legacy["environment"] as Record<string, unknown>),
         lighting: standardLighting(),
@@ -113,6 +114,51 @@ describe("SceneDocument", () => {
     records(legacy1_1Cycle["entities"])[0]!["parentId"] = "press-01";
     expect(codes(validateLegacy1_1!(legacy1_1Cycle))).toContain("ENTITY_CYCLE");
     expect(codes(parseSceneDocument(JSON.stringify(legacy1_1Cycle)))).toContain("ENTITY_CYCLE");
+  });
+
+  it("keeps frozen 1.3 validation independent and maps annotations field-for-field", () => {
+    const legacy = loadLegacy1_3Fixture();
+    legacy["annotations"] = [
+      {
+        id: "annotation-legacy",
+        targetId: "press-01-target",
+        title: " Legacy title ",
+        contentKey: "host-key",
+        localOffset: [1, 2, 3],
+      },
+    ];
+
+    expect(validateSceneDocument1_3(legacy).ok).toBe(true);
+    expect(validateSceneDocument(legacy).ok).toBe(false);
+    const result = parseSceneDocument(JSON.stringify(legacy));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.annotations).toEqual([
+      {
+        id: "annotation-legacy",
+        title: " Legacy title ",
+        visible: true,
+        locked: false,
+        anchor: { kind: "legacy", targetId: "press-01-target", localOffset: [1, 2, 3] },
+        content: { kind: "host-content", key: "host-key" },
+        action: { type: "show-content" },
+      },
+    ]);
+  });
+
+  it("rejects an invalid frozen 1.3 intermediate before current migration", () => {
+    const invalidSource = loadLegacy1_3Fixture();
+    records(invalidSource["annotations"]).push({
+      id: "annotation-legacy",
+      targetId: "missing-target",
+      title: "Legacy",
+      contentKey: "host-key",
+      localOffset: [0, 0, 0],
+    });
+    expect(codes(validateSceneDocument1_3(invalidSource))).toContain("ANNOTATION_TARGET_NOT_FOUND");
+    expect(codes(parseSceneDocument(JSON.stringify(invalidSource)))).toContain(
+      "ANNOTATION_TARGET_NOT_FOUND",
+    );
   });
 
   it("validates complete lighting structure and unit-vector semantics", () => {
@@ -259,7 +305,7 @@ describe("SceneDocument", () => {
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8")) as Record<string, unknown>;
-  fixture["schemaVersion"] = "1.3.0";
+  fixture["schemaVersion"] = "1.4.0";
   return fixture;
 }
 
@@ -271,6 +317,12 @@ function loadLegacyFixture(): Record<string, unknown> {
     throw new TypeError("Expected fixture environment.");
   }
   delete (environment as Record<string, unknown>)["backgroundMode"];
+  return legacy;
+}
+
+function loadLegacy1_3Fixture(): Record<string, unknown> {
+  const legacy = loadFixture();
+  legacy["schemaVersion"] = "1.3.0";
   return legacy;
 }
 

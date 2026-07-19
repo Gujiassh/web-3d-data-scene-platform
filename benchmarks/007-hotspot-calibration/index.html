@@ -25,38 +25,9 @@
         height: 100%;
       }
 
-      .hotspot-proxies {
-        position: absolute;
-        inset: 0;
-        overflow: hidden;
-        pointer-events: none;
-      }
-
-      .hotspot-proxy {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        border: 2px solid transparent;
-        border-radius: 50%;
-        background: transparent;
-        color: transparent;
-        opacity: 0;
-        pointer-events: auto;
-        transform: translate3d(var(--hotspot-x), var(--hotspot-y), 0) translate(-50%, -50%);
-      }
-
-      .hotspot-proxy:focus-visible {
-        border-color: #ffffff;
-        box-shadow: 0 0 0 2px #087f5b;
-        opacity: 1;
-        outline: 0;
-      }
-
-      .hotspot-proxies.pointer-pass-through .hotspot-proxy {
-        pointer-events: none;
+      .web3d-hotspot-proxy:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 2px;
       }
     </style>
   </head>

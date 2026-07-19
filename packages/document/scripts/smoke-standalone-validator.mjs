@@ -5,6 +5,7 @@ import validate from "../src/generated/scene-document.validator.js";
 import validate1_0 from "../src/generated/scene-document-1.0.validator.js";
 import validate1_1 from "../src/generated/scene-document-1.1.validator.js";
 import validate1_2 from "../src/generated/scene-document-1.2.validator.js";
+import validate1_3 from "../src/generated/scene-document-1.3.validator.js";
 
 const generatedPath = fileURLToPath(
   new URL("../src/generated/scene-document.validator.js", import.meta.url),
@@ -21,28 +22,42 @@ const legacy1_1GeneratedPath = fileURLToPath(
 const legacy1_2GeneratedPath = fileURLToPath(
   new URL("../src/generated/scene-document-1.2.validator.js", import.meta.url),
 );
-const [generated, legacyGenerated, legacy1_1Generated, legacy1_2Generated, fixture] =
-  await Promise.all([
-    readFile(generatedPath, "utf8"),
-    readFile(legacyGeneratedPath, "utf8"),
-    readFile(legacy1_1GeneratedPath, "utf8"),
-    readFile(legacy1_2GeneratedPath, "utf8"),
-    readFile(fixturePath, "utf8"),
-  ]);
+const legacy1_3GeneratedPath = fileURLToPath(
+  new URL("../src/generated/scene-document-1.3.validator.js", import.meta.url),
+);
+const [
+  generated,
+  legacyGenerated,
+  legacy1_1Generated,
+  legacy1_2Generated,
+  legacy1_3Generated,
+  fixture,
+] = await Promise.all([
+  readFile(generatedPath, "utf8"),
+  readFile(legacyGeneratedPath, "utf8"),
+  readFile(legacy1_1GeneratedPath, "utf8"),
+  readFile(legacy1_2GeneratedPath, "utf8"),
+  readFile(legacy1_3GeneratedPath, "utf8"),
+  readFile(fixturePath, "utf8"),
+]);
 
 if (
-  [generated, legacyGenerated, legacy1_1Generated, legacy1_2Generated].some((source) =>
-    /\brequire\s*\(|new Function\s*\(/u.test(source),
+  [generated, legacyGenerated, legacy1_1Generated, legacy1_2Generated, legacy1_3Generated].some(
+    (source) => /\brequire\s*\(|new Function\s*\(/u.test(source),
   )
 ) {
   throw new Error("Standalone validator contains a runtime compiler or CommonJS require.");
 }
 
 const currentFixture = JSON.parse(fixture);
+const legacy1_3Fixture = { ...currentFixture, schemaVersion: "1.3.0", annotations: [] };
+if (!validate1_3(legacy1_3Fixture)) {
+  throw new Error("Standalone legacy validator rejected the 1.3 SceneDocument fixture.");
+}
 if (!validate(currentFixture)) {
   throw new Error("Standalone validator rejected the canonical SceneDocument fixture.");
 }
-const legacy1_2Fixture = { ...currentFixture, schemaVersion: "1.2.0" };
+const legacy1_2Fixture = { ...legacy1_3Fixture, schemaVersion: "1.2.0" };
 if (!validate1_2(legacy1_2Fixture)) {
   throw new Error("Standalone legacy validator rejected the 1.2 SceneDocument fixture.");
 }

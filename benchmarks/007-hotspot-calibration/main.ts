@@ -4,7 +4,6 @@ import {
   Color,
   DirectionalLight,
   Group,
-  Matrix4,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -15,11 +14,14 @@ import {
   WebGLRenderer,
 } from "three";
 
-import { HotspotOverlayCandidate, type OverlayUpdateMetrics } from "./hotspot-overlay-candidate";
 import {
-  HotspotSurfaceIndexCandidate,
-  type CalibrationSurfaceAnchor,
-} from "./hotspot-surface-index-candidate";
+  HotspotOverlay,
+  type HotspotOverlayMarker,
+} from "../../packages/runtime/src/hotspots/hotspot-overlay";
+import {
+  HotspotSurfaceIndex,
+  type HotspotSurfaceAnchorReference,
+} from "../../packages/runtime/src/hotspots/surface-index";
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
@@ -29,7 +31,18 @@ const MEASURED_SAMPLES = 300;
 const FIXTURE_ASSET_HASH = "007-calibration-rigid-surface-v1";
 const FIXTURE_ENTITY_ID = "007-calibration-rigid-entity";
 const FIXTURE_NODE_INDEX = 1;
-const IDENTITY_MATRIX = new Matrix4();
+
+interface CalibrationSurfaceAnchor extends HotspotSurfaceAnchorReference {
+  readonly id: string;
+}
+
+interface ProductionUpdateMetrics {
+  readonly resolvedAnchorCount: number;
+  readonly surfaceResolutionMs: number;
+  readonly markerSyncMs: number;
+  readonly overlayUpdateMs: number;
+  readonly totalMs: number;
+}
 
 interface MetricResult {
   readonly measuredCount: number;
@@ -45,8 +58,9 @@ interface FrameResult {
   readonly measuredCount: number;
   readonly cpuWork: MetricResult;
   readonly frameInterval: MetricResult;
-  readonly projectionOcclusion: MetricResult;
-  readonly domMarkerUpdate: MetricResult;
+  readonly surfaceResolution: MetricResult;
+  readonly markerSync: MetricResult;
+  readonly overlayUpdate: MetricResult;
   readonly drawCalls: number;
   readonly triangles: number;
   readonly visibleMarkers: number;
@@ -179,9 +193,6 @@ try {
 }
 
 const container = requireElement("#app");
-const proxyLayer = document.createElement("div");
-proxyLayer.className = "hotspot-proxies";
-container.append(proxyLayer);
 
 const renderer = new WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(1);
@@ -213,23 +224,25 @@ surfaces.add(wall);
 scene.add(surfaces);
 
 const overlayConstructionStartedAt = performance.now();
-const surfaceIndex = new HotspotSurfaceIndexCandidate([
+const surfaceIndex = new HotspotSurfaceIndex([
   {
     entityId: FIXTURE_ENTITY_ID,
     assetHash: FIXTURE_ASSET_HASH,
-    nodes: new Map([[FIXTURE_NODE_INDEX, IDENTITY_MATRIX]]),
+    nodesByIndex: new Map([[FIXTURE_NODE_INDEX, surfaces]]),
+    nodeIndexByHitObject: new Map([[wall, FIXTURE_NODE_INDEX]]),
   },
 ]);
-const overlay = new HotspotOverlayCandidate(
+const overlay = new HotspotOverlay({
   scene,
-  proxyLayer,
-  surfaceIndex,
-  VIEWPORT_WIDTH,
-  VIEWPORT_HEIGHT,
-  MARKER_COUNT,
-);
+  container,
+  camera,
+  occlusionRoot: surfaces,
+  initialCapacity: MARKER_COUNT,
+  onActivate: ({ id }) => activationCapture?.ids.push(id),
+});
 const overlayConstructionMs = performance.now() - overlayConstructionStartedAt;
 const performanceAnchors = createPerformanceAnchors();
+let activeAnchors: readonly CalibrationSurfaceAnchor[] = [];
 let pointerCapture: PointerCaptureState | null = null;
 let activationCapture: ActivationCaptureState | null = null;
 let totalSurfaceRaycastCount = 0;
@@ -237,8 +250,85 @@ let interactionMode: "edit-idle" | "placement-disabled" | "run" | "placement" = 
 let pointerListenerAttached = false;
 let pendingPointerRafCount = 0;
 
+function setCalibrationAnchors(anchors: readonly CalibrationSurfaceAnchor[]): void {
+  activeAnchors = anchors;
+  overlay.setOrder(anchors.map((value) => value.id));
+  overlay.setMarkers(resolveMarkers(anchors).markers);
+}
+
+function updateProductionOverlay(): ProductionUpdateMetrics {
+  const startedAt = performance.now();
+  const resolutionStartedAt = performance.now();
+  const resolved = resolveMarkers(activeAnchors);
+  const surfaceResolutionMs = performance.now() - resolutionStartedAt;
+
+  const markerSyncStartedAt = performance.now();
+  overlay.setMarkers(resolved.markers);
+  const markerSyncMs = performance.now() - markerSyncStartedAt;
+
+  const overlayStartedAt = performance.now();
+  overlay.updateNow();
+  const overlayUpdateMs = performance.now() - overlayStartedAt;
+  return {
+    resolvedAnchorCount: resolved.markers.length,
+    surfaceResolutionMs,
+    markerSyncMs,
+    overlayUpdateMs,
+    totalMs: performance.now() - startedAt,
+  };
+}
+
+function resolveMarkers(anchors: readonly CalibrationSurfaceAnchor[]): {
+  readonly markers: readonly HotspotOverlayMarker[];
+} {
+  const markers: HotspotOverlayMarker[] = [];
+  const worldPosition = new Vector3();
+  const worldNormal = new Vector3();
+  for (const value of anchors) {
+    const result = surfaceIndex.resolveAnchor(value, worldPosition, worldNormal);
+    if (!result.ok) continue;
+    markers.push({
+      id: value.id,
+      title: value.id,
+      visible: true,
+      worldPosition: worldPosition.toArray(),
+      worldNormal: worldNormal.toArray(),
+    });
+  }
+  return { markers };
+}
+
+function visibleOverlayIds(): readonly string[] {
+  return [...overlay.instanceIds].sort();
+}
+
+function accessibleProxyNames(): readonly string[] {
+  return [
+    ...productionOverlayLayer().querySelectorAll<HTMLButtonElement>(".web3d-hotspot-proxy"),
+  ].map((button) => button.getAttribute("aria-label") ?? "");
+}
+
+function proxyCenter(id: string): { readonly x: number; readonly y: number } | null {
+  const button = [
+    ...productionOverlayLayer().querySelectorAll<HTMLButtonElement>(".web3d-hotspot-proxy"),
+  ].find((candidate) => candidate.dataset["hotspotId"] === id);
+  if (button === undefined || button.hidden) return null;
+  const bounds = button.getBoundingClientRect();
+  return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+}
+
+function isProxyFocused(id: string): boolean {
+  return document.activeElement?.getAttribute("data-hotspot-id") === id;
+}
+
+function productionOverlayLayer(): HTMLElement {
+  const layer = container.querySelector<HTMLElement>(":scope > .web3d-hotspot-overlay");
+  if (layer === null) throw new Error("Production hotspot overlay is unavailable.");
+  return layer;
+}
+
 async function runCalibration(): Promise<CalibrationResult> {
-  overlay.setAnchors([]);
+  setCalibrationAnchors([]);
   const compileStartedAt = performance.now();
   renderer.compile(scene, camera);
   renderer.render(scene, camera);
@@ -256,8 +346,8 @@ async function runCalibration(): Promise<CalibrationResult> {
   const occlusion = await measureOcclusion();
   const gpu = await measureGpuTime();
 
-  overlay.setAnchors(performanceAnchors);
-  overlay.update(camera, surfaces);
+  setCalibrationAnchors(performanceAnchors);
+  updateProductionOverlay();
   renderer.render(scene, camera);
   const canvas = canvasMetrics(renderer.domElement, performanceAnchors);
   (
@@ -279,7 +369,7 @@ async function runCalibration(): Promise<CalibrationResult> {
     resources: {
       markerDrawCalls: surface200.drawCalls - zero.drawCalls,
       markerTriangles: surface200.triangles - zero.triangles,
-      domProxyCount: overlay.domProxyCount,
+      domProxyCount: overlay.proxyCount,
       geometries: memory.geometries,
       textures: memory.textures,
     },
@@ -303,18 +393,18 @@ function measureIdentityResolution(): CalibrationResult["identityResolution"] {
     nodeIndex: FIXTURE_NODE_INDEX + 1,
   };
   const unresolved = [wrongEntity, wrongHash, wrongNode];
-  overlay.setAnchors([valid, ...unresolved]);
-  const update = overlay.update(camera, surfaces);
+  setCalibrationAnchors([valid, ...unresolved]);
+  const update = updateProductionOverlay();
   renderer.render(scene, camera);
-  const unresolvedDomAbsent = unresolved.every((value) => overlay.proxyCenter(value.id) === null);
+  const unresolvedDomAbsent = unresolved.every((value) => proxyCenter(value.id) === null);
   const unresolvedPicksAbsent = unresolved.every((value) => {
     const point = toScreen(value.nodeLocalPosition);
-    return overlay.pick(camera, point.x, point.y) === null;
+    return overlay.pick(point.x, point.y) === null;
   });
   return {
     expectedResolvedCount: 1,
     actualResolvedCount: update.resolvedAnchorCount,
-    visibleIds: overlay.visibleIds,
+    visibleIds: visibleOverlayIds(),
     unresolvedIds: unresolved.map((value) => value.id),
     unresolvedDomAbsent,
     unresolvedPicksAbsent,
@@ -325,7 +415,7 @@ async function measureFrameState(
   state: FrameResult["state"],
   anchors: readonly CalibrationSurfaceAnchor[],
 ): Promise<FrameResult> {
-  overlay.setAnchors(anchors);
+  setCalibrationAnchors(anchors);
   performance.mark(`007-${state}-start`);
   const samples = await collectFrameSamples(WARMUP_SAMPLES + MEASURED_SAMPLES);
   performance.mark(`007-${state}-end`);
@@ -339,12 +429,13 @@ async function measureFrameState(
     measuredCount: measured.length,
     cpuWork: summarize(measured.map((sample) => sample.cpuWorkMs)),
     frameInterval: summarize(measured.map((sample) => sample.frameIntervalMs)),
-    projectionOcclusion: summarize(measured.map((sample) => sample.update.projectionOcclusionMs)),
-    domMarkerUpdate: summarize(measured.map((sample) => sample.update.domMarkerUpdateMs)),
+    surfaceResolution: summarize(measured.map((sample) => sample.update.surfaceResolutionMs)),
+    markerSync: summarize(measured.map((sample) => sample.update.markerSyncMs)),
+    overlayUpdate: summarize(measured.map((sample) => sample.update.overlayUpdateMs)),
     drawCalls: info.calls,
     triangles: info.triangles,
     visibleMarkers: overlay.visibleMarkerCount,
-    visibleDomProxies: overlay.visibleDomProxyCount,
+    visibleDomProxies: overlay.visibleProxyIds.length,
     resolvedAnchorCount: last.update.resolvedAnchorCount,
     missedFrameCount: measured.filter((sample) => sample.frameIntervalMs > 25).length,
   };
@@ -353,7 +444,7 @@ async function measureFrameState(
 interface FrameSample {
   readonly cpuWorkMs: number;
   readonly frameIntervalMs: number;
-  readonly update: OverlayUpdateMetrics;
+  readonly update: ProductionUpdateMetrics;
 }
 
 function collectFrameSamples(count: number): Promise<readonly FrameSample[]> {
@@ -362,7 +453,7 @@ function collectFrameSamples(count: number): Promise<readonly FrameSample[]> {
     let previousFrameTime: number | null = null;
     const sample = (frameTime: number): void => {
       const startedAt = performance.now();
-      const update = overlay.update(camera, surfaces);
+      const update = updateProductionOverlay();
       renderer.render(scene, camera);
       samples.push({
         cpuWorkMs: performance.now() - startedAt,
@@ -378,32 +469,32 @@ function collectFrameSamples(count: number): Promise<readonly FrameSample[]> {
 }
 
 async function measureProjection(): Promise<CalibrationResult["projection"]> {
-  overlay.setAnchors(performanceAnchors);
+  setCalibrationAnchors(performanceAnchors);
   const durations: number[] = [];
   for (let index = 0; index < MEASURED_SAMPLES; index += 1) {
     await new Promise<void>((resolveFrame) => {
       requestAnimationFrame(() => {
-        durations.push(overlay.update(camera, surfaces).totalMs);
+        durations.push(updateProductionOverlay().totalMs);
         renderer.render(scene, camera);
         resolveFrame();
       });
     });
   }
   const maxProxyErrorCssPixels = measureProxyErrors(performanceAnchors);
-  const names = overlay.accessibleNames;
+  const names = accessibleProxyNames();
   const focusedId = performanceAnchors[109]!.id;
   const focused = overlay.focusProxy(focusedId);
   camera.position.x = 0.25;
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
-  overlay.update(camera, surfaces);
+  updateProductionOverlay();
   renderer.render(scene, camera);
   const movedCameraProxyErrorCssPixels = measureProxyErrors(performanceAnchors);
-  const focusRetainedAfterCameraMove = focused && overlay.isProxyFocused(focusedId);
+  const focusRetainedAfterCameraMove = focused && isProxyFocused(focusedId);
   camera.position.x = 0;
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
-  overlay.update(camera, surfaces);
+  updateProductionOverlay();
   renderer.render(scene, camera);
   await settleAnimationFrames();
   return {
@@ -417,28 +508,28 @@ async function measureProjection(): Promise<CalibrationResult["projection"]> {
 }
 
 function measurePicking(): CalibrationResult["picking"] {
-  overlay.setAnchors(performanceAnchors);
-  overlay.update(camera, surfaces);
+  setCalibrationAnchors(performanceAnchors);
+  updateProductionOverlay();
   const expected = performanceAnchors[109]!;
   const point = toScreen(anchorWorldPosition(expected));
   const durations: number[] = [];
   let pickedId: string | null = null;
   let correctPickCount = 0;
   for (let index = 0; index < WARMUP_SAMPLES; index += 1) {
-    overlay.pick(camera, point.x, point.y);
+    overlay.pick(point.x, point.y);
   }
   for (let index = 0; index < MEASURED_SAMPLES; index += 1) {
     const startedAt = performance.now();
-    pickedId = overlay.pick(camera, point.x, point.y);
+    pickedId = overlay.pick(point.x, point.y);
     durations.push(performance.now() - startedAt);
     if (pickedId === expected.id) correctPickCount += 1;
   }
 
   const overlapAnchors = [anchor("overlap-far", 0, 0, 0.06), anchor("overlap-near", 0, 0, 0.55)];
-  overlay.setAnchors(overlapAnchors);
-  overlay.update(camera, surfaces);
-  const overlapPickedId = overlay.pick(camera, VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
-  const missPickedId = overlay.pick(camera, 20, 20);
+  setCalibrationAnchors(overlapAnchors);
+  updateProductionOverlay();
+  const overlapPickedId = overlay.pick(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
+  const missPickedId = overlay.pick(20, 20);
   return {
     ...summarize(durations),
     correctPickCount,
@@ -482,16 +573,16 @@ async function measureOcclusion(): Promise<CalibrationResult["occlusion"]> {
     }
   }
   surfaces.add(occluders);
-  overlay.setAnchors(anchors);
+  setCalibrationAnchors(anchors);
   const durations: number[] = [];
   let staticFlickerCount = 0;
   let previousSignature: string | null = null;
   for (let index = 0; index < MEASURED_SAMPLES; index += 1) {
     await new Promise<void>((resolveFrame) => {
       requestAnimationFrame(() => {
-        durations.push(overlay.update(camera, surfaces).totalMs);
+        durations.push(updateProductionOverlay().totalMs);
         renderer.render(scene, camera);
-        const signature = overlay.visibleIds.join("|");
+        const signature = visibleOverlayIds().join("|");
         if (previousSignature !== null && signature !== previousSignature) {
           staticFlickerCount += 1;
         }
@@ -500,9 +591,9 @@ async function measureOcclusion(): Promise<CalibrationResult["occlusion"]> {
       });
     });
   }
-  const actualVisibleIds = overlay.visibleIds;
+  const actualVisibleIds = visibleOverlayIds();
   const occludedPoint = toScreen(anchorWorldPosition(anchors[0]!));
-  const occludedPickId = overlay.pick(camera, occludedPoint.x, occludedPoint.y);
+  const occludedPickId = overlay.pick(occludedPoint.x, occludedPoint.y);
 
   occluders.children.forEach((occluder, index) => {
     const moved = movedOccluderPositions[index];
@@ -510,10 +601,10 @@ async function measureOcclusion(): Promise<CalibrationResult["occlusion"]> {
     occluder.position.copy(moved);
   });
   occluders.updateMatrixWorld(true);
-  overlay.update(camera, surfaces);
+  updateProductionOverlay();
   renderer.render(scene, camera);
   await settleAnimationFrames();
-  const movedActualVisibleIds = overlay.visibleIds;
+  const movedActualVisibleIds = visibleOverlayIds();
 
   surfaces.remove(occluders);
   const cameraMotionProbe = await measureCameraMotionOcclusionProbe();
@@ -543,17 +634,17 @@ async function measureCameraMotionOcclusionProbe() {
   );
   probe.position.set(0, 0, 0.75);
   surfaces.add(probe);
-  overlay.setAnchors([anchor(id, 0, 0, 0.06)]);
-  overlay.update(camera, surfaces);
+  setCalibrationAnchors([anchor(id, 0, 0, 0.06)]);
+  updateProductionOverlay();
   renderer.render(scene, camera);
-  const visibleBeforeMove = overlay.visibleIds.includes(id);
+  const visibleBeforeMove = visibleOverlayIds().includes(id);
   camera.position.x = 8;
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
-  overlay.update(camera, surfaces);
+  updateProductionOverlay();
   renderer.render(scene, camera);
   await settleAnimationFrames();
-  const visibleAfterMove = overlay.visibleIds.includes(id);
+  const visibleAfterMove = visibleOverlayIds().includes(id);
   camera.position.x = 0;
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld(true);
@@ -578,10 +669,10 @@ function measureTransparentOcclusionProbe(): boolean {
   probe.position.set(0, 0, 0.75);
   surfaces.add(probe);
   const id = "transparent-probe";
-  overlay.setAnchors([anchor(id, 0, 0, 0.06)]);
-  overlay.update(camera, surfaces);
+  setCalibrationAnchors([anchor(id, 0, 0, 0.06)]);
+  updateProductionOverlay();
   renderer.render(scene, camera);
-  const visible = overlay.visibleIds.includes(id);
+  const visible = visibleOverlayIds().includes(id);
   surfaces.remove(probe);
   probe.geometry.dispose();
   const probeMaterial = probe.material;
@@ -599,10 +690,10 @@ async function measureGpuTime(): Promise<CalibrationResult["gpu"]> {
   if (extension === null || !(gl instanceof WebGL2RenderingContext)) {
     return { supported: false, warmupCount: 0, metric: null };
   }
-  overlay.setAnchors(performanceAnchors);
+  setCalibrationAnchors(performanceAnchors);
   const samples: number[] = [];
   for (let index = 0; index < WARMUP_SAMPLES + MEASURED_SAMPLES; index += 1) {
-    overlay.update(camera, surfaces);
+    updateProductionOverlay();
     const query = gl.createQuery();
     if (query === null) return { supported: false, warmupCount: 0, metric: null };
     gl.beginQuery(extension.TIME_ELAPSED_EXT, query);
@@ -657,8 +748,7 @@ function beginPointerPreviewCalibration(expectedCount: number): void {
     latestValidClientY: 0,
   };
   interactionMode = "placement";
-  overlay.setAnchors([]);
-  proxyLayer.classList.add("pointer-pass-through");
+  setCalibrationAnchors([]);
   renderer.domElement.addEventListener("pointermove", handlePointerPreview);
   pointerListenerAttached = true;
 }
@@ -682,13 +772,13 @@ function handlePointerPreview(event: PointerEvent): void {
     capture.latestValidClientX = event.clientX;
     capture.latestValidClientY = event.clientY;
     const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-    overlay.setAnchors([surfaceAnchorFromWorld("preview", hit.point, normal)]);
-    overlay.update(camera, surfaces);
+    setCalibrationAnchors([surfaceAnchorFromWorld("preview", hit.point, normal)]);
+    updateProductionOverlay();
     renderer.render(scene, camera);
   } else {
     capture.invalidHitCount += 1;
-    overlay.setAnchors([]);
-    overlay.update(camera, surfaces);
+    setCalibrationAnchors([]);
+    updateProductionOverlay();
     renderer.render(scene, camera);
   }
   capture.processMs.push(performance.now() - startedAt);
@@ -704,7 +794,6 @@ function finishPointerPreviewCalibration(): PointerPreviewResult {
   if (capture === null) throw new Error("Pointer preview calibration is not active.");
   renderer.domElement.removeEventListener("pointermove", handlePointerPreview);
   pointerListenerAttached = false;
-  proxyLayer.classList.remove("pointer-pass-through");
   interactionMode = "placement-disabled";
   pointerCapture = null;
   if (
@@ -717,7 +806,7 @@ function finishPointerPreviewCalibration(): PointerPreviewResult {
   }
   const measuredProcess = capture.processMs.slice(WARMUP_SAMPLES);
   const measuredPresented = capture.presentedMs.slice(WARMUP_SAMPLES);
-  const center = overlay.proxyCenter("preview");
+  const center = proxyCenter("preview");
   const latestPointerErrorCssPixels =
     center === null
       ? Number.POSITIVE_INFINITY
@@ -750,27 +839,25 @@ function currentInteractionMode(): typeof interactionMode {
 function beginActivationCalibration(): void {
   if (activationCapture !== null) throw new Error("Activation calibration is already active.");
   activationCapture = { ids: [], callbackMs: [] };
-  overlay.setAnchors(performanceAnchors);
-  overlay.update(camera, surfaces);
+  setCalibrationAnchors(performanceAnchors);
+  updateProductionOverlay();
   renderer.render(scene, camera);
-  proxyLayer.addEventListener("click", handleActivation);
+  productionOverlayLayer().addEventListener("click", handleActivationTiming);
 }
 
-function handleActivation(event: MouseEvent): void {
+function handleActivationTiming(event: MouseEvent): void {
   const capture = activationCapture;
   if (capture === null) return;
   const target = event.target;
   if (!(target instanceof HTMLButtonElement)) return;
-  const id = target.dataset["hotspotId"];
-  if (id === undefined) return;
-  capture.ids.push(id);
+  if (target.dataset["hotspotId"] === undefined) return;
   capture.callbackMs.push(performance.now() - event.timeStamp);
 }
 
 function finishActivationCalibration() {
   const capture = activationCapture;
   if (capture === null) throw new Error("Activation calibration is not active.");
-  proxyLayer.removeEventListener("click", handleActivation);
+  productionOverlayLayer().removeEventListener("click", handleActivationTiming);
   activationCapture = null;
   return {
     ids: [...capture.ids],
@@ -782,13 +869,13 @@ async function runTraceFrames(
   state: FrameResult["state"],
   count: number,
 ): Promise<{ readonly state: FrameResult["state"]; readonly count: number }> {
-  overlay.setAnchors(state === "zero" ? [] : performanceAnchors);
+  setCalibrationAnchors(state === "zero" ? [] : performanceAnchors);
   await collectFrameSamples(count);
   return { state, count };
 }
 
 function proxyCenterForCalibration(id: string) {
-  return overlay.proxyCenter(id);
+  return proxyCenter(id);
 }
 
 function runCleanupCalibration() {
@@ -800,22 +887,22 @@ function runCleanupCalibration() {
   const cycleDisposedProxyCounts: number[] = [];
   for (let cycle = 0; cycle < 5; cycle += 1) {
     const layer = document.createElement("div");
-    layer.className = "hotspot-proxies cleanup-probe";
+    layer.className = "cleanup-probe";
+    Object.assign(layer.style, { inset: "0", position: "absolute" });
     container.append(layer);
-    const candidate = new HotspotOverlayCandidate(
+    const probe = new HotspotOverlay({
       scene,
-      layer,
-      surfaceIndex,
-      VIEWPORT_WIDTH,
-      VIEWPORT_HEIGHT,
-      MARKER_COUNT,
-    );
-    candidate.setAnchors(performanceAnchors);
-    candidate.update(camera, surfaces);
+      container: layer,
+      camera,
+      occlusionRoot: surfaces,
+      initialCapacity: MARKER_COUNT,
+    });
+    probe.setMarkers(resolveMarkers(performanceAnchors).markers);
+    probe.updateNow();
     renderer.render(scene, camera);
-    cycleLiveProxyCounts.push(candidate.visibleDomProxyCount);
-    candidate.dispose();
-    cycleDisposedProxyCounts.push(candidate.domProxyCount);
+    cycleLiveProxyCounts.push(probe.visibleProxyIds.length);
+    probe.dispose();
+    cycleDisposedProxyCounts.push(probe.proxyCount);
     layer.remove();
     renderer.render(scene, camera);
   }
@@ -835,7 +922,7 @@ function runCleanupCalibration() {
 function cleanupSnapshot(): CleanupSnapshot {
   return {
     sceneChildren: scene.children.length,
-    proxyCount: container.querySelectorAll(".hotspot-proxy").length,
+    proxyCount: container.querySelectorAll(".web3d-hotspot-proxy").length,
     geometries: renderer.info.memory.geometries,
     textures: renderer.info.memory.textures,
   };
@@ -861,11 +948,12 @@ function createPerformanceAnchors(): readonly CalibrationSurfaceAnchor[] {
 function anchor(id: string, x: number, y: number, z: number): CalibrationSurfaceAnchor {
   return {
     id,
+    kind: "surface",
     entityId: FIXTURE_ENTITY_ID,
     assetHash: FIXTURE_ASSET_HASH,
     nodeIndex: FIXTURE_NODE_INDEX,
-    nodeLocalPosition: new Vector3(x, y, z),
-    nodeLocalNormal: new Vector3(0, 0, 1),
+    nodeLocalPosition: [x, y, z],
+    nodeLocalNormal: [0, 0, 1],
   };
 }
 
@@ -876,17 +964,18 @@ function surfaceAnchorFromWorld(
 ): CalibrationSurfaceAnchor {
   return {
     id,
+    kind: "surface",
     entityId: FIXTURE_ENTITY_ID,
     assetHash: FIXTURE_ASSET_HASH,
     nodeIndex: FIXTURE_NODE_INDEX,
-    nodeLocalPosition: worldPosition.clone(),
-    nodeLocalNormal: worldNormal.clone(),
+    nodeLocalPosition: worldPosition.toArray(),
+    nodeLocalNormal: worldNormal.toArray(),
   };
 }
 
 function anchorWorldPosition(value: CalibrationSurfaceAnchor): Vector3 {
   const worldPosition = new Vector3();
-  if (!surfaceIndex.resolve(value, worldPosition, new Vector3())) {
+  if (!surfaceIndex.resolveAnchor(value, worldPosition, new Vector3()).ok) {
     throw new Error(`Calibration anchor ${value.id} cannot resolve.`);
   }
   return worldPosition;
@@ -896,15 +985,20 @@ function measureProxyErrors(anchors: readonly CalibrationSurfaceAnchor[]): numbe
   let maxError = 0;
   for (const value of anchors) {
     const expected = toScreen(anchorWorldPosition(value));
-    const actual = overlay.proxyCenter(value.id);
+    const actual = proxyCenter(value.id);
     if (actual === null) throw new Error(`Visible proxy ${value.id} is missing.`);
     maxError = Math.max(maxError, Math.hypot(actual.x - expected.x, actual.y - expected.y));
   }
   return maxError;
 }
 
-function toScreen(position: Vector3): { readonly x: number; readonly y: number } {
-  const projected = position.clone().project(camera);
+function toScreen(position: Vector3 | readonly [number, number, number]): {
+  readonly x: number;
+  readonly y: number;
+} {
+  const projected = (
+    position instanceof Vector3 ? position.clone() : new Vector3().fromArray(position)
+  ).project(camera);
   return {
     x: (projected.x * 0.5 + 0.5) * VIEWPORT_WIDTH,
     y: (-projected.y * 0.5 + 0.5) * VIEWPORT_HEIGHT,
@@ -973,8 +1067,8 @@ function fixtureDescriptor() {
     },
     markers: performanceAnchors.map((value) => ({
       id: value.id,
-      nodeLocalPosition: value.nodeLocalPosition.toArray(),
-      nodeLocalNormal: value.nodeLocalNormal.toArray(),
+      nodeLocalPosition: value.nodeLocalPosition,
+      nodeLocalNormal: value.nodeLocalNormal,
     })),
   } as const;
 }

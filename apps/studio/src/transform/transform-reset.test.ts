@@ -130,7 +130,7 @@ function entity(
 
 function scene(entities: readonly SceneEntity[]): SceneDocument {
   return {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id: "scene",
     name: "Scene",
     revision: 1,

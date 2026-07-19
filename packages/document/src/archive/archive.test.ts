@@ -29,22 +29,28 @@ const manifestContractUrl = new URL(
 const createdAt = "2026-07-14T08:00:00Z";
 
 describe("archive codec", () => {
-  it("keeps the canonical manifest SSoT aligned with SceneDocument 1.3", () => {
+  it("keeps the canonical manifest SSoT aligned with SceneDocument 1.4", () => {
     const schema = JSON.parse(readFileSync(manifestSchemaUrl, "utf8")) as {
       properties: { sceneSchemaVersion: { enum: string[] } };
     };
     const example = JSON.parse(readFileSync(manifestExampleUrl, "utf8")) as unknown;
     const contract = readFileSync(manifestContractUrl, "utf8");
 
-    expect(schema.properties.sceneSchemaVersion.enum).toEqual(["1.0.0", "1.1.0", "1.2.0", "1.3.0"]);
+    expect(schema.properties.sceneSchemaVersion.enum).toEqual([
+      "1.0.0",
+      "1.1.0",
+      "1.2.0",
+      "1.3.0",
+      "1.4.0",
+    ]);
     expect(parseArchiveManifest(example)).toMatchObject({
       archiveVersion: "1.0.0",
-      sceneSchemaVersion: "1.3.0",
+      sceneSchemaVersion: "1.4.0",
     });
     expect(contract).toContain(
-      "Import accepts raw SceneDocument 1.0.0, 1.1.0, 1.2.0 and 1.3.0 payloads",
+      "Import accepts raw SceneDocument 1.0.0, 1.1.0, 1.2.0, 1.3.0 and 1.4.0 payloads",
     );
-    expect(contract).toContain("Export accepts and writes only current SceneDocument 1.3.0");
+    expect(contract).toContain("Export accepts and writes only current SceneDocument 1.4.0");
     expect(contract).toContain("`archiveVersion` remains\n  1.0.0");
   });
 
@@ -66,15 +72,15 @@ describe("archive codec", () => {
       createdAt,
       sceneBytes: new Uint8Array([1]),
       sceneSha256: "a".repeat(64),
-      sceneSchemaVersion: "1.3.0",
+      sceneSchemaVersion: "1.4.0",
       assets: [],
     });
     expect(manifest.archiveVersion).toBe("1.0.0");
-    expect(manifest.sceneSchemaVersion).toBe("1.3.0");
+    expect(manifest.sceneSchemaVersion).toBe("1.4.0");
 
     const imported = importCanonicalSceneJson(new TextEncoder().encode(JSON.stringify(legacy)));
     expect(imported).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       revision: current.revision,
       environment: {
         backgroundMode: current.environment.backgroundMode,
@@ -101,10 +107,10 @@ describe("archive codec", () => {
     const zip = unzipSync(first);
     const sceneJson = new TextDecoder().decode(zip["scene.json"]!);
     expect(sceneJson).toContain(`"uri": "assets/${document.assets[0]!.sha256}.glb"`);
-    expect(JSON.parse(sceneJson)).toMatchObject({ schemaVersion: "1.3.0" });
+    expect(JSON.parse(sceneJson)).toMatchObject({ schemaVersion: "1.4.0" });
     expect(JSON.parse(new TextDecoder().decode(zip["manifest.json"]!))).toMatchObject({
       archiveVersion: "1.0.0",
-      sceneSchemaVersion: "1.3.0",
+      sceneSchemaVersion: "1.4.0",
     });
   });
 
@@ -206,12 +212,30 @@ describe("archive codec", () => {
     await expect(importSceneArchive(zipFromFiles(files))).rejects.toThrow(/does not match/);
   });
 
-  it.each(["1.0.0", "1.1.0", "1.2.0"] as const)(
-    "imports a %s archive as a current 1.3 document",
+  it.each(["1.0.0", "1.1.0", "1.2.0", "1.3.0"] as const)(
+    "imports a %s archive as a current 1.4 document",
     async (legacyVersion) => {
       const zip = await exportFixtureArchive();
       const files = unzipSync(zip);
-      const current = importCanonicalSceneJson(files["scene.json"]!);
+      const base = importCanonicalSceneJson(files["scene.json"]!);
+      const current: SceneDocument = {
+        ...base,
+        annotations: [
+          {
+            id: "archive-annotation",
+            title: "Archive annotation",
+            visible: true,
+            locked: false,
+            anchor: {
+              kind: "legacy",
+              targetId: base.targets[0]!.id,
+              localOffset: [1, 2, 3],
+            },
+            content: { kind: "host-content", key: "archive-content" },
+            action: { type: "show-content" },
+          },
+        ],
+      };
       const legacy = legacyDocument(current, legacyVersion);
       files["scene.json"] = new TextEncoder().encode(JSON.stringify(legacy));
       const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]!)) as {
@@ -235,8 +259,9 @@ describe("archive codec", () => {
       const imported = await importSceneArchive(zipFromFiles(files));
       expect(imported.manifest.sceneSchemaVersion).toBe(legacyVersion);
       expect(imported.document).toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         revision: current.revision,
+        annotations: current.annotations,
         environment: {
           backgroundMode: legacyVersion === "1.0.0" ? "custom" : current.environment.backgroundMode,
           background: current.environment.background,
@@ -335,12 +360,21 @@ function loadLocalFixture(): SceneDocument {
 
 function legacyDocument(
   document: SceneDocument,
-  version: "1.0.0" | "1.1.0" | "1.2.0",
+  version: "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0",
 ): Record<string, unknown> {
+  const annotations = document.annotations.map((annotation) => ({
+    id: annotation.id,
+    targetId:
+      annotation.anchor.kind === "legacy" ? annotation.anchor.targetId : document.targets[0]!.id,
+    title: annotation.title,
+    contentKey:
+      annotation.content.kind === "host-content" ? annotation.content.key : "legacy-content",
+    localOffset: annotation.anchor.kind === "legacy" ? annotation.anchor.localOffset : [0, 0, 0],
+  }));
   const environment = { ...document.environment } as Record<string, unknown>;
-  if (version !== "1.2.0") delete environment["lighting"];
+  if (version === "1.0.0" || version === "1.1.0") delete environment["lighting"];
   if (version === "1.0.0") delete environment["backgroundMode"];
-  return { ...document, schemaVersion: version, environment };
+  return { ...document, schemaVersion: version, annotations, environment };
 }
 
 async function loadFixtureWithAsset(): Promise<{

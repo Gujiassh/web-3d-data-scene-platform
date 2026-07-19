@@ -38,8 +38,20 @@ describe("createIndexedDbProjectRepository", () => {
     vi.restoreAllMocks();
   });
 
-  it("rewrites every legacy project to 1.3 in one transaction and leaves current bytes untouched", async () => {
+  it("rewrites every legacy project to 1.4 in one transaction and leaves current bytes untouched", async () => {
     const dbName = createDbName();
+    const currentSeed = {
+      ...nonCanonicalCurrentStoredProject(
+        legacyStoredProject("current", "Current", "2026-07-14T12:30:00.000Z", 18),
+      ),
+      lastExportedRevision: 17,
+    };
+    expect(currentSeed.documentJson).toMatch(/^\{\n {4}"revision":/u);
+    expect(currentSeed.documentJson).toContain('"name": "\\u0043urrent"');
+    const parsedCurrentSeed = parseSceneDocument(currentSeed.documentJson);
+    if (!parsedCurrentSeed.ok) throw new Error("Current test project must be valid.");
+    expect(currentSeed.documentJson).not.toBe(serializeProjectDocument(parsedCurrentSeed.value));
+
     const original = [
       {
         ...legacyStoredProject("legacy-1-0", "Legacy 1.0", "2026-07-10T08:00:00.000Z", 4),
@@ -54,11 +66,10 @@ describe("createIndexedDbProjectRepository", () => {
         lastExportedRevision: 11,
       },
       {
-        ...currentStoredProject(
-          legacyStoredProject("current", "Current", "2026-07-13T11:15:00.000Z", 15),
-        ),
+        ...legacy1_3StoredProject("legacy-1-3", "Legacy 1.3", "2026-07-13T11:15:00.000Z", 15),
         lastExportedRevision: 14,
       },
+      currentSeed,
     ];
     await seedStoredProjects(dbName, original);
 
@@ -91,9 +102,10 @@ describe("createIndexedDbProjectRepository", () => {
     });
 
     const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
-    await expect(repository.listRecent()).resolves.toHaveLength(4);
+    await expect(repository.listRecent()).resolves.toHaveLength(5);
     await repository.close();
-    expect(rewrittenIds.sort()).toEqual(["legacy-1-0", "legacy-1-1", "legacy-1-2"]);
+    expect(rewrittenIds.sort()).toEqual(["legacy-1-0", "legacy-1-1", "legacy-1-2", "legacy-1-3"]);
+    expect(rewrittenIds).not.toContain(currentSeed.id);
     expect(migrationTransactions).toEqual(["projects"]);
     putSpy.mockRestore();
     transactionSpy.mockRestore();
@@ -101,23 +113,33 @@ describe("createIndexedDbProjectRepository", () => {
     const migrated = await readStoredProjects(dbName);
     expect(migrated.version).toBe(1);
     expect(migrated.stores).toEqual(["assets", "projects", "settings"]);
-    expect(migrated.records).toHaveLength(4);
+    expect(migrated.records).toHaveLength(5);
+    const currentAfterInitialization = migrated.records.find(
+      (record) => record.id === currentSeed.id,
+    );
+    expect(currentAfterInitialization).toEqual(currentSeed);
+    expect(Object.keys(currentAfterInitialization ?? {})).toHaveLength(8);
+    expect(currentAfterInitialization?.documentJson).toBe(currentSeed.documentJson);
     for (const before of original) {
       const after = migrated.records.find((record) => record.id === before.id)!;
       const beforeDocument = storedDocument(before);
       expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
       expect(Object.keys(after)).toHaveLength(8);
-      if (beforeDocument.schemaVersion === "1.3.0") {
+      if (beforeDocument.schemaVersion === "1.4.0") {
         expect(after).toEqual(before);
+        expect(after.documentJson).toBe(before.documentJson);
       } else {
         expect(stripStoredDocument(after)).toEqual({
           ...stripStoredDocument(before),
           lastExportedRevision: null,
         });
+        const parsedBefore = parseSceneDocument(before.documentJson);
+        if (!parsedBefore.ok) throw new Error("Legacy test project could not be migrated.");
+        expect(after.documentJson).toBe(serializeProjectDocument(parsedBefore.value));
       }
       const afterDocument = storedDocument(after);
       expect(afterDocument).toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         revision: beforeDocument.revision,
         environment: {
           background: beforeDocument.environment.background,
@@ -147,7 +169,7 @@ describe("createIndexedDbProjectRepository", () => {
       return originalPut.call(this, value, key);
     });
     const reopened = createIndexedDbProjectRepository({ dbName, indexedDB });
-    await expect(reopened.listRecent()).resolves.toHaveLength(4);
+    await expect(reopened.listRecent()).resolves.toHaveLength(5);
     await reopened.close();
     expect(secondRewrites).toEqual([]);
     idempotentSpy.mockRestore();
@@ -171,7 +193,7 @@ describe("createIndexedDbProjectRepository", () => {
         this.name === "projects" &&
         isStoredProject(value) &&
         value.id === "legacy-b" &&
-        storedDocument(value).schemaVersion === "1.3.0"
+        storedDocument(value).schemaVersion === "1.4.0"
       ) {
         throw new DOMException("migration write failed", "QuotaExceededError");
       }
@@ -194,7 +216,7 @@ describe("createIndexedDbProjectRepository", () => {
       structurallyInvalidStoredProject(
         legacy1_1StoredProject("b-invalid", "Invalid", "2026-07-11T09:30:00.000Z", 9),
       ),
-      currentStoredProject(
+      nonCanonicalCurrentStoredProject(
         legacyStoredProject("c-valid-current", "Valid current", "2026-07-12T10:45:00.000Z", 12),
       ),
     ];
@@ -217,6 +239,28 @@ describe("createIndexedDbProjectRepository", () => {
       expect(stripStoredDocument(after)).toEqual(stripStoredDocument(before));
       expect(after.documentJson).toBe(before.documentJson);
     }
+  });
+
+  it("rolls back every stored project when one stored document cannot be parsed", async () => {
+    const dbName = createDbName();
+    const malformed = {
+      ...legacyStoredProject("b-malformed", "Malformed", "2026-07-11T09:30:00.000Z", 9),
+      documentJson: "{not-json",
+    };
+    const original = [
+      legacy1_3StoredProject("a-valid-legacy", "Valid legacy", "2026-07-10T08:00:00.000Z", 4),
+      malformed,
+      nonCanonicalCurrentStoredProject(
+        legacyStoredProject("c-valid-current", "Valid current", "2026-07-12T10:45:00.000Z", 12),
+      ),
+    ];
+    await seedStoredProjects(dbName, original);
+
+    const repository = createIndexedDbProjectRepository({ dbName, indexedDB });
+    await expect(repository.listRecent()).rejects.toThrow(/valid JSON/);
+
+    const afterFailure = await readStoredProjects(dbName);
+    expect(afterFailure.records).toEqual(original);
   });
 
   it("saves a validated canonical SceneDocument atomically with new assets", async () => {
@@ -599,10 +643,20 @@ function storedDocument(record: StoredProject): StoredDocumentShape {
   return JSON.parse(record.documentJson) as StoredDocumentShape;
 }
 
-function currentStoredProject(record: StoredProject): StoredProject {
+function nonCanonicalCurrentStoredProject(record: StoredProject): StoredProject {
   const parsed = parseSceneDocument(record.documentJson);
   if (!parsed.ok) throw new Error("Legacy test project could not be migrated.");
-  return { ...record, documentJson: serializeProjectDocument(parsed.value) };
+  const canonical = JSON.parse(serializeProjectDocument(parsed.value)) as Record<string, unknown>;
+  const { revision, schemaVersion, name, ...remaining } = canonical;
+  if (typeof name !== "string" || name.length === 0) {
+    throw new Error("Current test project must have a name.");
+  }
+  const reordered = JSON.stringify({ revision, schemaVersion, name, ...remaining }, null, 4);
+  const escapedName = `"\\u${name.charCodeAt(0).toString(16).padStart(4, "0")}${JSON.stringify(name.slice(1)).slice(1)}`;
+  return {
+    ...record,
+    documentJson: reordered.replace(JSON.stringify(name), escapedName),
+  };
 }
 
 function legacy1_1StoredProject(
@@ -646,6 +700,20 @@ function legacy1_2StoredProject(
         lighting: standardLighting(),
       },
     }),
+  };
+}
+
+function legacy1_3StoredProject(
+  id: string,
+  name: string,
+  timestamp: string,
+  revision: number,
+): StoredProject {
+  const legacy = legacy1_2StoredProject(id, name, timestamp, revision);
+  const document = JSON.parse(legacy.documentJson) as Record<string, unknown>;
+  return {
+    ...legacy,
+    documentJson: JSON.stringify({ ...document, schemaVersion: "1.3.0" }),
   };
 }
 

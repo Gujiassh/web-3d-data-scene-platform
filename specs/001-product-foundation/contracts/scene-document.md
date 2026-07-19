@@ -2,8 +2,9 @@
 
 > Status: MVP v1 design
 > Machine-readable schema: `scene-document.schema.json`
-> Current version: `1.3.0`; immutable legacy schemas: `scene-document-1.0.schema.json`,
-> `scene-document-1.1.schema.json` and `scene-document-1.2.schema.json`
+> Current version: `1.4.0`; immutable legacy schemas: `scene-document-1.0.schema.json`,
+> `scene-document-1.1.schema.json`, `scene-document-1.2.schema.json` and
+> `scene-document-1.3.schema.json`
 
 ## Purpose
 
@@ -32,17 +33,17 @@ Object3D or InstancedMesh instance IDs.
 
 ## Document Sections
 
-| Section       | Responsibility                                   |
-| ------------- | ------------------------------------------------ |
-| `assets`      | Immutable model references and content integrity |
-| `entities`    | Authored scene hierarchy and transforms          |
-| `targets`     | Stable selection/data-binding targets            |
-| `dataSources` | Logical adapter declarations without credentials |
-| `bindings`    | JSON Pointer to target/rule-set mapping          |
-| `ruleSets`    | Declarative condition/effect mappings            |
-| `annotations` | 3D anchors linked to trusted host content keys   |
-| `views`       | Named camera bookmarks                           |
-| `environment` | Scene-level rendering configuration              |
+| Section       | Responsibility                                     |
+| ------------- | -------------------------------------------------- |
+| `assets`      | Immutable model references and content integrity   |
+| `entities`    | Authored scene hierarchy and transforms            |
+| `targets`     | Stable selection/data-binding targets              |
+| `dataSources` | Logical adapter declarations without credentials   |
+| `bindings`    | JSON Pointer to target/rule-set mapping            |
+| `ruleSets`    | Declarative condition/effect mappings              |
+| `annotations` | Authored hotspots with anchors, content and action |
+| `views`       | Named camera bookmarks                             |
+| `environment` | Scene-level rendering configuration                |
 
 `environment.backgroundMode` is `theme | custom`. Theme mode resolves against a transient host
 presentation color and keeps `environment.background` as the dormant custom color/fallback. Custom
@@ -61,7 +62,9 @@ unit vector within `1e-6`. Preset names and editor previews are not persisted.
 - `schemaVersion` uses semantic versioning. Major changes require explicit migration or rejection.
 - Valid 1.0.0 documents migrate deterministically through every frozen intermediate validator. Valid
   1.1.0 documents add the approved Standard concrete environment lighting values; valid 1.2.0
-  documents change only `schemaVersion`. Every path finishes as a validated 1.3.0 document without
+  documents change only `schemaVersion`. The 1.3 -> 1.4 step maps each legacy Annotation to the
+  approved opaque Legacy anchor, Host content reference and Show content action. Every path finishes
+  as a validated 1.4.0 document without
   changing revision or other authored fields. Persisted stores and exports write only current data.
 - Runtime values are never written back by Viewer.
 

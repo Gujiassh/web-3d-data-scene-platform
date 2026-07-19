@@ -16,6 +16,7 @@ export type StudioCommandId =
   | "selection.duplicate"
   | "selection.delete"
   | "selection.clear"
+  | "hotspot.add"
   | "project.save"
   | "view.focus"
   | "help.open";
@@ -57,6 +58,7 @@ export const STUDIO_COMMANDS = [
     true,
   ),
   command("selection.clear", "selection", [{ key: "Escape", displayKey: "Esc" }]),
+  command("hotspot.add", "selection", [{ key: "h" }], true),
   command("tool.select", "transform", [{ key: "q" }], true),
   command("tool.translate", "transform", [{ key: "w" }], true),
   command("tool.rotate", "transform", [{ key: "e" }], true),

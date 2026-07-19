@@ -17,6 +17,8 @@ interface FakeViewer {
   readonly load: ReturnType<typeof vi.fn>;
   readonly getLightCreationFrame: ReturnType<typeof vi.fn>;
   readonly setAuthoringMode: ReturnType<typeof vi.fn>;
+  readonly setHotspotAuthority: ReturnType<typeof vi.fn>;
+  readonly setHotspotOrder: ReturnType<typeof vi.fn>;
   readonly setBackgroundPreview: ReturnType<typeof vi.fn>;
   readonly setGridPreview: ReturnType<typeof vi.fn>;
   readonly setLightingPreview: ReturnType<typeof vi.fn>;
@@ -56,11 +58,21 @@ vi.mock("@web3d/runtime", () => {
         (source: SceneSource) => runtime.loadImplementation?.(source) ?? Promise.resolve(),
       ),
       resize: vi.fn(),
+      acknowledgeHotspotCancellation: vi.fn(() => true),
+      acceptHotspotReticle: vi.fn(() => true),
+      activateHotspot: vi.fn(() => Promise.resolve({})),
+      cancelHotspotSession: vi.fn(),
+      focusHotspot: vi.fn(() => Promise.resolve()),
+      startHotspotPlacement: vi.fn(() => ({ sessionId: 1 })),
+      startHotspotReposition: vi.fn(() => ({ sessionId: 2 })),
+      updateHotspotReticle: vi.fn(),
       selectEntity: vi.fn(),
       selectEntities: vi.fn(),
       selectTarget: vi.fn(),
       setAdapter: vi.fn(() => Promise.resolve()),
       setAuthoringMode: vi.fn(),
+      setHotspotAuthority: vi.fn(),
+      setHotspotOrder: vi.fn(),
       setBackgroundPreview: vi.fn(),
       setGridPreview: vi.fn(),
       setLightingPreview: vi.fn(),
@@ -290,7 +302,7 @@ describe("React scene environment lifecycle", () => {
 
 function scene(id: string): SceneSource {
   return {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id,
     name: id,
     revision: 0,

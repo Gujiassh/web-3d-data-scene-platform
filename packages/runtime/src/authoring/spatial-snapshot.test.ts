@@ -3,6 +3,7 @@ import { BoxGeometry, Group, Mesh, MeshBasicMaterial, type Object3D } from "thre
 import { describe, expect, it, vi } from "vitest";
 
 import type { RuntimeEntity, RuntimeGeneration } from "../viewer/runtime-generation";
+import { HotspotSurfaceIndex } from "../hotspots/surface-index";
 import { createEntitySpatialSnapshots } from "./spatial-snapshot";
 
 describe("createEntitySpatialSnapshots", () => {
@@ -193,7 +194,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     transform: transform([1, 0, 0]),
   };
   const document: SceneDocument = {
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.4.0",
     id: "spatial-document",
     name: "Spatial document",
     revision: 7,
@@ -248,6 +249,7 @@ function spatialFixture(): { document: SceneDocument; generation: RuntimeGenerat
     generation: {
       root,
       authoredLights: stubAuthoredLights(),
+      hotspotSurfaces: new HotspotSurfaceIndex(),
       entities,
       targets: new Map(),
       diagnostics: [],

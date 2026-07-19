@@ -9,6 +9,7 @@ import {
   MeshStandardMaterial,
   PointLight,
   SpotLight,
+  Vector3,
   type Material,
 } from "three";
 import { describe, expect, it, vi } from "vitest";
@@ -34,6 +35,63 @@ const pbrAssetUrl = new URL(
 );
 
 describe("buildRuntimeGeneration", () => {
+  it("builds exact hotspot surface evidence from formal loader node associations", async () => {
+    const [sceneJson, asset] = await Promise.all([readFile(sceneUrl, "utf8"), readFile(assetUrl)]);
+    const parsed = parseSceneDocument(sceneJson);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const entity = parsed.value.entities.find((candidate) => candidate.type === "asset");
+    const sceneAsset = parsed.value.assets[0];
+    expect(entity?.type).toBe("asset");
+    expect(sceneAsset).toBeDefined();
+    if (entity?.type !== "asset" || sceneAsset === undefined) return;
+    const generation = await buildRuntimeGeneration(
+      parsed.value,
+      { resolve: () => Promise.resolve(new Blob([asset])) },
+      new AbortController().signal,
+    );
+    const surface = generation.entities.get(entity.id)?.object.getObjectByProperty("isMesh", true);
+    expect(surface).toBeDefined();
+    if (surface === undefined) return;
+    const lookup = generation.hotspotSurfaces.lookupHitObject(surface);
+    expect(lookup).toMatchObject({
+      ok: true,
+      identity: { entityId: entity.id, assetHash: sceneAsset.sha256 },
+    });
+    if (!lookup.ok) return;
+    const anchor = {
+      kind: "surface" as const,
+      ...lookup.identity,
+      nodeLocalPosition: [0, 0, 0] as const,
+      nodeLocalNormal: [0, 1, 0] as const,
+    };
+    expect(
+      generation.hotspotSurfaces.resolveAnchor(anchor, new Vector3(), new Vector3()),
+    ).toMatchObject({ ok: true });
+    expect(
+      generation.hotspotSurfaces.resolveAnchor(
+        { ...anchor, entityId: "wrong-entity" },
+        new Vector3(),
+        new Vector3(),
+      ),
+    ).toEqual({ ok: false, reason: "entity-not-registered" });
+    expect(
+      generation.hotspotSurfaces.resolveAnchor(
+        { ...anchor, assetHash: "0".repeat(64) },
+        new Vector3(),
+        new Vector3(),
+      ),
+    ).toEqual({ ok: false, reason: "asset-hash-mismatch" });
+    expect(
+      generation.hotspotSurfaces.resolveAnchor(
+        { ...anchor, nodeIndex: Number.MAX_SAFE_INTEGER },
+        new Vector3(),
+        new Vector3(),
+      ),
+    ).toEqual({ ok: false, reason: "node-not-registered" });
+    generation.dispose();
+  });
+
   it("maps both M0 targets by node index and isolates their materials", async () => {
     const [sceneJson, asset] = await Promise.all([readFile(sceneUrl, "utf8"), readFile(assetUrl)]);
     const parsed = parseSceneDocument(sceneJson);

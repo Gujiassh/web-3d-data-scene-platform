@@ -346,6 +346,38 @@ describe("document commands", () => {
     expectValidationOk(next);
   });
 
+  it("cascades surface, legacy and focus-target annotations including locked snapshots", () => {
+    const nested = withNestedAssetTarget(loadFixture());
+    const survivor = surfaceAnnotation("survivor", "press-01", false);
+    const surface = surfaceAnnotation("surface-removed", "robot-01", true);
+    const legacy: Annotation = {
+      id: "legacy-removed",
+      title: "Legacy",
+      visible: true,
+      locked: true,
+      anchor: { kind: "legacy", targetId: "robot-01-target", localOffset: [0, 1, 0] },
+      content: { kind: "host-content", key: "legacy" },
+      action: { type: "show-content" },
+    };
+    const focusTarget: Annotation = {
+      ...survivor,
+      id: "focus-removed",
+      action: { type: "focus-target", targetId: "robot-01-target" },
+    };
+    const document = {
+      ...nested,
+      annotations: [survivor, surface, legacy, focusTarget],
+    } satisfies SceneDocument;
+
+    const next = executeDocumentCommand(document, {
+      type: "delete-subtree",
+      rootEntityId: "line-01",
+    });
+
+    expect(next.annotations).toEqual([survivor]);
+    expectValidationOk(next);
+  });
+
   it("duplicates a subtree with caller-provided stable IDs only", () => {
     const document = withNestedAssetTarget(loadFixture());
     const next = executeDocumentCommand(document, {
@@ -748,10 +780,16 @@ function withNestedAssetTarget(document: SceneDocument): SceneDocument {
   };
   const annotation: Annotation = {
     id: "robot-01-annotation",
-    targetId: "robot-01-target",
     title: "Robot Note",
-    contentKey: "robot-01-note",
-    localOffset: [0, 1, 0],
+    visible: true,
+    locked: false,
+    anchor: {
+      kind: "legacy",
+      targetId: "robot-01-target",
+      localOffset: [0, 1, 0],
+    },
+    content: { kind: "host-content", key: "robot-01-note" },
+    action: { type: "show-content" },
   };
 
   const next = {
@@ -763,6 +801,25 @@ function withNestedAssetTarget(document: SceneDocument): SceneDocument {
   } satisfies SceneDocument;
   expectValidationOk(next);
   return next;
+}
+
+function surfaceAnnotation(id: string, entityId: string, locked: boolean): Annotation {
+  return {
+    id,
+    title: id,
+    visible: true,
+    locked,
+    anchor: {
+      kind: "surface",
+      entityId,
+      assetHash: "a".repeat(64),
+      nodeIndex: 2,
+      nodeLocalPosition: [0, 1, 0],
+      nodeLocalNormal: [0, 1, 0],
+    },
+    content: { kind: "plain-text", text: "" },
+    action: { type: "show-content" },
+  };
 }
 
 function entityById(document: SceneDocument, entityId: string) {

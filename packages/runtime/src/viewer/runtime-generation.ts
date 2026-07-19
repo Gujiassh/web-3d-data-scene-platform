@@ -4,6 +4,10 @@ import { Color, Group, Mesh, type Material, type Object3D } from "three";
 import { loadGltfAsset } from "../assets/asset-loader";
 import { disposeObject3D, isolateTargetMaterials } from "../assets/dispose-object";
 import { diagnostic, diagnosticError } from "../diagnostics";
+import {
+  HotspotSurfaceIndex,
+  type HotspotSurfaceEntityRegistration,
+} from "../hotspots/surface-index";
 import type { AssetResolver, AuthoringMode, Diagnostic } from "../types";
 import { AuthoredLightController, type AuthoredLightRuntime } from "./authored-light-controller";
 
@@ -29,6 +33,7 @@ export interface RuntimeGeneration {
   readonly targets: ReadonlyMap<string, RuntimeTarget>;
   readonly diagnostics: readonly Diagnostic[];
   readonly authoredLights: AuthoredLightRuntime;
+  readonly hotspotSurfaces: HotspotSurfaceIndex;
   entityForObject(object: Object3D): string | undefined;
   targetForObject(object: Object3D): string | undefined;
   dispose(): void;
@@ -45,6 +50,7 @@ export async function buildRuntimeGeneration(
   root.name = `document:${document.id}`;
   const runtimeEntities = new Map<string, RuntimeEntity>();
   const assetNodes = new Map<string, ReadonlyMap<number, Object3D>>();
+  const hotspotSurfaceRegistrations: HotspotSurfaceEntityRegistration[] = [];
   const entityObjects = new Map<string, Object3D>();
   const objectEntities = new WeakMap<Object3D, string>();
   const originalMaterials = new Set<Material>();
@@ -69,7 +75,28 @@ export async function buildRuntimeGeneration(
             );
       runtimeEntities.set(entity.id, { entity, object });
       entityObjects.set(entity.id, object);
-      if (entity.type === "asset") assetNodes.set(entity.id, objectNodes(object));
+      if (entity.type === "asset") {
+        const asset = document.assets.find((candidate) => candidate.id === entity.assetId);
+        if (asset === undefined) {
+          throw diagnosticError(
+            diagnostic(
+              "DOCUMENT_REFERENCE_INVALID",
+              "document",
+              "error",
+              `Entity ${entity.id} references missing asset ${entity.assetId}.`,
+              { entityId: entity.id, assetId: entity.assetId },
+            ),
+          );
+        }
+        const nodesByIndex = objectNodes(object);
+        assetNodes.set(entity.id, nodesByIndex);
+        hotspotSurfaceRegistrations.push({
+          entityId: entity.id,
+          assetHash: asset.sha256,
+          nodesByIndex,
+          nodeIndexByHitObject: objectNodeAssociations(object),
+        });
+      }
       object.traverse((candidate) => objectEntities.set(candidate, entity.id));
     }
 
@@ -156,12 +183,15 @@ export async function buildRuntimeGeneration(
       (material) => !attachedMaterials.has(material),
     );
 
+    const hotspotSurfaces = new HotspotSurfaceIndex(hotspotSurfaceRegistrations);
+
     return {
       root,
       entities: runtimeEntities,
       targets: targetObjects,
       diagnostics: Object.freeze([...diagnostics]),
       authoredLights,
+      hotspotSurfaces,
       entityForObject(object) {
         const lightEntityId = authoredLights.entityForObject(object);
         if (lightEntityId !== undefined) return lightEntityId;
@@ -235,7 +265,11 @@ async function createAssetEntity(
   collectMaterials(loaded.root, originalMaterials);
   applyEntity(loaded.root, entity);
   return Object.assign(loaded.root, {
-    userData: { ...loaded.root.userData, web3dNodesByIndex: loaded.nodesByIndex },
+    userData: {
+      ...loaded.root.userData,
+      web3dNodesByIndex: loaded.nodesByIndex,
+      web3dNodeIndexByObject: loaded.nodeIndexByObject,
+    },
   });
 }
 
@@ -256,6 +290,11 @@ function stableTargets(document: SceneDocument) {
 function objectNodes(object: Object3D): ReadonlyMap<number, Object3D> {
   return ((object.userData as { web3dNodesByIndex?: ReadonlyMap<number, Object3D> })
     .web3dNodesByIndex ?? new Map()) as ReadonlyMap<number, Object3D>;
+}
+
+function objectNodeAssociations(object: Object3D): ReadonlyMap<Object3D, number> {
+  return ((object.userData as { web3dNodeIndexByObject?: ReadonlyMap<Object3D, number> })
+    .web3dNodeIndexByObject ?? new Map()) as ReadonlyMap<Object3D, number>;
 }
 
 function collectMaterials(root: Object3D, output: Set<Material>): void {

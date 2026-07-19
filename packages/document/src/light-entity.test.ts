@@ -8,6 +8,7 @@ import {
   validateSceneDocument1_0,
   validateSceneDocument1_1,
   validateSceneDocument1_2,
+  validateSceneDocument1_3,
 } from "./index.js";
 
 const fixtureUrl = new URL(
@@ -15,7 +16,7 @@ const fixtureUrl = new URL(
   import.meta.url,
 );
 
-describe("SceneDocument 1.3 light entities", () => {
+describe("SceneDocument 1.4 light entities", () => {
   it("accepts canonical root point and spot entities", () => {
     const document = currentFixture();
     document.entities.push(pointLight("point-01"), spotLight("spot-01"));
@@ -24,7 +25,7 @@ describe("SceneDocument 1.3 light entities", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.schemaVersion).toBe("1.3.0");
+    expect(result.value.schemaVersion).toBe("1.4.0");
     expect(result.value.entities.slice(-2)).toEqual([pointLight("point-01"), spotLight("spot-01")]);
   });
 
@@ -236,6 +237,15 @@ describe("SceneDocument frozen migration chain", () => {
     expect(validateSceneDocument1_2(withLight).ok).toBe(false);
   });
 
+  it("keeps an independent frozen 1.3 validator", () => {
+    const legacy = rawFixture();
+    legacy.schemaVersion = "1.3.0";
+    legacy.annotations = [];
+
+    expect(validateSceneDocument1_3(legacy).ok).toBe(true);
+    expect(validateSceneDocument(legacy).ok).toBe(false);
+  });
+
   it.each(["1.0.0", "1.1.0", "1.2.0"] as const)(
     "validates and migrates %s through every frozen version to current",
     (version) => {
@@ -244,7 +254,7 @@ describe("SceneDocument frozen migration chain", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.value.schemaVersion).toBe("1.3.0");
+      expect(result.value.schemaVersion).toBe("1.4.0");
       expect(result.value.revision).toBe(legacy.revision);
     },
   );
@@ -312,7 +322,7 @@ type EntityRecord = Record<string, unknown> & {
 
 function currentFixture(): FixtureRecord {
   const fixture = rawFixture();
-  fixture.schemaVersion = "1.3.0";
+  fixture.schemaVersion = "1.4.0";
   return fixture;
 }
 
