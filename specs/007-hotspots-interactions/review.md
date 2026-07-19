@@ -207,15 +207,15 @@ blocked on five real representative-user runs; automated agents cannot manufactu
 ## Delivery Ledger
 
 - Source branch/ref: `main` at `9149cd9`, equal to `origin/main` when Feature 007 implementation began.
-- Repair branch: the same `main` working tree; the approved implementation and S1-S11 rework remain uncommitted and
-  unpushed because no commit or push was requested.
+- Repair branch: `main`; the approved implementation and S1-S11 rework were committed as `43e11f2` and pushed to
+  `origin/main` on 2026-07-19.
 - Symptom/root cause record: Document/Persistence, Runtime/React and Studio findings are preserved above as the P0
   current-byte fixture correction, R1-R7 and S1-S11 with their closure oracles.
 - Changed scope: SceneDocument 1.4 migration/commands/archive/IndexedDB; Runtime/React hotspot controllers and lifecycle;
   Studio authoring/Run UX; E2E, production benchmark and acceptance documentation.
 - Verification: 17/158 focused, 109/728 full Vitest, 21/21 hotspot Chromium, 4/4 native IndexedDB, 5/5 production wiring,
   accepted hardware calibration, nine checked screenshot hashes and all sequential repository gates.
-- Downstream target: `main`. No merge, cherry-pick, commit or push step exists until explicitly requested; Feature 008
+- Downstream target: `main`, already integrated by the direct push above; no merge or cherry-pick remains. Feature 008
   must wait for Feature 007 to pass T044.
 
 ## Approval And Implementation Closure
