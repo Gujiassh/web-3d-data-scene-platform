@@ -137,6 +137,8 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 
 ## 008：发布与嵌入
 
+> 状态：2026-07-19 规格与技术设计完成，等待实现
+
 ### 所有权
 
 008 负责分发产物、公共 API、宿主集成和静态部署，不重新引入行业 dashboard 产品。
