@@ -70,10 +70,11 @@ Exit: marker, DOM proxy and list activation execute once and emit the same bound
 ### Phase F: Acceptance And Evolution Gate
 
 Run full document/persistence tests, production-path 200-marker calibration, bilingual/reduced-motion E2E, the five-user
-usability protocol and independent Critical reverse review. Update SSoT and prepare Feature 008 handoff.
+usability protocol or an explicit owner risk decision, and independent Critical reverse review. Update SSoT and prepare
+Feature 008 handoff.
 
-Exit: every FR/NFR/SC has evidence or an explicit blocked decision; no temporary compatibility or hidden contract drift
-remains.
+Exit: every FR/NFR/SC has evidence or an explicit blocked/waived decision; no temporary compatibility or hidden contract
+drift remains. The 2026-07-19 Owner Waiver leaves NFR-001/NFR-002 and SC-001/SC-002 unproven for Feature 009 to test.
 
 ## Ownership Boundaries
 

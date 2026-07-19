@@ -1,6 +1,6 @@
 # 热点与声明式交互
 
-> 状态：SceneDocument 1.4、Runtime/React、Studio、自动化生产验收与 Critical reverse review 已完成；真实五用户可用性验收待执行
+> 状态：Feature 007 已完成；真实五用户证据因参与者不可得而由 Owner Waiver 明确豁免，风险保留至 Feature 009
 >
 > 校准日期：2026-07-18
 >
@@ -63,13 +63,13 @@ transaction 回滚；已是 current 的 record 字节保持不变，重写旧 re
 
 ## 验收与下一步
 
-1. T010-T043 与 T045-T047 已完成：热点聚焦测试 17 文件 / 158 测试、全仓 109 文件 / 728 测试、热点 Chromium
+1. T010-T047 已完成：热点聚焦测试 17 文件 / 158 测试、全仓 109 文件 / 728 测试、热点 Chromium
    21/21、原生 IndexedDB 4/4、生产性能 wiring 5/5 和完整串行门禁均通过；九张双语/双主题/双视口截图及哈希已保留。
-2. T044 仍需五名未使用过该功能的 solution engineer 按 `usability-protocol.md` 完成真实录屏或观察记录；五人
-   必须全部首次无协助通过，中位创建不超过 12 秒、重定位不超过 5 秒。
-3. 独立 Critical reverse review 已无 P0-P2 发现并关闭 T046；Feature 007 只剩 T044，必须完成后才能正式通过。
+2. 2026-07-19 项目所有者确认无法提供五名代表用户，并明确批准 T044 Owner Waiver。未填写参与者数据，也不
+   宣称 NFR-001/NFR-002 或 SC-001/SC-002 已有实证；Feature 009 发布门禁仍需外部目标开发者测试。
+3. 独立 Critical reverse review 已无 P0-P2 发现并关闭 T046；Owner Waiver 关闭 T044，Feature 007 正式完成。
 4. T047 已准备 Feature 008 handoff：必须复用 SceneDocument 1.4、同一 Runtime controllers 和四动作解释器，只新增 publish
    readiness、宿主 trusted-content 映射与 embed 集成；unresolved hotspot 是否阻止发布由 Feature 008 明确负责。
-   按 delivery plan，在 Feature 007 通过 T044 前不得开始 publishing-contract 实施。
+   Owner Waiver 已清除 Feature 008 启动门禁，但不构成真实用户可用性证据。
 5. 若后续需要改变持久化含义、保存语义、archive container、ProjectRecord、anchor、action set 或数量策略，
    必须先重新取得明确批准。

@@ -1,6 +1,6 @@
 # Tasks: Hotspots And Declarative Interactions
 
-**Status**: Implementation, automated acceptance and Critical review complete; blocked on five-user usability evidence
+**Status**: Complete with an explicit Owner Waiver for unavailable representative-user evidence
 
 **Date**: 2026-07-18
 
@@ -53,7 +53,7 @@ T007 completed on 2026-07-18. Production tasks may proceed in the approved order
 - [x] T041 Add Runtime/React integration coverage for every semantic oracle and race.
 - [x] T042 Add desktop bilingual/theme/reduced-motion pointer and keyboard E2E at 1280x720 and 1440x900.
 - [x] T043 Rewire `bench:hotspot-007` to production controllers and rerun the fixed hardware protocol.
-- [ ] T044 Run five-user usability protocol and record first-attempt completion and task times.
+- [x] T044 Record the owner-approved usability waiver; retain first-attempt and timing targets as unproven residual risk.
 - [x] T045 Run full typecheck, lint, tests, build, i18n, design, topology, format and diff gates sequentially.
 - [x] T046 Return implementation findings to original owners, close rework and obtain independent Critical PASS.
 - [x] T047 Update SSoT/spec/acceptance artifacts and prepare Feature 008 publish/embed handoff.

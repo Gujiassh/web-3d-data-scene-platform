@@ -6,10 +6,10 @@ publishes the same versioned scene to an embeddable Three.js viewer.
 
 ## Status
 
-The M0 document/runtime foundation, M1 Studio editing loop, and feature 005 data-binding Run workflow
-are implemented and locally verified without changing `SceneDocument 1.0.0`. Studio is the sole product
-frontend. The former independent Factory Demo was removed after its reusable adapter, alarm, selection,
-theme, i18n, lifecycle, and WebGL evidence passed in Studio Run.
+The foundation through feature 007 is implemented and verified: the single Studio covers editing, data-binding Run,
+layout, lighting, precise surface hotspots and declarative interactions on `SceneDocument 1.4.0`. Studio remains the
+sole product frontend. Feature 007's representative-user timing gate was owner-waived because participants were
+unavailable; no usability result is claimed, and external target-developer testing remains a release-stage requirement.
 
 This is not a production release. External developer testing, Firefox/Safari coverage, fixed-hardware
 performance evidence, publish/embed packaging, and formal open-source release gates remain future work.

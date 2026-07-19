@@ -190,19 +190,26 @@ post-S11 21/21 Chromium result and judged goal alignment, user-visible timing, a
 contracts, unresolved TypeScript imports, browser-test honesty, S10 rejection context, S11 deterministic IDs and the
 Feature 008 handoff boundary as passing. T046 is closed.
 
-| Final Critical area                  | Status  | Evidence                                                                  |
-| ------------------------------------ | ------- | ------------------------------------------------------------------------- |
-| Goal alignment and user-visible flow | pass    | Frozen Canvas-first create/manage/Run semantics and post-S11 Chromium     |
-| Architecture and timing boundaries   | pass    | Runtime geometry/session authority; Studio command/editor authority       |
-| Persistence and save contracts       | pass    | No S1-S11 change to document, database, archive, anchor or action meaning |
-| Type/import integrity                | pass    | Project typechecks plus unresolved identifier/import review               |
-| Browser-test honesty                 | pass    | 21/21 hotspot and 4/4 IndexedDB tests reject page/console errors          |
-| S10 and S11                          | pass    | Rejection context retained; document-wide lowest-free ID is deterministic |
-| Feature 008 handoff                  | pass    | Reuse 1.4, Runtime controllers and four-action interpreter                |
-| Feature 007 completion               | blocked | T044 requires five real representative users                              |
+| Final Critical area                  | Status | Evidence                                                                  |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------- |
+| Goal alignment and user-visible flow | pass   | Frozen Canvas-first create/manage/Run semantics and post-S11 Chromium     |
+| Architecture and timing boundaries   | pass   | Runtime geometry/session authority; Studio command/editor authority       |
+| Persistence and save contracts       | pass   | No S1-S11 change to document, database, archive, anchor or action meaning |
+| Type/import integrity                | pass   | Project typechecks plus unresolved identifier/import review               |
+| Browser-test honesty                 | pass   | 21/21 hotspot and 4/4 IndexedDB tests reject page/console errors          |
+| S10 and S11                          | pass   | Rejection context retained; document-wide lowest-free ID is deterministic |
+| Feature 008 handoff                  | pass   | Reuse 1.4, Runtime controllers and four-action interpreter                |
+| Feature 007 completion               | waived | Owner accepted the explicitly unproven T044 usability risk                |
 
-Controller status: implementation, automated acceptance and Critical reverse review **PASS**. T044 remains explicitly
-blocked on five real representative-user runs; automated agents cannot manufacture that evidence.
+## T044 Owner Waiver
+
+On 2026-07-19 the project owner confirmed that five representative participants cannot be supplied and explicitly
+approved an Owner Waiver. No participant data, completion rate or task time is fabricated. NFR-001, NFR-002, SC-001
+and SC-002 remain unproven residual risks and must not be described as empirically passing. Feature 009 retains the
+external target-developer usability gate before release claims.
+
+Controller status: implementation, automated acceptance and Critical reverse review **PASS**. T044 is administratively
+closed by the explicit Owner Waiver, so Feature 007 is complete and Feature 008 may begin.
 
 ## Delivery Ledger
 
@@ -215,11 +222,12 @@ blocked on five real representative-user runs; automated agents cannot manufactu
   Studio authoring/Run UX; E2E, production benchmark and acceptance documentation.
 - Verification: 17/158 focused, 109/728 full Vitest, 21/21 hotspot Chromium, 4/4 native IndexedDB, 5/5 production wiring,
   accepted hardware calibration, nine checked screenshot hashes and all sequential repository gates.
-- Downstream target: `main`, already integrated by the direct push above; no merge or cherry-pick remains. Feature 008
-  must wait for Feature 007 to pass T044.
+- Downstream target: `main`, already integrated by the direct push above; no merge or cherry-pick remains. The T044
+  Owner Waiver clears the documented Feature 008 start gate without asserting usability evidence.
 
 ## Approval And Implementation Closure
 
 The user explicitly approved the reviewed calibrated implementation package on 2026-07-18, closing CHK032. The
 approved migration and automated production acceptance now pass, so SceneDocument 1.4 is the production authority.
-T046 and T047 are closed; Feature 007 completion waits only for the real-user T044 evidence.
+T044 is owner-waived and T046/T047 are closed. Feature 007 is complete with the missing real-user evidence retained as
+an explicit release-stage risk.

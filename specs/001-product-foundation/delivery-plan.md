@@ -115,6 +115,8 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 
 ## 007：热点与交互
 
+> 状态：2026-07-19 完成；T044 因代表用户不可得由项目所有者明确 Owner Waiver，未证明的可用性风险转入 009
+
 ### 所有权
 
 007 只负责精确表面目标、标注和声明式交互，不实现任意脚本或宿主业务路由。
@@ -131,6 +133,7 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 - 热点不依赖节点名称猜测，资产版本变化时显式报告重新映射。
 - action 不执行用户脚本，不把宿主路由或运行时选择写入 SceneDocument。
 - 键盘和非 Canvas 路径可以定位同一热点。
+- 自动化生产验收与 Critical reverse review 通过；Owner Waiver 允许推进，但不视为真实用户可用性证据。
 
 ## 008：发布与嵌入
 

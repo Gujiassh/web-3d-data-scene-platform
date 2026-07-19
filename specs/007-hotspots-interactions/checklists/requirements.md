@@ -62,8 +62,10 @@
       2026-07-18 with no remaining findings.
 - [x] CHK032 The implementation plan/tasks and calibrated complete contract received independent final review and
       explicit user implementation approval on 2026-07-18 before production/schema edits.
+- [x] CHK033 The project owner explicitly approved the T044 Owner Waiver on 2026-07-19; no human evidence is fabricated,
+      NFR-001/NFR-002 and SC-001/SC-002 remain unproven, and Feature 009 retains external usability testing.
 
 ## Notes
 
-- CHK032 is closed. Production implementation may proceed only within the approved complete contract and plan.
-- SceneDocument 1.3 remains the production authority until the approved migration is implemented and accepted.
+- CHK032 and CHK033 are closed. Feature 007 is complete within the approved contract and explicit waiver boundary.
+- SceneDocument 1.4 is the production authority after the accepted migration and implementation.

@@ -1,8 +1,18 @@
 # Hotspot Usability Acceptance Protocol
 
-**Status**: Ready for representative-user execution; results not yet collected
+**Status**: Owner-waived on 2026-07-19; representative-user results were not collected
 
 **Minimum participants**: Five solution engineers who have not used this hotspot feature
+
+## Owner Waiver
+
+The project owner confirmed on 2026-07-19 that five representative participants cannot be supplied and explicitly
+approved replacing T044 execution with an Owner Waiver. No participant row below is treated as completed and no
+first-attempt rate or task-time result is claimed.
+
+The waiver permits Feature 007 administrative closure and Feature 008 work to begin. It does not prove NFR-001,
+NFR-002, SC-001 or SC-002, and it does not permit a release or marketing claim about first-use usability. Feature 009
+must retain external target-developer testing as the release-stage evidence for this residual risk.
 
 ## Setup
 
@@ -44,5 +54,5 @@ entity IDs, asset hashes, normals, content keys or Action JSON.
 - Median reposition time is at most 5 seconds.
 - Record every failed task, assistance event and technical-field search; do not replace participants or discard runs.
 
-T044 remains open until this table contains five real runs with linked recordings or observer notes and the calculated
-results are written into `review.md`.
+T044 is closed by the Owner Waiver above. This empty table is retained to make the missing evidence explicit and to
+support a future real run without rewriting the protocol.

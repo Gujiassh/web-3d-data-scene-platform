@@ -1,6 +1,6 @@
 # Quickstart: Review And Verify Hotspots
 
-**Status**: Implementation and automated production acceptance passed on 2026-07-19; five-user usability remains open
+**Status**: Complete on 2026-07-19 with an explicit Owner Waiver for unavailable five-user usability evidence
 
 ## Review Order
 

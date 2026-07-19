@@ -273,3 +273,7 @@ explaining controls:
 Record first-attempt completion, time to complete, misclick/cancellation count and whether a technical field was sought.
 Pass requires at least 90% unassisted first-attempt completion, median create-and-title at most 12 seconds and median
 reposition at most 5 seconds.
+
+Feature 007 did not execute this protocol. On 2026-07-19 the project owner approved an Owner Waiver because five
+representative participants cannot be supplied. The targets remain unproven and carry into Feature 009 external
+target-developer testing; the waiver must not be presented as usability evidence.

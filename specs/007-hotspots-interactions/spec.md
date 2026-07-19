@@ -295,6 +295,11 @@ legacy values and inject invalid or failed storage writes. Confirm all-or-nothin
 
 ### Non-Functional Requirements
 
+**Acceptance status note (2026-07-19)**: The project owner approved an Owner Waiver because representative participants
+cannot be supplied for Feature 007. NFR-001/NFR-002 and SC-001/SC-002 remain product targets but are not empirically
+proven by this feature. The waiver permits roadmap progression only; Feature 009 must retain external target-developer
+testing before any release claim based on these outcomes.
+
 - **NFR-001**: In representative usability testing, at least 90% of solution engineers MUST create and title their
   first hotspot without assistance.
 - **NFR-002**: Median Add -> surface click -> title -> Enter completion MUST be at most 12 seconds; median reposition
