@@ -4,7 +4,12 @@ import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 
 import { loadPublishedScene } from "@web3d/publish";
-import { createSceneViewer, type SceneViewer, type ViewerEvent } from "@web3d/runtime";
+import {
+  createSceneViewer,
+  type SceneViewer,
+  type ViewerEvent,
+  type ViewerSnapshot,
+} from "@web3d/runtime";
 
 import { createHostAdapters } from "./runtime-adapters";
 import { resolveTrustedContent, type TrustedContentRecord } from "./trusted-content";
@@ -58,6 +63,7 @@ async function start(): Promise<void> {
     });
     await viewer.load(published.document);
     await viewer.setView("factory-overview");
+    writeRuntimeEvidence(viewer.getSnapshot());
     focusButton.disabled = false;
     sceneStatus.dataset["state"] = "ready";
     sceneStatus.textContent = `Ready / revision ${published.document.revision}`;
@@ -70,6 +76,7 @@ async function start(): Promise<void> {
 }
 
 function handleViewerEvent(event: ViewerEvent): void {
+  if (viewer !== null) writeRuntimeEvidence(viewer.getSnapshot());
   if (event.type === "connection-change") {
     const label = titleCase(event.status);
     connectionValue.textContent = label;
@@ -90,6 +97,23 @@ function handleViewerEvent(event: ViewerEvent): void {
     }
     showHostContent(content);
   }
+}
+
+function writeRuntimeEvidence(snapshot: ViewerSnapshot): void {
+  sceneStatus.dataset["runtimeSnapshot"] = JSON.stringify({
+    lifecycle: snapshot.lifecycle,
+    documentId: snapshot.documentId,
+    revision: snapshot.revision,
+    selectedTargetId: snapshot.selectedTargetId,
+    connections: Object.fromEntries(
+      Object.entries(snapshot.connections).sort(([left], [right]) =>
+        left.localeCompare(right, "en"),
+      ),
+    ),
+    alarmKeys: snapshot.alarms
+      .map((alarm) => alarm.key)
+      .sort((left, right) => left.localeCompare(right, "en")),
+  });
 }
 
 async function focusSelectedTarget(): Promise<void> {

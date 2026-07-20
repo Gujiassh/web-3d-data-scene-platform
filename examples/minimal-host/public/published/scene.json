@@ -50,7 +50,7 @@
     {
       "enabled": true,
       "id": "conveyor-01-status-binding",
-      "pointer": "/machines/CONVEYOR-01/status",
+      "pointer": "/telemetry/status",
       "ruleSetId": "equipment-status",
       "sourceId": "factory-telemetry",
       "targetId": "conveyor-01",
@@ -62,7 +62,7 @@
     {
       "enabled": true,
       "id": "press-01-status-binding",
-      "pointer": "/machines/PRESS-01/status",
+      "pointer": "/telemetry/status",
       "ruleSetId": "equipment-status",
       "sourceId": "factory-telemetry",
       "targetId": "press-01",
@@ -79,7 +79,7 @@
       "name": "Factory Telemetry",
       "offlineAfterMs": 60000,
       "options": {
-        "scenario": "published-host"
+        "scenario": "status-cycle"
       },
       "staleAfterMs": 30000
     }
@@ -170,10 +170,10 @@
               "type": "alarm"
             }
           ],
-          "id": "status-running",
+          "id": "status-ready",
           "priority": 100,
           "when": {
-            "expected": "running",
+            "expected": "ready",
             "fact": "value",
             "operator": "eq"
           }

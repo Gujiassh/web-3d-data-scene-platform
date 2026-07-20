@@ -33,12 +33,7 @@ function factorySteps(sourceId: string): readonly MockScenarioStep[] {
         streamId: "published-factory-status",
         sequence: 1,
         quality: "good",
-        value: {
-          machines: {
-            "PRESS-01": { status: "running" },
-            "CONVEYOR-01": { status: "running" },
-          },
-        },
+        value: { telemetry: { status: "ready" } },
       },
     },
   ];

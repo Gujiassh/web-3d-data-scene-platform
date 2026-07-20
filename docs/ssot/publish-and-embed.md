@@ -1,8 +1,8 @@
 # 发布与嵌入
 
-> 状态：Feature 008 publish package、Studio 与 minimal host 已完成；最终验收待执行
+> 状态：Feature 008 实现与自动化 Critical 验收已完成；T045 外部计时或本次 Owner Waiver、T046 交付关闭待完成
 >
-> 日期：2026-07-19
+> 日期：2026-07-20
 
 ## 稳定裁决
 
@@ -44,8 +44,22 @@
 4. Studio Run 与最小宿主消费同一 canonical document 和 adapter 语义。
 5. 宿主映射 trusted content，发布产物不持久化宿主值。
 
+## 自动化验收
+
+- Studio Run 与 minimal host 读取 byte-identical `scene.json`，并达到同一 normalized ready Runtime snapshot：
+  document/revision 相同、无选择、`factory-telemetry=online`、零告警。
+- Studio 侧同时验证两条 binding 均为 `ready/Good`、零诊断和 ready 绿色 Canvas；这避免用文档常量掩盖仍在
+  `Connecting/Bad` 的 Runtime。
+- publish-host Chromium 4/4 通过：1280x720、1440x900 桌面交互/CSP/静态路径和 390x844 移动布局均无
+  page/console error；viewer-origin selection、API-origin focus/selection 与 trusted content 映射均通过。
+- 聚焦 publish/Runtime/React/host 测试 12 文件 / 88 测试，全仓 Vitest 116 文件 / 765 测试；typecheck、ESLint、
+  recursive build、i18n、design、topology、Prettier 和 diff 门禁通过。
+- fixture ZIP SHA-256 为 `a769c6a4b75af84876c8f18fd9167e1eafa3cfd78968695372ecbbbabafe4ded`；生产
+  loader/ZIP parity、JSON/GLB MIME、缺失路径 404 与 2 个 emitted JS no-eval 检查通过。
+- T044 Critical reverse review 对目标、时序、架构、data/save 合约、public API、host-only 值、CSP/static path、
+  TS/import 和测试诚实性均判定 pass。
+
 ## 下一步
 
-`@web3d/publish`、Studio 与 minimal host 的实现切片已完成。下一步执行 Studio Run/minimal-host snapshot parity、
-双桌面尺寸 host Chromium/CSP/static-path 证据、focused/full gates、最终 Critical reverse review，并为 15 分钟外部
-开发者结果取得真实证据或单独的 Owner Waiver。
+T040-T044 已完成。T045 必须记录真实 15 分钟外部开发者结果，或取得本次明确 Owner Waiver 且保留未验证风险；
+不得复用 Feature 007 waiver 或编造计时。随后完成 T046 的 commit/push 和 delivery ledger，Feature 009 才可开始。

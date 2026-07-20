@@ -144,19 +144,19 @@ function publishedDocument(assetSha256, byteLength) {
         adapter: "mock",
         staleAfterMs: 30000,
         offlineAfterMs: 60000,
-        options: { scenario: "published-host" },
+        options: { scenario: "status-cycle" },
       },
     ],
-    bindings: [binding("press-01", "PRESS-01"), binding("conveyor-01", "CONVEYOR-01")],
+    bindings: [binding("press-01"), binding("conveyor-01")],
     ruleSets: [
       {
         id: "equipment-status",
         name: "Equipment Status",
         rules: [
           {
-            id: "status-running",
+            id: "status-ready",
             priority: 100,
-            when: { fact: "value", operator: "eq", expected: "running" },
+            when: { fact: "value", operator: "eq", expected: "ready" },
             effects: [
               { type: "color", value: "#1E8A68" },
               { type: "alarm", level: "none", message: "" },
@@ -226,12 +226,12 @@ function target(id, name, businessId, nodeIndex, assetHash) {
   };
 }
 
-function binding(targetId, businessId) {
+function binding(targetId) {
   return {
     id: `${targetId}-status-binding`,
     targetId,
     sourceId: "factory-telemetry",
-    pointer: `/machines/${businessId}/status`,
+    pointer: "/telemetry/status",
     ruleSetId: "equipment-status",
     writes: ["color", "alarm"],
     enabled: true,

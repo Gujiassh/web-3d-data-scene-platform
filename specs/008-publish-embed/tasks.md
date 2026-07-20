@@ -37,10 +37,10 @@
 
 ## Acceptance
 
-- [ ] T040 Prove Studio Run/minimal-host canonical document and normalized snapshot parity.
-- [ ] T041 Run Chromium host interaction/CSP/static-path evidence at 1280x720 and 1440x900.
-- [ ] T042 Run focused publish, Runtime and React contract tests.
-- [ ] T043 Run full typecheck, lint, tests, build, design, topology, formatting and diff gates sequentially.
-- [ ] T044 Complete Critical reverse review of security, data/save boundaries, API contracts and test honesty.
+- [x] T040 Prove Studio Run/minimal-host canonical document and normalized snapshot parity.
+- [x] T041 Run Chromium host interaction/CSP/static-path evidence at 1280x720 and 1440x900.
+- [x] T042 Run focused publish, Runtime and React contract tests.
+- [x] T043 Run full typecheck, lint, tests, build, design, topology, formatting and diff gates sequentially.
+- [x] T044 Complete Critical reverse review of security, data/save boundaries, API contracts and test honesty.
 - [ ] T045 Record the 15-minute external developer result or an explicit Owner Waiver without fabricating timing.
 - [ ] T046 Update SSoT/review/delivery ledger, commit and push Feature 008 before starting Feature 009.

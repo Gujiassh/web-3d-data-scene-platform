@@ -13,8 +13,8 @@
     },
     {
       "path": "scene.json",
-      "sha256": "35df2128f9ceec32006a299426aad9e499fc1cc7ec135daab432565ff6d8b4ed",
-      "byteLength": 4802,
+      "sha256": "a68c525b4fe6bdee840222577da97518643fc13c96db723efa25d1943daf4674",
+      "byteLength": 4777,
       "mediaType": "application/json"
     }
   ],
