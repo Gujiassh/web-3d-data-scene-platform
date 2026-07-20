@@ -1,6 +1,6 @@
 # 发布与嵌入
 
-> 状态：Feature 008 publish package 与 Studio 集成已完成；minimal host 待实现
+> 状态：Feature 008 publish package、Studio 与 minimal host 已完成；最终验收待执行
 >
 > 日期：2026-07-19
 
@@ -24,6 +24,18 @@
 - checking、blocked、failed、published 都是瞬态 UI；关闭、Escape、项目/revision 变化或组件卸载会中止当前任务。
 - Publish 对话框接入既有 modal shortcut gate，打开期间全局撤销/重做与编辑快捷键不执行。
 
+## 最小宿主边界
+
+- `examples/minimal-host` 是 framework-neutral Runtime 集成样例，不导入 Studio，不保存项目，也不复制编辑能力。
+- 宿主先用 `loadPublishedScene` 校验 manifest/scene，再把同一个 document 与 verified AssetResolver 交给 Runtime。
+- fixture 生成器复用仓库内 CC0 工厂 GLB，重复生成并比较 exploded files/ZIP；report 不含时间戳。
+- manifest 只声明 `factory-telemetry/mock` 与 `inspection-card`；adapter 实例、endpoint、payload 和 trusted content
+  value 均由宿主本地提供。
+- 生产验证器检查 ZIP/exploded parity、loader round-trip、真实 GLB hash、无内联脚本与 emitted JS 无
+  `eval`/`new Function`。
+- dev/preview 对缺失 `/published/*` 返回 404，不允许 SPA fallback 把缺失 bundle 路径伪装成 HTML 200。
+- 静态托管必须通过响应头发送 CSP；`frame-ancestors` 不能只依赖 meta CSP。
+
 ## 关键 Oracle
 
 1. 相同输入跨重复运行产生 byte-identical manifest、静态文件和 ZIP。
@@ -34,7 +46,6 @@
 
 ## 下一步
 
-`@web3d/publish` 已交付 exact readiness、严格 manifest/schema、确定性静态文件/ZIP 和 abortable loader；Studio
-已接入独立发布服务、本地化状态与 exact Runtime Surface evidence。真实 Chromium 已验证确定性 bundle 的
-manifest/scene/GLB、Legacy 阻断与 in-flight cancel，三条路径均保持 document/history/save/export/selection/runtime
-可见状态不变。下一步实现 minimal host、真实发布 fixture、CSP/静态托管教程和最终 Critical 验收。
+`@web3d/publish`、Studio 与 minimal host 的实现切片已完成。下一步执行 Studio Run/minimal-host snapshot parity、
+双桌面尺寸 host Chromium/CSP/static-path 证据、focused/full gates、最终 Critical reverse review，并为 15 分钟外部
+开发者结果取得真实证据或单独的 Owner Waiver。

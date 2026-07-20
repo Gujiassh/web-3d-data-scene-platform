@@ -1,12 +1,12 @@
 # Viewer API Contract
 
-> Status: MVP v1 design
+> Status: Implemented SceneDocument 1.4 / Feature 008 baseline
 
-## Framework-neutral API
+## Framework-Neutral API
 
 ```ts
 interface CreateViewerOptions {
-  source?: SceneSource;
+  source?: SceneDocument;
   assetResolver?: AssetResolver;
   adapters?: Record<string, DataAdapter>;
   canvasLabel?: string;
@@ -16,11 +16,20 @@ interface CreateViewerOptions {
 }
 
 interface SceneViewer {
-  load(source: SceneSource): Promise<void>;
+  load(source: SceneDocument): Promise<void>;
   setAdapter(sourceId: string, adapter: DataAdapter | null): Promise<void>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
   setCanvasLabel(label: string): void;
   selectTarget(targetId: string | null): void;
   focusTarget(targetId: string, options?: FocusOptions): Promise<void>;
+  focusHotspot(annotationId: string, options?: FocusOptions): Promise<void>;
+  activateHotspot(
+    annotationId: string,
+    origin?: HotspotActivationOrigin,
+  ): Promise<HotspotActivationEvent>;
   setView(viewId: string): Promise<void>;
   getSnapshot(): ViewerSnapshot;
   getDiagnostics(): readonly Diagnostic[];
@@ -31,16 +40,21 @@ interface SceneViewer {
 function createSceneViewer(container: HTMLElement, options?: CreateViewerOptions): SceneViewer;
 ```
 
-## Scene Sources
+`SceneSource` is exactly one validated `SceneDocument`; Runtime does not fetch URLs or parse ZIPs. A host that consumes a
+published bundle first calls `loadPublishedScene`, then gives its verified document and AssetResolver to Runtime:
 
-`SceneSource` supports:
+```ts
+const published = await loadPublishedScene({ baseUrl: new URL("./published/", document.baseURI) });
+const viewer = createSceneViewer(container, {
+  assetResolver: published.assetResolver,
+  adapters: hostAdapters,
+  onEvent,
+});
+await viewer.load(published.document);
+```
 
-- A validated SceneDocument object.
-- A URL to `scene.json` plus an AssetResolver.
-- A ZIP Blob/File containing `manifest.json`, `scene.json` and `assets/`.
-
-Loading is transactional. A failed load rejects its Promise and leaves the previous ready scene
-active. `dispose` is idempotent; all other commands reject after disposal.
+The optional creation-time `source` starts the same transactional load. A failed or superseded load rejects its Promise
+without replacing the previous ready generation. `dispose` is idempotent; commands reject after disposal.
 
 ## Asset Resolver
 
@@ -50,8 +64,9 @@ interface AssetResolver {
 }
 ```
 
-The resolver is responsible for authenticated URLs or object storage integration. Viewer validates
-the returned content against the asset hash before activation.
+Runtime verifies returned bytes against the SceneAsset hash and byte length before activation. The published-scene
+loader supplies a resolver that additionally restricts fetches to manifest-declared bundle paths. Authentication,
+credentials and external object-storage URLs remain host concerns and never enter a publish manifest.
 
 ## Events
 
@@ -63,58 +78,91 @@ type ViewerEvent =
   | { type: "alarm"; transition: "opened" | "updated" | "cleared"; alarm: RuntimeAlarm }
   | { type: "connection-change"; sourceId: string; status: ConnectionStatus }
   | { type: "diagnostic"; diagnostic: Diagnostic }
-  | { type: "performance"; sample: PerformanceSample };
+  | { type: "performance"; sample: PerformanceSample }
+  | HotspotActivationEvent
+  | { type: "hotspot-content"; annotationId: string; title: string; text: string }
+  | {
+      type: "hotspot-host-content-request";
+      annotationId: string;
+      title: string;
+      key: string;
+    };
 ```
 
-Events contain stable target IDs and domain values, never Object3D instances. Event delivery order
-matches accepted runtime state transitions.
+Events contain stable authored IDs and domain values, never Three.js objects. Host-content events carry only the opaque
+trusted key; the host maps that key to local values. Alarm identity is `(targetId, bindingId, ruleId)`, and repeated data
+with the same normalized result does not emit duplicate transitions.
 
-Alarm identity is `(targetId, bindingId, ruleId)`. Viewer emits transitions only when the normalized
-alarm state changes; repeated data with the same result does not emit duplicate alarm events.
+## Focus And Selection
 
-## Focus and Selection
+- `selectTarget` changes selection without moving the camera and emits `origin: "api"` only when state changes.
+- `focusTarget` moves the camera and selects only when `options.select === true`.
+- `focusHotspot` frames a resolved visible Surface hotspot; `activateHotspot` executes its declarative action.
+- Viewer pointer selection emits `origin: "viewer"`; host commands emit `origin: "api"`.
+- A new camera gesture or focus command cancels the current focus animation.
+- Missing or hidden targets reject through stable diagnostics; Runtime does not guess by name or node order.
 
-- `selectTarget` changes selection without moving the camera.
-- `focusTarget` moves the camera and selects only when `select: true` is passed.
-- A new user camera gesture or focus command cancels the current focus animation.
-- Missing targets reject with a stable diagnostic code.
-- Hidden targets can be selected through API but cannot be focused until made visible by current
-  rules; Viewer reports this explicitly.
+## Snapshot And Adapter Lifecycle
 
-## Viewer Snapshot
+`getSnapshot` returns lifecycle, document ID/revision, selected target ID, connection health and current alarms. It does
+not expose mutable renderer objects, raw payloads or Studio state.
 
-`getSnapshot` returns read-only diagnostic state: lifecycle, document ID/revision, selected target,
-connection health and current alarms. It does not expose mutable renderer objects or the full live
-data payload.
+`setAdapter` validates `adapter.sourceId === sourceId`. Add, replace and remove operations are serialized per source;
+superseded work is aborted, subscriptions are released, and transient binding/alarm state clears before slow physical
+adapter shutdown can complete.
 
 ## React Wrapper
 
 ```tsx
-type SceneViewerProps = {
-  source: SceneSource;
-  adapters?: Record<string, DataAdapter>;
+interface SceneViewerProps {
+  source: SceneDocument;
+  adapters?: Readonly<Record<string, DataAdapter>>;
+  assetResolver?: AssetResolver;
   canvasLabel?: string;
   className?: string;
+  style?: CSSProperties;
+  pixelRatio?: number;
+  reducedMotion?: boolean;
+  themeBackground?: string | null;
+  backgroundPreview?: string | null;
+  gridPreview?: boolean | null;
+  lightingPreview?: SceneLighting | null;
   onReady?: (event: ReadyEvent) => void;
-  onSelectionChange?: (event: SelectionChangeEvent) => void;
+  onSelectionChange?: (event: SelectionEvent) => void;
   onAlarm?: (event: AlarmEvent) => void;
-  onDiagnostic?: (event: DiagnosticEvent) => void;
-};
+  onHotspotActivation?: (event: HotspotActivationEvent) => void;
+  onHotspotContent?: (event: HotspotContentEvent) => void;
+  onHotspotHostContentRequest?: (event: HotspotHostContentEvent) => void;
+  onDiagnostic?: (diagnostic: Diagnostic) => void;
+  onEvent?: (event: ViewerEvent) => void;
+}
 
-type SceneViewerHandle = Pick<
-  SceneViewer,
-  "selectTarget" | "focusTarget" | "setView" | "getSnapshot"
->;
+interface SceneViewerHandle {
+  selectTarget(targetId: string | null): void;
+  focusTarget(targetId: string): Promise<void>;
+  focusHotspot(annotationId: string): Promise<void>;
+  activateHotspot(
+    annotationId: string,
+    origin?: HotspotActivationOrigin,
+  ): Promise<HotspotActivationEvent>;
+  setThemeBackground(color: string | null): void;
+  setBackgroundPreview(color: string | null): void;
+  setGridPreview(visible: boolean | null): void;
+  setLightingPreview(lighting: SceneLighting | null): void;
+  setView(viewId: string): Promise<void>;
+  getSnapshot(): ViewerSnapshot;
+}
 ```
 
-- Prop identity changes do not recreate Viewer unless the container changes.
-- Source changes call transactional `load`.
-- Adapter map changes add, replace or remove only affected adapters.
-- `canvasLabel` changes update the mounted Canvas `aria-label` in place and do not recreate Viewer.
-- Unmount always calls `dispose` and suppresses late async updates.
+- The wrapper creates one Runtime Viewer per mounted container and disposes that same instance on unmount.
+- `source`, adapters, canvas label and visual preview props reconcile in place without recreating Runtime.
+- `assetResolver`, `pixelRatio` and `reducedMotion` are creation-time options; remount to replace them.
+- The imperative `focusTarget` intentionally focuses with selection enabled.
+- Callback props dispatch the same `ViewerEvent` after the generic `onEvent` callback.
+- StrictMode setup/cleanup remains idempotent and suppresses stale async results.
 
 ## Host Responsibilities
 
-The host owns authentication, business routing, equipment detail UI, alarm acknowledgement,
-permissions, persistence of runtime events and data adapter credentials. Viewer does not make
-control decisions or send commands to industrial equipment.
+The host owns authentication, business routing, trusted-content values, equipment detail UI, alarm acknowledgement,
+permissions, adapter credentials and persistence of runtime events. Viewer does not make control decisions, save Studio
+state or send commands to industrial equipment.

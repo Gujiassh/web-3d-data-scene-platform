@@ -1,0 +1,32 @@
+{
+  "publishVersion": "1.0.0",
+  "sceneSchemaVersion": "1.4.0",
+  "documentId": "published-factory-scene",
+  "revision": 4,
+  "entry": "scene.json",
+  "files": [
+    {
+      "path": "assets/e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8.glb",
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "byteLength": 1216,
+      "mediaType": "model/gltf-binary"
+    },
+    {
+      "path": "scene.json",
+      "sha256": "35df2128f9ceec32006a299426aad9e499fc1cc7ec135daab432565ff6d8b4ed",
+      "byteLength": 4802,
+      "mediaType": "application/json"
+    }
+  ],
+  "requirements": {
+    "dataSources": [
+      {
+        "sourceId": "factory-telemetry",
+        "adapter": "mock"
+      }
+    ],
+    "trustedContentKeys": [
+      "inspection-card"
+    ]
+  }
+}

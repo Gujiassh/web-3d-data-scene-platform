@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f3f6f4" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob: data:; connect-src 'self' wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'"
+    />
+    <title>Published Factory Scene</title>
+  </head>
+  <body>
+    <main class="host-shell">
+      <section id="viewer" aria-label="Published scene viewport"></section>
+
+      <header class="host-toolbar">
+        <div class="scene-identity">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>
+            <strong>Published Factory Scene</strong>
+            <small id="scene-status" data-state="loading">Loading bundle</small>
+          </span>
+        </div>
+        <div class="host-controls">
+          <label for="target-select">Target</label>
+          <select id="target-select">
+            <option value="press-01">Press 01</option>
+            <option value="conveyor-01">Conveyor 01</option>
+          </select>
+          <button id="focus-target" type="button" disabled>Focus</button>
+        </div>
+      </header>
+
+      <aside class="runtime-strip" aria-label="Runtime status">
+        <span><i id="connection-dot"></i><b id="connection-value">Connecting</b></span>
+        <span>Selection <b id="selection-value">None</b></span>
+        <span>Origin <b id="selection-origin">None</b></span>
+      </aside>
+
+      <aside id="host-content" class="host-content" aria-live="polite" hidden>
+        <button id="close-content" type="button" aria-label="Close inspection record">Close</button>
+        <small id="content-eyebrow">Inspection</small>
+        <strong id="content-title"></strong>
+        <dl id="content-fields"></dl>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

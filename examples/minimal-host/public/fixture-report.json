@@ -1,0 +1,33 @@
+{
+  "fixtureVersion": 1,
+  "documentId": "published-factory-scene",
+  "revision": 4,
+  "sourceAsset": {
+    "path": "tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+    "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+    "byteLength": 1216,
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "assets/e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8.glb",
+      "byteLength": 1216,
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8"
+    },
+    {
+      "path": "publish-manifest.json",
+      "byteLength": 805,
+      "sha256": "8da7e4f3fb48e3d0ef0c08fe8ab74382627241926c184617b475f24d3ce2045f"
+    },
+    {
+      "path": "scene.json",
+      "byteLength": 4802,
+      "sha256": "35df2128f9ceec32006a299426aad9e499fc1cc7ec135daab432565ff6d8b4ed"
+    }
+  ],
+  "zip": {
+    "path": "published-factory.web3d.zip",
+    "byteLength": 7285,
+    "sha256": "f4d7f857b0e2a25affa9836a1f767f389200a6e877847eaf7877c6ce4030a33c"
+  }
+}

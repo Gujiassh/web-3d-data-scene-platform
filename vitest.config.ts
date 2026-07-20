@@ -5,7 +5,7 @@ export default defineConfig({
     coverage: {
       reporter: ["text", "json-summary", "html"],
     },
-    include: ["packages/**/*.test.ts", "apps/**/*.test.ts"],
+    include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "examples/**/*.test.ts"],
     reporters: ["default"],
   },
 });

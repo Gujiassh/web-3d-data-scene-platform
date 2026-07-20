@@ -1,0 +1,226 @@
+{
+  "annotations": [
+    {
+      "action": {
+        "type": "show-content"
+      },
+      "anchor": {
+        "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+        "entityId": "factory-cell",
+        "kind": "surface",
+        "nodeIndex": 0,
+        "nodeLocalNormal": [
+          0,
+          1,
+          0
+        ],
+        "nodeLocalPosition": [
+          0,
+          0.5,
+          0
+        ]
+      },
+      "content": {
+        "key": "inspection-card",
+        "kind": "host-content"
+      },
+      "id": "press-inspection",
+      "locked": false,
+      "title": "Press inspection",
+      "visible": true
+    }
+  ],
+  "assets": [
+    {
+      "byteLength": 1216,
+      "id": "factory-cell-asset",
+      "mediaType": "model/gltf-binary",
+      "name": "M0 Factory Cell",
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "stats": {
+        "materialCount": 1,
+        "meshCount": 1,
+        "nodeCount": 2,
+        "triangleCount": 12
+      },
+      "uri": "asset://e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8"
+    }
+  ],
+  "bindings": [
+    {
+      "enabled": true,
+      "id": "conveyor-01-status-binding",
+      "pointer": "/machines/CONVEYOR-01/status",
+      "ruleSetId": "equipment-status",
+      "sourceId": "factory-telemetry",
+      "targetId": "conveyor-01",
+      "writes": [
+        "color",
+        "alarm"
+      ]
+    },
+    {
+      "enabled": true,
+      "id": "press-01-status-binding",
+      "pointer": "/machines/PRESS-01/status",
+      "ruleSetId": "equipment-status",
+      "sourceId": "factory-telemetry",
+      "targetId": "press-01",
+      "writes": [
+        "color",
+        "alarm"
+      ]
+    }
+  ],
+  "dataSources": [
+    {
+      "adapter": "mock",
+      "id": "factory-telemetry",
+      "name": "Factory Telemetry",
+      "offlineAfterMs": 60000,
+      "options": {
+        "scenario": "published-host"
+      },
+      "staleAfterMs": 30000
+    }
+  ],
+  "entities": [
+    {
+      "assetId": "factory-cell-asset",
+      "id": "factory-cell",
+      "locked": false,
+      "metadata": {
+        "fixtureRole": "published-host"
+      },
+      "name": "Factory Cell",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "asset",
+      "visible": true
+    }
+  ],
+  "environment": {
+    "background": "#F3F6F4",
+    "backgroundMode": "custom",
+    "grid": true,
+    "lighting": {
+      "fill": {
+        "groundColor": "#65706A",
+        "intensity": 1.8,
+        "skyColor": "#FFFFFF"
+      },
+      "key": {
+        "color": "#FFFFFF",
+        "directionToLight": [
+          0.37904902178945177,
+          0.7580980435789035,
+          0.5306686305052324
+        ],
+        "intensity": 2.2
+      }
+    },
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "id": "published-factory-scene",
+  "name": "Published Factory Scene",
+  "revision": 4,
+  "ruleSets": [
+    {
+      "fallback": [
+        {
+          "type": "color",
+          "value": "#A96800"
+        },
+        {
+          "level": "info",
+          "message": "Status unavailable",
+          "type": "alarm"
+        }
+      ],
+      "id": "equipment-status",
+      "name": "Equipment Status",
+      "rules": [
+        {
+          "effects": [
+            {
+              "type": "color",
+              "value": "#1E8A68"
+            },
+            {
+              "level": "none",
+              "message": "",
+              "type": "alarm"
+            }
+          ],
+          "id": "status-running",
+          "priority": 100,
+          "when": {
+            "expected": "running",
+            "fact": "value",
+            "operator": "eq"
+          }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": "1.4.0",
+  "targets": [
+    {
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "businessId": "CONVEYOR-01",
+      "entityId": "factory-cell",
+      "id": "conveyor-01",
+      "metadata": {
+        "equipmentType": "conveyor"
+      },
+      "name": "Conveyor 01",
+      "nodeIndex": 1
+    },
+    {
+      "assetHash": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "businessId": "PRESS-01",
+      "entityId": "factory-cell",
+      "id": "press-01",
+      "metadata": {
+        "equipmentType": "press"
+      },
+      "name": "Press 01",
+      "nodeIndex": 0
+    }
+  ],
+  "views": [
+    {
+      "fov": 42,
+      "id": "factory-overview",
+      "name": "Factory Overview",
+      "position": [
+        7.5,
+        5.5,
+        8.5
+      ],
+      "target": [
+        0,
+        0.75,
+        0
+      ]
+    }
+  ]
+}

@@ -29,11 +29,11 @@
 
 ## Embed Boundaries
 
-- [ ] T030 Align Viewer API documentation with implemented Runtime/React public surfaces without breaking signatures.
-- [ ] T031 Add framework-neutral minimal host with adapter, selection, focus and trusted-content integration.
-- [ ] T032 Add deterministic real-asset published fixture generation and verification.
-- [ ] T033 Add static hosting, CSP, asset resolver and 15-minute embed tutorial.
-- [ ] T034 Add production host build and dynamic-eval/CSP artifact scan.
+- [x] T030 Align Viewer API documentation with implemented Runtime/React public surfaces without breaking signatures.
+- [x] T031 Add framework-neutral minimal host with adapter, selection, focus and trusted-content integration.
+- [x] T032 Add deterministic real-asset published fixture generation and verification.
+- [x] T033 Add static hosting, CSP, asset resolver and 15-minute embed tutorial.
+- [x] T034 Add production host build and dynamic-eval/CSP artifact scan.
 
 ## Acceptance
 

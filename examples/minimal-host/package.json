@@ -1,0 +1,23 @@
+{
+  "name": "@web3d/minimal-host",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm generate:fixture && tsc --noEmit -p tsconfig.json && vite build && node scripts/verify-build.mjs",
+    "dev": "pnpm generate:fixture && vite --host 0.0.0.0 --port 4191 --strictPort",
+    "generate:fixture": "node scripts/generate-fixture.mjs",
+    "preview": "vite preview --host 0.0.0.0 --port 4191 --strictPort",
+    "test": "vitest run --root ../.. --config vitest.config.ts examples/minimal-host/src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.2.7",
+    "@fontsource/ibm-plex-sans": "5.2.8",
+    "@web3d/publish": "workspace:*",
+    "@web3d/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "fflate": "0.8.3"
+  }
+}

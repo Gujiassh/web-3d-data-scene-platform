@@ -116,6 +116,25 @@ importers:
         specifier: 20.10.6
         version: 20.10.6
 
+  examples/minimal-host:
+    dependencies:
+      '@fontsource/ibm-plex-mono':
+        specifier: 5.2.7
+        version: 5.2.7
+      '@fontsource/ibm-plex-sans':
+        specifier: 5.2.8
+        version: 5.2.8
+      '@web3d/publish':
+        specifier: workspace:*
+        version: link:../../packages/publish
+      '@web3d/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+    devDependencies:
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
+
   packages/document:
     dependencies:
       ajv:
