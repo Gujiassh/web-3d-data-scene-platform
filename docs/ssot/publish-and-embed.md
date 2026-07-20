@@ -1,6 +1,6 @@
 # 发布与嵌入
 
-> 状态：Feature 008 实现与自动化 Critical 验收已完成；T045 外部计时或本次 Owner Waiver、T046 交付关闭待完成
+> 状态：Feature 008 已完成；T045 由 Owner Waiver 关闭，外部首次使用风险保留至 Feature 009
 >
 > 日期：2026-07-20
 
@@ -58,8 +58,11 @@
   loader/ZIP parity、JSON/GLB MIME、缺失路径 404 与 2 个 emitted JS no-eval 检查通过。
 - T044 Critical reverse review 对目标、时序、架构、data/save 合约、public API、host-only 值、CSP/static path、
   TS/import 和测试诚实性均判定 pass。
+- 2026-07-20 Owner 明确授权在缺少外部/人工验证时由控制器自验。最终生产 publish-host 4/4 在 `18.55s` 内通过，
+  但该结果只证明可执行集成流，不证明外部开发者首次使用或教程理解；风险继续由 Feature 009 承担。
 
-## 下一步
+## 关闭状态
 
-T040-T044 已完成。T045 必须记录真实 15 分钟外部开发者结果，或取得本次明确 Owner Waiver 且保留未验证风险；
-不得复用 Feature 007 waiver 或编造计时。随后完成 T046 的 commit/push 和 delivery ledger，Feature 009 才可开始。
+T040-T046 已完成。Feature 008 的发布、嵌入、静态托管与自动化 Critical 证据通过；T045 使用本次独立 Owner
+Waiver，不复用 Feature 007 waiver，也不编造外部计时。Feature 009 可开始，但必须继续保留外部目标开发者首次
+使用、跨浏览器真实设备和固定参考硬件的未验证风险。

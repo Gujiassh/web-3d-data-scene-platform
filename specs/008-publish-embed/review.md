@@ -87,22 +87,32 @@ Reverse review assumed four regressions: publish mutates persistent state, host-
 published path returns SPA HTML, or a document-only assertion hides non-ready Runtime state. Source-boundary diff,
 forbidden-value scan, production response checks and the corrected P7 oracle respectively catch those failures.
 
+## T045 Owner Waiver
+
+On 2026-07-20 the Owner explicitly authorized controller verification when external/manual validation is unavailable.
+The controller reran the production publish-host matrix in `18.55s`: 4/4 passed with zero page/console errors, covering
+the ready Runtime snapshot, target focus, Viewer-origin and API-origin selection, mapped trusted content, CSP, JSON/GLB
+MIME, missing-path 404 and mobile layout. This is executable integration evidence only. It is not evidence from a new
+external developer and does not prove first-use tutorial comprehension; Feature 009 retains that residual risk.
+
 ## Delivery Ledger
 
-- Source branch/ref: `main` at pushed SHA `8dbb7b1`.
+- Source branch/ref: `main` at pushed SHA `ec7e0d7` for T040-T044; local closure starts after the independently accepted
+  light-helper fix `869a2e4` without changing any publish contract.
 - Repair/delivery branch: `main`; no secondary worktree or integration branch.
 - Acceptance symptom/root cause: the first parity screenshot showed Studio `Connecting/Bad` and orange fallback effects;
   the test's so-called normalized snapshot was built only from SceneDocument fields and could not observe Runtime state.
 - Changed scope: fixture adapter semantics, host Runtime evidence, dedicated publish-host Playwright config/spec, PNG
   decoding dependencies and five checked screenshots. No persistence or public API contract changed.
 - Verification: publish-host 4/4, focused 12/88, full Vitest 116/765, all sequential repository gates, screenshot review
-  and production loader/ZIP/CSP/MIME/404/no-eval checks passed.
-- Commit/push: pending this acceptance slice.
+  and production loader/ZIP/CSP/MIME/404/no-eval checks passed. The final Owner-Waiver controller rerun also passed 4/4
+  in `18.55s`.
+- Commit/push: closure is committed on `main`; the exact pushed HEAD is recorded in the linked dev-workbench closeout.
 - Downstream target: direct `origin/main`; no merge or cherry-pick remains after push. Feature 009 remains blocked until
   T045 and T046 close.
 
 Controller judgment: the publish package is acceptable now and points toward the intended Feature 008 architecture.
 The Studio and embed implementation slices are acceptable: Publish reads exact current Runtime evidence, the minimal
 host consumes the verified public loader/Runtime boundary, and host-only adapter/content values stay outside the bundle.
-T040-T044 pass. The feature is not complete until T045 records real external timing or a new explicit Owner Waiver and
-T046 records the final commit/push and delivery closure.
+T040-T046 pass. Feature 008 is complete under the explicit T045 Owner Waiver, with external first-use timing and tutorial
+comprehension retained as unproven Feature 009 product risk.

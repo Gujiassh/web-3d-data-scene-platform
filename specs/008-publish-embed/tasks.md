@@ -42,5 +42,10 @@
 - [x] T042 Run focused publish, Runtime and React contract tests.
 - [x] T043 Run full typecheck, lint, tests, build, design, topology, formatting and diff gates sequentially.
 - [x] T044 Complete Critical reverse review of security, data/save boundaries, API contracts and test honesty.
-- [ ] T045 Record the 15-minute external developer result or an explicit Owner Waiver without fabricating timing.
-- [ ] T046 Update SSoT/review/delivery ledger, commit and push Feature 008 before starting Feature 009.
+- [x] T045 Record the 15-minute external developer result or an explicit Owner Waiver without fabricating timing.
+- [x] T046 Update SSoT/review/delivery ledger, commit and push Feature 008 before starting Feature 009.
+
+T045 closed on 2026-07-20 by explicit Owner Waiver: when external/manual validation is unavailable, the owner authorizes
+controller self-verification. The controller reran the production publish-host flow in `18.55s` with 4/4 Chromium tests,
+but this is not an external first-use or tutorial-comprehension result. That residual product risk remains assigned to
+Feature 009 and must not be converted into an external-usability claim.

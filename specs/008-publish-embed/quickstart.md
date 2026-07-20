@@ -1,6 +1,6 @@
 # Publish And Embed Quickstart
 
-**Status**: Executable Feature 008 path; external 15-minute result pending T045
+**Status**: Executable Feature 008 path; T045 external timing waived by the Owner with residual risk retained for Feature 009
 
 ## Clean Checkout
 
@@ -107,5 +107,7 @@ The build gate regenerates the fixture twice, checks byte identity, verifies ZIP
 fixture through `loadPublishedScene`, rechecks the resolved GLB and scans emitted JS for `eval`/`new Function`.
 
 The external 15-minute acceptance starts after dependencies are installed and ends when the participant has loaded the
-fixture, focused a target, observed both selection origins and opened mapped trusted content. Record actual start/end
-times, participant context and blockers under T045; do not infer a timing result from this document or automated tests.
+fixture, focused a target, observed both selection origins and opened mapped trusted content. T045 closed by explicit
+Owner Waiver on 2026-07-20 because an external participant was unavailable. A controller rerun completed all four
+production host checks in `18.55s`; this proves the executable flow, not external first-use timing or tutorial
+comprehension. Feature 009 retains that product risk.

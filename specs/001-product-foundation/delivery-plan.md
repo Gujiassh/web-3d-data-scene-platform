@@ -137,7 +137,7 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 
 ## 008：发布与嵌入
 
-> 状态：2026-07-19 规格与技术设计完成，等待实现
+> 状态：2026-07-20 完成；自动化 Critical 验收通过，T045 外部计时由明确 Owner Waiver 关闭并将风险转入 009
 
 ### 所有权
 
