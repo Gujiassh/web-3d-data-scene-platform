@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { PNG } from "pngjs";
 import {
   exportSceneArchive,
   type LightEntity,
@@ -203,6 +204,52 @@ test.describe("Feature 006B light authoring", () => {
     await page.screenshot({ path: artifact("006b-light-authoring-1440x900.png"), fullPage: true });
     expect(runtimeErrors).toEqual([]);
   });
+
+  test("keeps a light helper visible over a transparent model while orbiting", async ({ page }) => {
+    test.setTimeout(45_000);
+    const runtimeErrors = observeRuntimeErrors(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const canvas = await readyCanvas(page);
+    const transparentModel = transparentFirstMaterial(await readFile(assetPath));
+
+    await page.getByTestId("model-file-input").setInputFiles({
+      name: "m0-factory-cell-transparent.glb",
+      mimeType: "model/gltf-binary",
+      buffer: transparentModel,
+    });
+    const importDialog = page.getByRole("dialog", { name: "Import model" });
+    await expect(importDialog).toBeVisible();
+    await importDialog.getByRole("button", { name: "Add to scene" }).click();
+    await expect(importDialog).toBeHidden();
+
+    await openLightingMenuReady(page);
+    await page.getByRole("menuitem", { name: "Add point", exact: true }).click();
+    await setColorInput(page.getByLabel("Color", { exact: true }), "#FF00FF");
+    await setNumberInput(page.getByLabel("Position X", { exact: true }), "-1.6");
+    await setNumberInput(page.getByLabel("Position Y", { exact: true }), "0.75");
+    await expectRevision(page, 5);
+
+    const bounds = await canvas.boundingBox();
+    if (bounds === null) throw new Error("Canvas bounds are unavailable for camera orbit.");
+    const start = {
+      x: bounds.x + bounds.width * 0.82,
+      y: bounds.y + bounds.height * 0.65,
+    };
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 260, start.y + 120, { steps: 20 });
+    await page.mouse.up();
+
+    await expect
+      .poll(async () => countMagentaPixels(await canvas.screenshot()))
+      .toBeGreaterThan(20);
+    await page.screenshot({
+      path: artifact("light-helper-transparent-model-1440x900.png"),
+      fullPage: true,
+    });
+    expect(runtimeErrors).toEqual([]);
+  });
 });
 
 let archivePromise: Promise<Uint8Array> | undefined;
@@ -262,6 +309,72 @@ async function releaseFixtureAssetReads(page: Page): Promise<void> {
     if (release === undefined) throw new Error("006B fixture asset gate is unavailable.");
     release();
   });
+}
+
+function transparentFirstMaterial(source: Buffer): Buffer {
+  const jsonLength = source.readUInt32LE(12);
+  const json = JSON.parse(
+    source
+      .subarray(20, 20 + jsonLength)
+      .toString("utf8")
+      .trim(),
+  ) as {
+    materials: Array<{ alphaMode?: string }>;
+  };
+  const firstMaterial = json.materials[0];
+  if (firstMaterial === undefined)
+    throw new Error("Fixture GLB has no material to make transparent.");
+  firstMaterial.alphaMode = "BLEND";
+
+  const jsonChunk = padGlbChunk(Buffer.from(JSON.stringify(json)), 0x20);
+  const binaryHeaderOffset = 20 + jsonLength;
+  const binaryLength = source.readUInt32LE(binaryHeaderOffset);
+  const binary = source.subarray(binaryHeaderOffset + 8, binaryHeaderOffset + 8 + binaryLength);
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(12 + 8 + jsonChunk.length + 8 + binary.length, 8);
+  const jsonHeader = Buffer.alloc(8);
+  jsonHeader.writeUInt32LE(jsonChunk.length, 0);
+  jsonHeader.writeUInt32LE(0x4e4f534a, 4);
+  const binaryHeader = Buffer.alloc(8);
+  binaryHeader.writeUInt32LE(binary.length, 0);
+  binaryHeader.writeUInt32LE(0x004e4942, 4);
+  return Buffer.concat([header, jsonHeader, jsonChunk, binaryHeader, binary]);
+}
+
+function padGlbChunk(value: Buffer, fill: number): Buffer {
+  const length = (4 - (value.length % 4)) % 4;
+  return length === 0 ? value : Buffer.concat([value, Buffer.alloc(length, fill)]);
+}
+
+function countMagentaPixels(screenshot: Buffer): number {
+  const image = PNG.sync.read(screenshot);
+  let count = 0;
+  for (let index = 0; index < image.data.length; index += 4) {
+    const red = image.data[index] ?? 0;
+    const green = image.data[index + 1] ?? 0;
+    const blue = image.data[index + 2] ?? 0;
+    const alpha = image.data[index + 3] ?? 0;
+    if (alpha > 200 && red > 150 && blue > 150 && green < 130) count += 1;
+  }
+  return count;
+}
+
+async function setColorInput(input: Locator, value: string): Promise<void> {
+  await input.evaluate((element, next) => {
+    const control = element as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter === undefined) throw new Error("Color input setter is unavailable.");
+    setter.call(control, next);
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
+async function setNumberInput(input: Locator, value: string): Promise<void> {
+  await input.fill(value);
+  await input.press("Enter");
 }
 
 async function openLightingMenuReady(page: Page): Promise<void> {

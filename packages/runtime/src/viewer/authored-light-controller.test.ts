@@ -1,5 +1,15 @@
 import type { LightEntity } from "@web3d/document";
-import { BufferGeometry, Group, LineSegments, Material, Mesh, PointLight, SpotLight } from "three";
+import {
+  BufferGeometry,
+  Group,
+  LineBasicMaterial,
+  LineSegments,
+  Material,
+  Mesh,
+  MeshBasicMaterial,
+  PointLight,
+  SpotLight,
+} from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import { AuthoredLightController } from "./authored-light-controller";
@@ -64,6 +74,40 @@ describe("AuthoredLightController", () => {
     expect(pointThree?.intensity).toBe(0);
     expect(spotThree?.intensity).toBe(1000);
     expect(spotThree?.distance).toBe(0);
+    controller.dispose();
+  });
+
+  it("renders Point and Spot helpers as depth-independent overlays without changing pick proxies", () => {
+    const root = new Group();
+    const entities = new Map<string, RuntimeEntity>();
+    const controller = new AuthoredLightController(root, entities, vi.fn());
+    const lights = [pointLight("point-a", 25, null), spotLight("spot-a", 10, 12)];
+    controller.stage(lights).commit("edit");
+
+    for (const light of lights) {
+      const object = entities.get(light.id)?.object;
+      const helper = object?.getObjectByName(`light-helper:${light.id}`);
+      const proxy = object?.getObjectByName(`light-pick-proxy:${light.id}`);
+      expect(helper).toBeInstanceOf(LineSegments);
+      expect(helper?.renderOrder).toBe(1_000);
+      expect((helper as LineSegments).material).toBeInstanceOf(LineBasicMaterial);
+      expect((helper as LineSegments).material).toMatchObject({
+        depthTest: false,
+        depthWrite: false,
+        opacity: 1,
+        transparent: true,
+      });
+      expect(proxy).toBeInstanceOf(Mesh);
+      expect((proxy as Mesh).material).toBeInstanceOf(MeshBasicMaterial);
+      expect((proxy as Mesh).material).toMatchObject({
+        colorWrite: false,
+        depthWrite: false,
+        opacity: 0,
+        transparent: true,
+      });
+      expect(controller.entityForObject(proxy!)).toBe(light.id);
+    }
+
     controller.dispose();
   });
 

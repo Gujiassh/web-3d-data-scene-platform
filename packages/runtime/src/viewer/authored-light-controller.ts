@@ -259,9 +259,16 @@ function createAuthoringSurface(entity: LightEntity): Group {
   sourceGeometry.dispose();
   const helper = new LineSegments(
     helperGeometry,
-    new LineBasicMaterial({ color: entity.light.color, depthTest: false }),
+    new LineBasicMaterial({
+      color: entity.light.color,
+      depthTest: false,
+      depthWrite: false,
+      opacity: 1,
+      transparent: true,
+    }),
   );
   helper.name = `light-helper:${entity.id}`;
+  helper.renderOrder = 1_000;
   helper.userData["web3dLightHelper"] = true;
 
   const proxyGeometry =
