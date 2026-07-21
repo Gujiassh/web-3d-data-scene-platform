@@ -1,8 +1,8 @@
 # Feature 009: Performance, Usability And Open-Source Release
 
-**Status**: Implementation approved by the accepted roadmap and the Owner's 2026-07-20 instructions to complete the
-project with controller verification where manual participants are unavailable and to make the provided 90 m2
-smart-home content the default clean-profile experience.
+**Status**: Release-candidate engineering complete locally on 2026-07-21. Required external production gates remain
+blocked; the Owner's 2026-07-20 instructions permit controller verification where participants are unavailable and make
+the provided 90 m2 smart-home content the local clean-profile default without changing domain-neutral contracts.
 
 ## Goal
 

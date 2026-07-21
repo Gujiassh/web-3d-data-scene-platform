@@ -158,8 +158,8 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 
 ## 009：性能、可用性与开源发布
 
-> 状态：2026-07-20 规格与证据审计进行中；Owner 明确要求把 90 m2 全屋智能参考内容作为 clean-profile
-> 默认体验，同时保持核心合同领域中立
+> 状态：2026-07-21 工程实现完成，本地 release candidate；外部生产声明仍 blocked。Owner 明确要求把 90 m2
+> 全屋智能参考内容作为 clean-profile 默认体验，同时保持核心合同领域中立
 
 ### 所有权
 
@@ -202,5 +202,7 @@ Hierarchy，暂不公开 Transform、Arrange、Transform snap、anchor snap 和 
 - 006A 未通过前不继续 007 热点实现，避免在不可发现的编辑基础上叠加新 authoring 流程。
 - 007 未通过前不把临时 Studio 内部状态包装成发布合同。
 - 008 未通过前不宣称 15 分钟嵌入、跨框架发布或静态部署已经完成。
-- 009 未通过前不宣称产品满足性能、外部可用性或生产发布门槛。
+- 009 未通过前不宣称产品满足性能、外部可用性或生产发布门槛。当前工程门禁通过或有明确 blocker/waiver，
+  但 Iris Xe、稳定 Firefox、真实 Safari、E3 参与者、owner asset redistribution、npm/GitHub/Pages 和 push
+  authorization 仍未满足。
 - MVP 发布前不实现账号、协作、插件市场、真实工业协议、设备控制或物理仿真。

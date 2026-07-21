@@ -1,5 +1,11 @@
 # Critical Review: Performance, Usability And Open-Source Release
 
+## Verdict
+
+No open implementation P0-P2 finding remains at `a0222c8c9a05b2495303e7e37ea68624dcf39320`. The current structure points
+toward the intended domain-neutral release architecture. The release itself remains blocked by external evidence,
+license and publication gates; those blockers are not implementation findings and are not waived into passes.
+
 ## Semantic Oracles
 
 1. Existing project bytes and save contracts do not change because a starter exists.
@@ -8,40 +14,56 @@
 4. Unsupported renderers, engines, hardware, assets or package states fail closed.
 5. Release status reflects the weakest required unresolved gate.
 
-## Specification Review Findings
+## Review Areas
 
-| ID  | Severity | Finding                                                      | Resolution                                                                                          |
-| --- | -------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| S1  | P0       | Smart-home default expands the original release-only scope   | Closed by the Owner's explicit 2026-07-20 default smart-home requirement and delivery-plan update   |
-| S2  | P1       | One source cannot have per-binding connection outages        | Closed with generic independent status values while the source remains online                       |
-| S3  | P1       | Existing project byte-identity ignored open metadata         | Closed by limiting byte identity to document/assets and preserving metadata updates                 |
-| S4  | P1       | Browser plan omitted Studio critical flows                   | Closed with required Studio plus host flows and viewports                                           |
-| S5  | P1       | Positive memory growth was incorrectly allowed               | Closed with named series, non-positive trends and bounded forced-GC final delta                     |
-| S6  | P1       | FPS/paint/size oracles were underspecified                   | Closed with one clock, render-state plus pixel proof, exact loaded bytes and renderer stats         |
-| S7  | P1       | Controller rehearsal weakened E3 honesty and correction loop | Closed by renaming E1 rehearsal and adding participant/fix/retest evidence                          |
-| S8  | P1       | Mutable asset facts were stale                               | Closed with exact counts, conflicting toilet verdict and source digests                             |
-| S9  | P2       | Package version/dependency/license gates were incomplete     | Closed with one RC version, dependency rewrite, deterministic tarballs and third-party/font notices |
-| S10 | P2       | Acceptance artifact missing                                  | Closed by adding `acceptance.md`                                                                    |
-| S11 | P1       | Node-name lookup made authored names semantic identifiers    | Closed with an explicit asset-hash/semantic-target/node-index map; names only validate the mapping  |
-| S12 | P1       | Stable Firefox E2 was missing from the real-browser gates    | Closed by separating stable Firefox E2 and real Safari E2 pass-or-blocker tasks                     |
-| S13 | P1       | Workspace hooks owned fetch/hash/archive bootstrap mechanics | Closed by assigning the complete atomic operation to a dedicated domain-neutral bootstrap service   |
+| Area                    | Judgment                    | Evidence                                                                                                                                                 |
+| ----------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Goal alignment          | pass                        | Clean-profile local smart home, fixed benchmark, browser matrix, packages and governance match Feature 009; public claims stay blocked.                  |
+| User-visible flow       | pass                        | Existing projects bypass starter loading; clean profile is atomic; explicit New Scene stays empty; Retry clears stale failure diagnostics.               |
+| Architecture boundaries | pass                        | `starter-bootstrap` owns fetch/hash/archive; `initializeRepository` owns empty-repository authority/persist; smart-home semantics remain generator-only. |
+| Data/save contracts     | pass                        | No SceneDocument, ProjectRecord, archive or save-payload shape changed; full migration/round-trip tests pass.                                            |
+| Runtime lifecycle       | pass                        | Benchmark resource ownership is explicit; 22 disposal probes reach zero; capture arrays are cleared before the memory stage.                             |
+| Browser behavior        | pass with external blockers | E1 matrix and Canvas/state evidence pass where supported; WebKit Blob storage, stable Firefox E2 and Safari E2 remain exact blockers.                    |
+| Asset/provenance        | pass with release blocker   | Tracked assets pass; 38 owner assets remain local; smart toilet/downlight fail closed; public license is absent.                                         |
+| Tests and evolution     | pass                        | 787 unit tests, deterministic one-worker E2E, package consumers, docs/assets and generator gates pass.                                                   |
 
-Implementation review has not started.
+## Findings Closed
 
-## Gate Matrix
+| ID  | Severity | Finding                                                                              | Resolution                                                                                                                       |
+| --- | -------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| S1  | P0       | Smart-home default expanded release-only scope                                       | Owner explicitly approved the default reference scene; persisted/domain contracts remain unchanged.                              |
+| S2  | P1       | One source cannot represent per-binding connection outages                           | Generic independent status values model application-level offline while the source stays online.                                 |
+| S3  | P1       | Existing-project byte identity ignored open metadata                                 | Document/assets stay byte-identical while normal last-opened/recent metadata continues updating.                                 |
+| S4  | P1       | Browser plan omitted Studio critical flows                                           | Shared Studio plus published-host flows cover three viewports and preserve engine identity.                                      |
+| S5  | P1       | Positive memory growth had been allowed                                              | Non-positive named-series gates and bounded heap final delta are enforced; current positive heap slope remains blocked.          |
+| S6  | P1       | FPS/paint/size oracles were underspecified                                           | One clock, Canvas-visible proof, exact loaded hashes/bytes and renderer stats are recorded.                                      |
+| S7  | P1       | Controller rehearsal risked masquerading as E3                                       | It is labeled E1; external participants are Owner-Waived with no usability claim.                                                |
+| S8  | P1       | Mutable asset facts became stale                                                     | Registry/status/floorplan hashes and exact manifest set fail closed; new `NO-SHIP` downlight is hash-bound and excluded.         |
+| S9  | P2       | Package version/dependency/license gates were incomplete                             | One RC version, dependency rewrite, deterministic tarballs, notices and clean consumers pass.                                    |
+| S10 | P2       | Acceptance artifact was missing                                                      | `acceptance.md` now covers every FR/NFR/SC and release gate.                                                                     |
+| S11 | P1       | Node-name lookup made authored names semantic IDs                                    | Fixed `assetHash + semanticTargetId -> nodeIndex`; names only assert the mapped node.                                            |
+| S12 | P1       | Stable Firefox E2 was absent                                                         | Stable Firefox and real Safari are separate explicit E2 blockers.                                                                |
+| S13 | P1       | Workspace hook owned bootstrap domain mechanics                                      | Dedicated bootstrap and repository-initialization modules now own the operation.                                                 |
+| I1  | P1       | Benchmark retained unbounded performance events into memory sampling                 | Capture is stopped and arrays are cleared; 100,000 post-stop records stay at zero.                                               |
+| I2  | P1       | E2E schema assertions still expected 1.3 and Canvas corner averages sampled overlays | Current assertions use 1.4; a repeated border-color oracle rejects overlay/status contamination without weakening RGB tolerance. |
+| I3  | P1       | Default 10-worker E2E entry reproduced revision timing failures                      | Standard `pnpm test:e2e` now fixes `--workers=1`; 65-test deterministic run passes.                                              |
+| I4  | P1       | Newly materialized recessed-downlight manifest invalidated the frozen source set     | Asset remains excluded at exact hash while `IN_PROGRESS`, `NO-SHIP`, validator-error and Three.js-fail states persist.           |
 
-| Gate        | Status  | Evidence                                                                                   |
-| ----------- | ------- | ------------------------------------------------------------------------------------------ |
-| Product     | pending | E1 controller rehearsal permitted; E3 participants remain independently required or waived |
-| Contract    | pending | Existing full suite is baseline                                                            |
-| Runtime     | pending | Existing full suite is baseline                                                            |
-| UI          | pending | Chromium baseline exists; Firefox/WebKit matrix pending                                    |
-| Performance | blocked | Reference Iris Xe environment unavailable                                                  |
-| Assets      | blocked | Smart-home redistribution license and tracked validator report missing                     |
-| Open source | pending | Packages, governance, Pages and release candidate pending                                  |
+## Reverse Review
+
+Assume a production claim was made incorrectly:
+
+- The gate matrix would catch missing E2/E3 because evidence classes are explicit and final status follows the weakest gate.
+- Public generation would catch missing redistribution authorization before writing under the repository.
+- The benchmark would catch SwiftShader, fixture drift, incomplete loaded hashes, positive memory slope or nonzero disposal.
+- Browser identity and the IndexedDB Blob probe would catch WebKit/Safari relabeling or unsupported Studio persistence.
+- Package and asset audits would catch workspace-only exports, missing notices, unknown tracked bytes or validator drift.
 
 ## Delivery Ledger
 
-- Source: `main@670f8e2` after Feature 008 closure.
-- Branch: `main`; no extra worktree.
-- Push state: Feature 009 not yet delivered.
+- Source: `main@670f8e25d980f9efd3c064b2e66a51ee9a7cdd63` after Feature 008 closure.
+- Specification baseline: `c83cc9384a765354e7982ec9c4b901cf6928027a`.
+- Implementation: `main@a0222c8c9a05b2495303e7e37ea68624dcf39320`.
+- Worktree: `/home/cc/code1/web-3d-data-scene-platform`; no extra worktree.
+- Push state: local only, ahead of `origin/main`; no push/publication authorization was provided.
+- Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.
