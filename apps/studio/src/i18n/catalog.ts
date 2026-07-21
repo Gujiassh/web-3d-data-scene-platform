@@ -8,6 +8,7 @@ export const english = {
     sizeGate: "Studio requires a 1280px desktop viewport.",
     openingProject: "Opening project",
     openingLocalProject: "Opening local project",
+    retryOpeningProject: "Retry",
     navigationLabel: "Scene navigation",
     sourceSummary: {
       sceneTab: "Scene",
@@ -553,6 +554,7 @@ export const english = {
     scenarios: {
       "status-cycle": "Three-state status cycle",
       "boolean-cycle": "Boolean active cycle",
+      "multi-status-cycle": "Independent channel status cycle",
     },
     effectTypes: {
       color: "color",
@@ -723,6 +725,8 @@ export const english = {
     indexedDbRequestFailed: "IndexedDB request failed.",
     indexedDbTransactionAborted: "IndexedDB transaction aborted.",
     indexedDbTransactionFailed: "IndexedDB transaction failed.",
+    starterBootstrapFailed: ({ stage }: StudioAppErrorDetailsByCode["STARTER_BOOTSTRAP_FAILED"]) =>
+      `The starter project could not be opened (${stage}). Check the starter descriptor and retry.`,
   },
   defaults: {
     untitledScene: "Untitled Scene",
@@ -737,6 +741,7 @@ export const chinese: CatalogShape<typeof english> = {
     sizeGate: "Studio 需要至少 1280px 的桌面视口。",
     openingProject: "正在打开项目",
     openingLocalProject: "正在打开本地项目",
+    retryOpeningProject: "重试",
     navigationLabel: "场景导航",
     sourceSummary: {
       sceneTab: "场景",
@@ -1270,6 +1275,7 @@ export const chinese: CatalogShape<typeof english> = {
     scenarios: {
       "status-cycle": "三状态循环",
       "boolean-cycle": "布尔启用循环",
+      "multi-status-cycle": "多通道独立状态循环",
     },
     effectTypes: {
       color: "颜色",
@@ -1415,6 +1421,8 @@ export const chinese: CatalogShape<typeof english> = {
     indexedDbRequestFailed: "IndexedDB 请求失败。",
     indexedDbTransactionAborted: "IndexedDB 事务已中止。",
     indexedDbTransactionFailed: "IndexedDB 事务失败。",
+    starterBootstrapFailed: ({ stage }) =>
+      `默认项目无法打开（${stage}）。请检查 starter descriptor 后重试。`,
   },
   defaults: {
     untitledScene: "未命名场景",

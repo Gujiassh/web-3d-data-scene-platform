@@ -4,9 +4,10 @@
 
 - Owner-provided source root: `/mnt/e/data/model/smart_home_90sqm`.
 - Registry: `00_specs/asset_registry.json`, versioned independently from this repository.
-- Audited snapshot at 2026-07-20 15:10 CST: 55 registered families, 39 manifests and 39 GLBs. Manifest QA reports 38
-  `SHIP` plus one `NO-SHIP` smart toilet, while `production_status.md` calls the same smart toilet `SHIP`; it is excluded
-  until those sources agree and all hash-bound gates replay.
+- Audited snapshot at 2026-07-21 15:12 CST: 55 registered families, 40 manifests and 40 GLBs. Manifest QA reports 38
+  `SHIP`, one `NO-SHIP` smart toilet whose production status says `SHIP`, and one `NO-SHIP` recessed downlight whose
+  production status remains `IN_PROGRESS`. Both non-SHIP assets are excluded until their sources agree and all
+  hash-bound gates replay.
 - Delivered manifest totals: 13,654,936 bytes and 286,534 declared triangles before starter selection.
 - Snapshot hashes: registry `d05619974d36c0be5ec8d47dc41ed11dfe15197f671f5628ec8009aca1692606`, production
   status `bac931c67ecbe394525c71233a6f71be5e4ce170aceb6622079cf818d317a958`, floorplan
@@ -28,8 +29,11 @@ record exists, generated starter bytes may be used for local validation but MUST
 - Living/dining: sofa, coffee table, dining table/chairs, TV console and smart TV.
 - Bedrooms/work: beds, wardrobe, bedside table, desk and office chair as space permits.
 - Kitchen/bath/utility: cabinet and selected SHIP appliances; `smart_toilet` is excluded while `NO-SHIP`.
+- Lighting: the SHIP ceiling light remains the authored fixture; `recessed_downlight` is excluded while `IN_PROGRESS`
+  and `NO-SHIP` with failed validator/Three.js gates.
 - Smart devices: ceiling light, wall air conditioner, curtain, door lock, wall switch, control panel and video doorbell.
 - Cleaning: robot vacuum and dock.
+- Bound state Targets: living ceiling light, living air conditioner, entry door lock, smart TV and robot-vacuum motion.
 
 ## Persisted Boundary
 

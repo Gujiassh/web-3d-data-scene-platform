@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "repositoryMaxTrackedBytes": 6000,
+  "repositoryMaxUniqueBytes": 5000,
+  "assets": [
+    {
+      "path": "examples/minimal-host/public/published/assets/e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8.glb",
+      "byteLength": 1216,
+      "maxByteLength": 1400,
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "licenseId": "CC0-1.0",
+      "licensePath": "tests/fixtures/m0-factory/LICENSE-CC0.txt",
+      "licenseSha256": "de84631b5c5a3524cec1d16bf1230b6181cd75420bf8af60184d0c2a8cbf6ddc"
+    },
+    {
+      "path": "tests/fixtures/006b-light-performance-pbr/public/006b-light-performance-pbr.glb",
+      "byteLength": 3200,
+      "maxByteLength": 3500,
+      "sha256": "9a0dcc3641f98f5f6ac9efa8993f3d103228c6a170b0fc36b6ca75a1eb6b901d",
+      "licenseId": "CC0-1.0",
+      "licensePath": "tests/fixtures/006b-light-performance-pbr/LICENSE-CC0.txt",
+      "licenseSha256": "de84631b5c5a3524cec1d16bf1230b6181cd75420bf8af60184d0c2a8cbf6ddc"
+    },
+    {
+      "path": "tests/fixtures/m0-factory/public/m0-factory-cell.glb",
+      "byteLength": 1216,
+      "maxByteLength": 1400,
+      "sha256": "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b9605efe8",
+      "licenseId": "CC0-1.0",
+      "licensePath": "tests/fixtures/m0-factory/LICENSE-CC0.txt",
+      "licenseSha256": "de84631b5c5a3524cec1d16bf1230b6181cd75420bf8af60184d0c2a8cbf6ddc"
+    }
+  ],
+  "fonts": [
+    {
+      "package": "@fontsource/ibm-plex-mono",
+      "version": "5.2.7",
+      "licenseId": "OFL-1.1",
+      "installedRoot": "apps/studio/node_modules/@fontsource/ibm-plex-mono",
+      "distributedLicensePath": "assets/licenses/ibm-plex-mono-OFL-1.1.txt",
+      "licenseSha256": "23b0a9d0c6d3f140a0b77e483c5cfa6bba574325ef5cb189ed9f2fec4884533f"
+    },
+    {
+      "package": "@fontsource/ibm-plex-sans",
+      "version": "5.2.8",
+      "licenseId": "OFL-1.1",
+      "installedRoot": "apps/studio/node_modules/@fontsource/ibm-plex-sans",
+      "distributedLicensePath": "assets/licenses/ibm-plex-sans-OFL-1.1.txt",
+      "licenseSha256": "d0283623ef57e722fd0eb688a8041589670c608ab780cd3612d06ba6f153d3fd"
+    }
+  ]
+}

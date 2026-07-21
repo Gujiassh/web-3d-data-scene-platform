@@ -187,7 +187,7 @@ test.describe("Theme and scene naming", () => {
     const revision = await page.getByTestId("document-revision").getAttribute("data-revision");
     const before = await activeStoredDocument(page);
     expect(before).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       environment: {
         backgroundMode: "theme",
         background: "#F4F6F5",
@@ -277,7 +277,7 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
 
@@ -288,7 +288,7 @@ test.describe("Theme and scene naming", () => {
     const jsonPath = test.info().outputPath("scene-background.scene.json");
     await jsonDownload.saveAs(jsonPath);
     expect(JSON.parse(await readFile(jsonPath, "utf8"))).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       environment: { backgroundMode: "custom", background: "#336699" },
     });
     await rememberCanvas(page, reloadedCanvas);
@@ -308,13 +308,13 @@ test.describe("Theme and scene naming", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         environment: { backgroundMode: "custom", background: "#336699" },
       });
     expect(runtimeErrors).toEqual([]);
   });
 
-  test("rewrites mixed stored 1.0 and 1.1 projects to persisted 1.3 data", async ({ page }) => {
+  test("rewrites mixed stored 1.0 and 1.1 projects to persisted 1.4 data", async ({ page }) => {
     await useEnglish(page, studioLocaleKey);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(studioUrl);
@@ -344,7 +344,7 @@ test.describe("Theme and scene naming", () => {
       expect(withoutDocumentJson(record)).toEqual(withoutDocumentJson(legacy!));
       const before = JSON.parse(legacy!.documentJson) as LegacySceneDocument;
       const after = JSON.parse(record.documentJson) as CurrentSceneDocument;
-      expect(after.schemaVersion).toBe("1.3.0");
+      expect(after.schemaVersion).toBe("1.4.0");
       expect(after.revision).toBe(before.revision);
       expect(after.environment).toEqual({
         ...before.environment,
@@ -496,17 +496,27 @@ async function canvasCornerRgb(
       [12, 4],
       [sample.width - 5, 4],
       [sample.width - 13, 4],
+      [4, 24],
+      [12, 24],
+      [sample.width - 5, 24],
+      [sample.width - 13, 24],
+      [4, 48],
+      [12, 48],
+      [sample.width - 5, 48],
+      [sample.width - 13, 48],
     ] as const;
-    let red = 0;
-    let green = 0;
-    let blue = 0;
+    const samples = new Map<string, { count: number; rgb: [number, number, number] }>();
     for (const [x, y] of points) {
       const pixel = context.getImageData(x, y, 1, 1).data;
-      red += pixel[0] ?? 0;
-      green += pixel[1] ?? 0;
-      blue += pixel[2] ?? 0;
+      const rgb: [number, number, number] = [pixel[0] ?? 0, pixel[1] ?? 0, pixel[2] ?? 0];
+      const key = rgb.join(":");
+      const sample = samples.get(key);
+      if (sample === undefined) samples.set(key, { count: 1, rgb });
+      else sample.count += 1;
     }
-    const composited = [red, green, blue].map((value) => value / points.length);
+    const composited = [...samples.values()].toSorted((left, right) => right.count - left.count)[0]
+      ?.rgb;
+    if (composited === undefined) throw new Error("Canvas background samples are unavailable.");
     const backdrop = document.querySelector<HTMLElement>(".dialog-backdrop");
     const backdropColor = backdrop === null ? null : getComputedStyle(backdrop).backgroundColor;
     const match = backdropColor?.match(
@@ -561,7 +571,7 @@ interface LegacySceneDocument {
 }
 
 interface CurrentSceneDocument {
-  readonly schemaVersion: "1.3.0";
+  readonly schemaVersion: "1.4.0";
   readonly revision: number;
   readonly environment: LegacySceneDocument["environment"] & {
     readonly backgroundMode: "theme" | "custom";

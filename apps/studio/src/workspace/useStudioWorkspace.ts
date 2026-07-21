@@ -39,6 +39,10 @@ import {
 import { buildImportAssetCommand, createBrowserIdFactory } from "../session/command-builders";
 import { createNewStudioProject } from "../session/new-project";
 import {
+  bootstrapStarterProject,
+  DEFAULT_STARTER_DESCRIPTOR_PATH,
+} from "../starter-bootstrap/starter-bootstrap";
+import {
   assertCanEdit,
   createStudioSession,
   isDirty,
@@ -50,6 +54,7 @@ import {
   type StudioSessionState,
 } from "../session/session-state";
 import type { StudioCommandOutcome } from "./command-outcome";
+import { initializeRepository } from "./initialize-repository";
 
 export type ModelImportState =
   | { readonly status: "inspecting"; readonly fileName: string }
@@ -108,6 +113,7 @@ export interface StudioWorkspace {
     surfaceEvidence: readonly PublishSurfaceEvidence[],
     signal: AbortSignal,
   ) => Promise<StudioPublishOutcome>;
+  readonly retryInitialization: () => void;
   readonly addDiagnostic: (message: string) => void;
 }
 
@@ -117,7 +123,6 @@ export function useStudioWorkspace(): StudioWorkspace {
   const autosaveRef = useRef<AutosaveController | null>(null);
   const importCandidateRef = useRef<ImportCandidate | null>(null);
   const projectRef = useRef<StudioProjectSnapshot | null>(null);
-  const initialProjectNameRef = useRef(t.defaults.untitledScene);
   const liveErrorCopyRef = useRef(t.errors);
   liveErrorCopyRef.current = t.errors;
 
@@ -128,6 +133,7 @@ export function useStudioWorkspace(): StudioWorkspace {
   const [recent, setRecent] = useState<readonly ProjectRecord[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
   const [importState, setImportState] = useState<ModelImportState | null>(null);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
 
   const addDiagnostic = useCallback((message: string) => {
     setDiagnostics((current) => [...current.slice(-11), message]);
@@ -226,7 +232,22 @@ export function useStudioWorkspace(): StudioWorkspace {
     browserNavigation?.addEventListener("navigate", flushBeforeNavigation);
     window.addEventListener("pagehide", flushBeforePageExit);
 
-    void initializeRepository(repository, initialProjectNameRef.current)
+    const initializationAbort = new AbortController();
+    void initializeRepository({
+      repository,
+      signal: initializationAbort.signal,
+      ...(navigator.locks === undefined
+        ? {}
+        : {
+            withAuthority: (operation: () => ReturnType<typeof initializeRepository>) =>
+              navigator.locks.request("web3d-studio:initialize", { mode: "exclusive" }, operation),
+          }),
+      loadStarter: (signal) =>
+        bootstrapStarterProject({
+          descriptorUrl: new URL(DEFAULT_STARTER_DESCRIPTOR_PATH, window.location.href).href,
+          signal,
+        }),
+    })
       .then(({ current, items }) => {
         if (!active) return;
         activateProject(current, setProject, setHistory, setSession);
@@ -241,6 +262,7 @@ export function useStudioWorkspace(): StudioWorkspace {
 
     return () => {
       active = false;
+      initializationAbort.abort();
       browserNavigation?.removeEventListener("navigate", flushBeforeNavigation);
       window.removeEventListener("pagehide", flushBeforePageExit);
       if (repositoryRef.current === repository) repositoryRef.current = null;
@@ -248,7 +270,14 @@ export function useStudioWorkspace(): StudioWorkspace {
       importCandidateRef.current = null;
       void autosave.close().finally(() => repository.close());
     };
-  }, [addDiagnostic, presentError]);
+  }, [addDiagnostic, initializationAttempt, presentError]);
+
+  const retryInitialization = useCallback(() => {
+    if (projectRef.current !== null) return;
+    setDiagnostics([]);
+    setLoading(true);
+    setInitializationAttempt((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     if (project === null || session === null) return;
@@ -748,26 +777,9 @@ export function useStudioWorkspace(): StudioWorkspace {
     exportJson,
     exportArchive,
     publishScene,
+    retryInitialization,
     addDiagnostic,
   };
-}
-
-async function initializeRepository(
-  repository: StudioProjectRepository,
-  defaultProjectName: string,
-) {
-  const items = await repository.listRecent();
-  if (items[0] !== undefined) {
-    return { current: await repository.open(items[0].id), items: await repository.listRecent() };
-  }
-  const now = new Date().toISOString();
-  const initial = createNewStudioProject({
-    id: "untitled-project",
-    name: defaultProjectName,
-    createdAt: now,
-  });
-  const current = await repository.save(initial);
-  return { current, items: await repository.listRecent() };
 }
 
 function activateProject(

@@ -6,13 +6,13 @@ publishes the same versioned scene to an embeddable Three.js viewer.
 
 ## Status
 
-The foundation through feature 007 is implemented and verified: the single Studio covers editing, data-binding Run,
-layout, lighting, precise surface hotspots and declarative interactions on `SceneDocument 1.4.0`. Studio remains the
-sole product frontend. Feature 007's representative-user timing gate was owner-waived because participants were
-unavailable; no usability result is claimed, and external target-developer testing remains a release-stage requirement.
+The MVP implementation is at `0.1.0-rc.1`. Studio covers editing, data-binding Run, layout, lighting, precise surface
+hotspots, declarative interactions and deterministic publish/embed artifacts on `SceneDocument 1.4.0`. The Document,
+Runtime, React and Publish packages emit ESM plus declarations and pass clean-consumer verification.
 
-This is not a production release. External developer testing, Firefox/Safari coverage, fixed-hardware
-performance evidence, publish/embed packaging, and formal open-source release gates remain future work.
+This is a release candidate, not a production release. Real Safari, stable-Firefox reference evidence, the specified
+Iris Xe performance run, external target-developer testing, npm publication and public redistribution of the smart-home
+starter remain blocked or owner-operated gates. Controller automation is not reported as external-user evidence.
 
 ## Product Entry
 
@@ -28,7 +28,23 @@ pnpm dev
 Open Studio at <http://localhost:4173>. The development server uses strict port 4173 and exits instead
 of silently selecting another port when 4173 is occupied.
 
-## What M0 Proves
+### Smart-Home Starter
+
+The clean-profile default is a generated 90 m2 smart-home project when the owner-provided assets are available locally:
+
+```bash
+node scripts/smart-home/generate.mjs \
+  --mode local-validation \
+  --output /home/cc/tmp/web3d-smart-home-starter
+ln -sfn /home/cc/tmp/web3d-smart-home-starter apps/studio/public/starter
+pnpm dev
+```
+
+Local output is deliberately restricted to `/home/cc/tmp`. Public generation additionally requires a hash-bound
+redistribution authorization; without it, the generator fails before writing public bytes. Existing IndexedDB projects
+and explicit **New Scene** remain unchanged by the starter.
+
+## Runtime Guarantees
 
 - A persisted `SceneDocument` can be structurally and semantically validated without runtime Three.js
   or React state.
@@ -41,10 +57,10 @@ of silently selecting another port when 4173 is occupied.
 The original M0 browser evidence used an independent Factory host. Feature 005 preserved those generic
 runtime invariants in Studio Run and automated tests, then removed that host.
 
-## What M1 Adds
+## Studio Guarantees
 
 - Local projects and content-addressed model assets are stored in IndexedDB without changing the
-  `SceneDocument 1.0.0` schema.
+  `SceneDocument 1.4.0` schema.
 - GLB and self-contained glTF files are inspected before confirmation and committed atomically with
   their asset, entity, and target records.
 - Tree and viewport selection share stable entity IDs; rename, visibility, lock, transform, duplicate,
@@ -70,6 +86,9 @@ runtime invariants in Studio Run and automated tests, then removed that host.
 - `packages/runtime`: framework-neutral Three.js viewer, asset loading, data ordering, rules, alarms,
   diagnostics, authoring controls, and lifecycle ownership.
 - `packages/react`: thin React lifecycle and imperative API wrappers around the runtime.
+- `packages/publish`: deterministic published-scene bundles and host loading contracts.
+- `scripts/smart-home`: hash-bound starter audit, layout and deterministic archive generation.
+- `benchmarks/009-release-performance`: fixed release-load fixture and evidence runner.
 - `tests/fixtures/m0-factory`: deterministic GLB, SceneDocument, manifest, generator, and license used as
   test evidence; it is not a product application or production asset bundle.
 
@@ -82,9 +101,14 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
+pnpm verify:docs
 pnpm verify:i18n
+pnpm verify:assets
 pnpm verify:topology
 pnpm verify:design
+pnpm verify:packages
+pnpm verify:smart-home
+RELEASE_PERF_SMOKE=1 RELEASE_PERF_ALLOW_SOFTWARE=1 pnpm bench:release-009
 ```
 
 The browser suite starts one isolated Studio server on 4173 and writes local screenshots to the ignored
@@ -108,6 +132,10 @@ preference keys, and non-strict Studio port configuration.
 - [Hotspot implementation plan](specs/007-hotspots-interactions/plan.md)
 - [Publish and embed specification](specs/008-publish-embed/spec.md)
 - [Publish and embed technical design](specs/008-publish-embed/technical-design.md)
+- [Release readiness](docs/ssot/release-readiness.md)
+- [Architecture guide](docs/architecture.md)
+- [Protocol guide](docs/protocols.md)
+- [Smart-home starter tutorial](docs/tutorial-smart-home.md)
 - [Scene document contract](specs/001-product-foundation/contracts/scene-document.md)
 - [Archive manifest contract](specs/001-product-foundation/contracts/archive-manifest.md)
 - [Data adapter contract](specs/001-product-foundation/contracts/data-adapter.md)
@@ -127,3 +155,10 @@ host business state never enter `SceneDocument` or archive content.
 Platform code is released under the [MIT License](LICENSE). The generated M0 reference fixture is
 released under CC0-1.0; see
 [tests/fixtures/m0-factory/LICENSE-CC0.txt](tests/fixtures/m0-factory/LICENSE-CC0.txt).
+
+Owner-provided smart-home GLBs are not covered by the repository MIT license and are not tracked or released until a
+separate redistribution authorization identifies the copyright owner, license text and exact covered hashes.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [CONTRIBUTING.md](CONTRIBUTING.md),
+[SECURITY.md](SECURITY.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [CHANGELOG.md](CHANGELOG.md) for release and
+project-participation details.

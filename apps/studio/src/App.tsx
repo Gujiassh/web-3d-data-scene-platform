@@ -521,8 +521,17 @@ export function App({ trustedHotspotContentCatalog }: StudioAppProps = {}) {
           className={`studio-viewport ${hotspots.placementActive ? "is-hotspot-placement" : ""}`}
           aria-label={t.app.viewport.label}
         >
-          {workspace.loading || project === null ? (
-            <div className="viewport-loading">{t.app.openingLocalProject}</div>
+          {workspace.loading ? (
+            <div className="viewport-loading" data-testid="project-loading">
+              {t.app.openingLocalProject}
+            </div>
+          ) : project === null ? (
+            <div className="viewport-initialization" data-testid="starter-bootstrap-error">
+              <span>{workspace.diagnostics.at(-1) ?? t.app.openingLocalProject}</span>
+              <button className="secondary-command" onClick={workspace.retryInitialization}>
+                {t.app.retryOpeningProject}
+              </button>
+            </div>
           ) : (
             <AuthoringScene
               ref={viewerRef}

@@ -68,6 +68,10 @@ export interface StudioAppErrorDetailsByCode {
   readonly INDEXEDDB_REQUEST_FAILED: EmptyDetails;
   readonly INDEXEDDB_TRANSACTION_ABORTED: EmptyDetails;
   readonly INDEXEDDB_TRANSACTION_FAILED: EmptyDetails;
+  readonly STARTER_BOOTSTRAP_FAILED: {
+    readonly stage: string;
+    readonly diagnostic: string;
+  };
 }
 
 export type StudioAppErrorCode = keyof StudioAppErrorDetailsByCode;
@@ -207,4 +211,9 @@ export const studioAppErrors = {
     createStudioAppError("INDEXEDDB_TRANSACTION_ABORTED", "IndexedDB transaction aborted.", {}),
   indexedDbTransactionFailed: () =>
     createStudioAppError("INDEXEDDB_TRANSACTION_FAILED", "IndexedDB transaction failed.", {}),
+  starterBootstrapFailed: (stage: string, diagnostic: string) =>
+    createStudioAppError("STARTER_BOOTSTRAP_FAILED", "Starter bootstrap failed.", {
+      stage,
+      diagnostic,
+    }),
 } as const;

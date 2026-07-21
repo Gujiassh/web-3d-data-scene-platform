@@ -69,6 +69,61 @@ describe("Studio Mock scenarios", () => {
     expect((steps[4]?.atMs ?? 0) - (steps[3]?.atMs ?? 0)).toBeGreaterThan(5_000);
   });
 
+  it("keeps independent normal, application-offline and alarm values on one online source", () => {
+    const scenario = mockScenario("multi-status-cycle");
+    if (scenario === null) throw new Error("multi-status-cycle must exist");
+
+    expect(scenario.sample).toEqual({
+      channels: {
+        "channel-a": { status: "ready" },
+        "channel-b": { status: "offline" },
+        "channel-c": { status: "alarm" },
+      },
+    });
+    expect(scenario.suggestedValues).toEqual({
+      "/channels/channel-a/status": ["ready", "offline", "alarm"],
+      "/channels/channel-b/status": ["ready", "offline", "alarm"],
+      "/channels/channel-c/status": ["ready", "offline", "alarm"],
+    });
+    const steps = scenario.createSteps("source-a");
+    expect(steps[0]).toMatchObject({
+      atMs: 80,
+      envelope: {
+        kind: "snapshot",
+        sourceId: "source-a",
+        streamId: "source-a-multi-status-cycle",
+        sequence: 1,
+      },
+    });
+    expect(steps.slice(1, 4).map((step) => step.envelope)).toMatchObject([
+      {
+        kind: "patch",
+        sequence: 2,
+        changes: [{ pointer: "/channels/channel-a/status", value: "offline" }],
+      },
+      {
+        kind: "patch",
+        sequence: 3,
+        changes: [{ pointer: "/channels/channel-b/status", value: "alarm" }],
+      },
+      {
+        kind: "patch",
+        sequence: 4,
+        changes: [{ pointer: "/channels/channel-c/status", value: "ready" }],
+      },
+    ]);
+    expect(steps.at(-1)).toMatchObject({
+      atMs: 6_000,
+      envelope: {
+        kind: "snapshot",
+        sourceId: "source-a",
+        streamId: "source-a-multi-status-recovery",
+        sequence: 1,
+      },
+    });
+    expect(JSON.stringify(scenario)).not.toMatch(/home|light|climate|lock|device/iu);
+  });
+
   it("returns stable transient error evidence for unsupported persisted scenario IDs", () => {
     const supported = source("source-a", MOCK_SCENARIO_IDS[0]);
     const unknown = source("source-b", "legacy-scenario");

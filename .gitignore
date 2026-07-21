@@ -8,3 +8,5 @@ artifacts/e2e/*
 !artifacts/e2e/publish-*.png
 *.tsbuildinfo
 .DS_Store
+benchmarks/009-release-performance/generated/
+apps/studio/public/starter

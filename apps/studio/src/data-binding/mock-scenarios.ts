@@ -7,7 +7,7 @@ import {
   type MockScenarioStep,
 } from "@web3d/runtime";
 
-export const MOCK_SCENARIO_IDS = ["status-cycle", "boolean-cycle"] as const;
+export const MOCK_SCENARIO_IDS = ["status-cycle", "boolean-cycle", "multi-status-cycle"] as const;
 export type MockScenarioId = (typeof MOCK_SCENARIO_IDS)[number];
 
 export interface MockScenarioDefinition {
@@ -48,6 +48,16 @@ const scenarios: Readonly<Record<MockScenarioId, MockScenarioDefinition>> = {
     sample: { telemetry: { active: true, count: 1 } },
     suggestedValues: { "/telemetry/active": [true, false] },
     createSteps: (sourceId) => booleanCycle(sourceId),
+  },
+  "multi-status-cycle": {
+    id: "multi-status-cycle",
+    sample: multiStatusValue("ready", "offline", "alarm"),
+    suggestedValues: {
+      "/channels/channel-a/status": ["ready", "offline", "alarm"],
+      "/channels/channel-b/status": ["ready", "offline", "alarm"],
+      "/channels/channel-c/status": ["ready", "offline", "alarm"],
+    },
+    createSteps: (sourceId) => multiStatusCycle(sourceId),
   },
 };
 
@@ -139,6 +149,41 @@ function booleanCycle(sourceId: string): readonly MockScenarioStep[] {
     patchStep(1_000, sourceId, streamId, 2, "/telemetry/active", false),
     patchStep(2_000, sourceId, streamId, 3, "/telemetry/active", true),
   ];
+}
+
+function multiStatusCycle(sourceId: string): readonly MockScenarioStep[] {
+  const streamId = `${sourceId}-multi-status-cycle`;
+  const recoveryStreamId = `${sourceId}-multi-status-recovery`;
+  return [
+    snapshotStep(80, sourceId, streamId, 1, multiStatusValue("ready", "offline", "alarm")),
+    patchStep(2_000, sourceId, streamId, 2, "/channels/channel-a/status", "offline"),
+    patchStep(2_000, sourceId, streamId, 3, "/channels/channel-b/status", "alarm"),
+    patchStep(2_000, sourceId, streamId, 4, "/channels/channel-c/status", "ready"),
+    patchStep(4_000, sourceId, streamId, 5, "/channels/channel-a/status", "alarm"),
+    patchStep(4_000, sourceId, streamId, 6, "/channels/channel-b/status", "ready"),
+    patchStep(4_000, sourceId, streamId, 7, "/channels/channel-c/status", "offline"),
+    snapshotStep(
+      6_000,
+      sourceId,
+      recoveryStreamId,
+      1,
+      multiStatusValue("ready", "offline", "alarm"),
+    ),
+  ];
+}
+
+function multiStatusValue(
+  channelA: JsonPrimitive,
+  channelB: JsonPrimitive,
+  channelC: JsonPrimitive,
+): JsonValue {
+  return {
+    channels: {
+      "channel-a": { status: channelA },
+      "channel-b": { status: channelB },
+      "channel-c": { status: channelC },
+    },
+  };
 }
 
 function snapshotStep(

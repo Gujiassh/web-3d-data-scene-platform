@@ -16,7 +16,7 @@ const assetSha256 = "e123f3d64ec60f136d8673478eb2fd2ce28f56bcb5fb94cef5a7377b960
 const artifact = (name: string) => `artifacts/e2e/${name}`;
 
 test.describe("Scene appearance and lighting", () => {
-  test("previews and persists one concrete 1.3 environment without recreating the Viewer", async ({
+  test("previews and persists one concrete 1.4 environment without recreating the Viewer", async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -33,7 +33,7 @@ test.describe("Scene appearance and lighting", () => {
     await expectRevision(page, 1);
     const storedBefore = await activeStoredDocument(page);
     expect(storedBefore).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       revision: 1,
       environment: {
         backgroundMode: "custom",
@@ -96,7 +96,7 @@ test.describe("Scene appearance and lighting", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         revision: 5,
         environment: concreteEnvironment(1.4),
       });
@@ -120,7 +120,7 @@ test.describe("Scene appearance and lighting", () => {
     await jsonDownload.saveAs(jsonPath);
     const jsonDocument = JSON.parse(await readFile(jsonPath, "utf8")) as SceneDocument;
     expect(jsonDocument).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       revision: 7,
       environment: concreteEnvironment(1.4),
     });
@@ -134,10 +134,10 @@ test.describe("Scene appearance and lighting", () => {
     const archive = await importSceneArchive(new Uint8Array(await readFile(archivePath)));
     expect(archive.manifest).toMatchObject({
       archiveVersion: "1.0.0",
-      sceneSchemaVersion: "1.3.0",
+      sceneSchemaVersion: "1.4.0",
     });
     expect(archive.document).toMatchObject({
-      schemaVersion: "1.3.0",
+      schemaVersion: "1.4.0",
       revision: 7,
       environment: concreteEnvironment(1.4),
     });
@@ -146,7 +146,7 @@ test.describe("Scene appearance and lighting", () => {
     await expect
       .poll(() => activeStoredDocument(page))
       .toMatchObject({
-        schemaVersion: "1.3.0",
+        schemaVersion: "1.4.0",
         revision: 7,
         environment: concreteEnvironment(1.4),
       });
@@ -344,17 +344,28 @@ async function expectCanvasBackground(
           [12, 4],
           [surface.width - 5, 4],
           [surface.width - 13, 4],
+          [4, 24],
+          [12, 24],
+          [surface.width - 5, 24],
+          [surface.width - 13, 24],
+          [4, 48],
+          [12, 48],
+          [surface.width - 5, 48],
+          [surface.width - 13, 48],
         ] as const;
-        let red = 0;
-        let green = 0;
-        let blue = 0;
+        const samples = new Map<string, { count: number; rgb: [number, number, number] }>();
         for (const [x, y] of points) {
           const pixel = context.getImageData(x, y, 1, 1).data;
-          red += pixel[0] ?? 0;
-          green += pixel[1] ?? 0;
-          blue += pixel[2] ?? 0;
+          const rgb: [number, number, number] = [pixel[0] ?? 0, pixel[1] ?? 0, pixel[2] ?? 0];
+          const key = rgb.join(":");
+          const sample = samples.get(key);
+          if (sample === undefined) samples.set(key, { count: 1, rgb });
+          else sample.count += 1;
         }
-        const average = [red, green, blue].map((value) => value / points.length);
+        const background = [...samples.values()].toSorted(
+          (left, right) => right.count - left.count,
+        )[0]?.rgb;
+        if (background === undefined) throw new Error("Canvas background samples are unavailable.");
         const backdrop = document.querySelector<HTMLElement>(".dialog-backdrop");
         const backdropColor = backdrop === null ? null : getComputedStyle(backdrop).backgroundColor;
         const match = backdropColor?.match(
@@ -362,10 +373,10 @@ async function expectCanvasBackground(
         );
         const alpha = Number(match?.[4] ?? 0);
         if (match === undefined || match === null || alpha <= 0 || alpha >= 1) {
-          return average.map(Math.round) as [number, number, number];
+          return background;
         }
         const overlay = [Number(match[1]), Number(match[2]), Number(match[3])];
-        return average.map((value, index) =>
+        return background.map((value, index) =>
           Math.round((value - (overlay[index] ?? 0) * alpha) / (1 - alpha)),
         ) as [number, number, number];
       }, encoded);

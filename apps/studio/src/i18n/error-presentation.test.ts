@@ -18,6 +18,12 @@ describe("formatStudioError", () => {
     expect(
       formatStudioError(studioAppErrors.insufficientStorageCapacity(1024, 8192), chinese.errors),
     ).toBe("存储空间不足：剩余 1024 字节，需要 8192 字节。");
+    expect(
+      formatStudioError(
+        studioAppErrors.starterBootstrapFailed("archive-hash", "internal detail"),
+        chinese.errors,
+      ),
+    ).toBe("默认项目无法打开（archive-hash）。请检查 starter descriptor 后重试。");
   });
 
   it("passes unknown browser and runtime error messages through unchanged", () => {

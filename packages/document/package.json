@@ -1,15 +1,42 @@
 {
   "name": "@web3d/document",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "description": "SceneDocument contracts, validation, commands, migration, and deterministic archives.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gujiassh/web-3d-data-scene-platform.git",
+    "directory": "packages/document"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "sideEffects": false,
   "type": "module",
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
+      }
+    }
   },
   "scripts": {
     "generate:validators": "node scripts/generate-validators.mjs",
     "prebuild": "pnpm generate:validators",
-    "build": "tsc --noEmit -p tsconfig.json",
+    "build": "vite build --config vite.config.ts && tsc -p tsconfig.build.json && node ../../scripts/release/rewrite-declaration-imports.mjs dist",
     "test": "pnpm generate:validators && node scripts/smoke-standalone-validator.mjs && vitest run --root ../.. --config vitest.config.ts packages/document/src/document.test.ts",
     "pretypecheck": "pnpm generate:validators",
     "typecheck": "tsc --noEmit -p tsconfig.json"

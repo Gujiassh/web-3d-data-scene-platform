@@ -65,5 +65,7 @@ export function formatStudioError(error: unknown, copy: StudioErrorCopy): string
       return copy.indexedDbTransactionAborted;
     case "INDEXEDDB_TRANSACTION_FAILED":
       return copy.indexedDbTransactionFailed;
+    case "STARTER_BOOTSTRAP_FAILED":
+      return copy.starterBootstrapFailed(error.details);
   }
 }

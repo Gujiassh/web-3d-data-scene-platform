@@ -1,13 +1,40 @@
 {
   "name": "@web3d/publish",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0-rc.1",
+  "description": "Deterministic publish bundles and loaders for Web 3D data scenes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gujiassh/web-3d-data-scene-platform.git",
+    "directory": "packages/publish"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "sideEffects": false,
   "type": "module",
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc --noEmit -p tsconfig.json",
+    "build": "vite build --config vite.config.ts && tsc -p tsconfig.build.json && node ../../scripts/release/rewrite-declaration-imports.mjs dist",
     "test": "vitest run --root ../.. --config vitest.config.ts packages/publish/src",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

@@ -5,7 +5,13 @@ export default defineConfig({
     coverage: {
       reporter: ["text", "json-summary", "html"],
     },
-    include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "examples/**/*.test.ts"],
+    include: [
+      "packages/**/*.test.ts",
+      "apps/**/*.test.ts",
+      "examples/**/*.test.ts",
+      "benchmarks/009-release-performance/**/*.test.ts",
+      "scripts/release/**/*.test.mjs",
+    ],
     reporters: ["default"],
   },
 });

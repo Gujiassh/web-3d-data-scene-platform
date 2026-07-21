@@ -547,6 +547,24 @@
   font-size: 11px;
 }
 
+.viewport-initialization {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.viewport-initialization span {
+  max-width: 720px;
+  overflow-wrap: anywhere;
+}
+
 .viewport-mode {
   position: absolute;
   top: 10px;

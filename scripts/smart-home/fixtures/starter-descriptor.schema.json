@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://web3d.local/schemas/starter-descriptor-1.0.0.json",
+  "title": "Starter Descriptor 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "archiveUrl", "archiveSha256", "archiveByteLength"],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "projectId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "archiveUrl": {
+      "type": "string",
+      "minLength": 1
+    },
+    "archiveSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "archiveByteLength": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
