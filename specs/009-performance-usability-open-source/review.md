@@ -67,4 +67,7 @@ Assume a production claim was made incorrectly:
 - Worktree: `/home/cc/code1/web-3d-data-scene-platform`; no extra worktree.
 - Push state: source push explicitly authorized and completed to `origin/main` through `a8d6637`; public deployment,
   GitHub Release, npm and Pages remain unauthorized and blocked by T010/T045.
+- CI follow-up: push run `29887006267` passed install, format, lint, typecheck, unit, build, docs, i18n, assets and
+  topology, then exposed that `ubuntu-latest` did not provide the verifier's required `rg` command. The workflow now
+  installs `ripgrep` explicitly before running the unchanged design/package/smart-home gates.
 - Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.
