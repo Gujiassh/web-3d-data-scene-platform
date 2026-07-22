@@ -7,6 +7,7 @@ export default defineConfig({
     },
     include: [
       "packages/**/*.test.ts",
+      "packages/**/*.test.mjs",
       "apps/**/*.test.ts",
       "examples/**/*.test.ts",
       "benchmarks/009-release-performance/**/*.test.ts",

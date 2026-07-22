@@ -4,6 +4,8 @@ All notable project changes are recorded here. The project follows Semantic Vers
 
 ## Unreleased
 
+- Prevented contract generation from exposing temporarily empty AJV validator modules to a running Vite server by
+  skipping unchanged files and atomically replacing changed generated output.
 - Branded the product and repository as SceneWeave and added clearer Three.js, WebGL, digital-twin, IoT, glTF, React,
   and self-hosted discovery metadata while preserving the `@web3d/*` RC package contract.
 - Public smart-home starter, Pages deployment, GitHub release and npm publication remain gated by asset licensing,
