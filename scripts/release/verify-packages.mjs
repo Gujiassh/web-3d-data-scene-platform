@@ -348,6 +348,9 @@ async function verifyCleanConsumer(tarballs) {
   const consumerDirectory = path.join(temporaryRoot, "clean-consumer");
   await mkdir(path.join(consumerDirectory, "src"), { recursive: true });
   const tarballDependency = (name) => `file:${requiredMapValue(tarballs, name)}`;
+  const packageOverrides = Object.fromEntries(
+    packageDefinitions.map((definition) => [definition.name, tarballDependency(definition.name)]),
+  );
   const manifest = {
     name: "web3d-clean-consumer",
     version: "1.0.0",
@@ -371,18 +374,17 @@ async function verifyCleanConsumer(tarballs) {
       typescript: "6.0.3",
       vite: "8.1.4",
     },
-    pnpm: {
-      overrides: Object.fromEntries(
-        packageDefinitions.map((definition) => [
-          definition.name,
-          tarballDependency(definition.name),
-        ]),
-      ),
-    },
   };
   await writeFile(
     path.join(consumerDirectory, "package.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
+  await writeFile(
+    path.join(consumerDirectory, "pnpm-workspace.yaml"),
+    `overrides:\n${Object.entries(packageOverrides)
+      .map(([name, value]) => `  ${JSON.stringify(name)}: ${JSON.stringify(value)}`)
+      .join("\n")}\n`,
     "utf8",
   );
   await writeFile(
@@ -446,7 +448,7 @@ export function createViewerElement(props: SceneViewerProps): ReactElement {
 
   await run(
     "pnpm",
-    ["install", "--offline", "--ignore-scripts", "--frozen-lockfile=false"],
+    ["install", "--prefer-offline", "--ignore-scripts", "--frozen-lockfile=false"],
     consumerDirectory,
   );
   await run(

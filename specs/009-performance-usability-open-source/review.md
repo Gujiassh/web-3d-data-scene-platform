@@ -69,5 +69,8 @@ Assume a production claim was made incorrectly:
   GitHub Release, npm and Pages remain unauthorized and blocked by T010/T045.
 - CI follow-up: push run `29887006267` passed install, format, lint, typecheck, unit, build, docs, i18n, assets and
   topology, then exposed that `ubuntu-latest` did not provide the verifier's required `rg` command. The workflow now
-  installs `ripgrep` explicitly before running the unchanged design/package/smart-home gates.
+  installs `ripgrep` explicitly. Follow-up run `29887169507` passed the design gate and exposed that a fresh pnpm cache
+  lacks registry metadata for a separately generated consumer project. The consumer install now prefers cached packages
+  but may fetch missing metadata, and its local tarball overrides use pnpm 10's supported root `pnpm-workspace.yaml`
+  configuration. Exact dependency pins and deterministic pack checks are unchanged.
 - Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.
