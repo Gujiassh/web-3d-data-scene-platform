@@ -72,5 +72,10 @@ Assume a production claim was made incorrectly:
   installs `ripgrep` explicitly. Follow-up run `29887169507` passed the design gate and exposed that a fresh pnpm cache
   lacks registry metadata for a separately generated consumer project. The consumer install now prefers cached packages
   but may fetch missing metadata, and its local tarball overrides use pnpm 10's supported root `pnpm-workspace.yaml`
-  configuration. Exact dependency pins and deterministic pack checks are unchanged.
+  configuration. Exact dependency pins and deterministic pack checks are unchanged. Run `29887898340` then passed the
+  package gate and exposed one test-only `/home/cc/tmp` `mkdtemp` call; license-record fixtures now use the platform
+  temporary directory while the production local-output policy remains fixed and unchanged.
+- A concurrent local owner-source rerun found `recessed_downlight` had advanced from frozen hash `2b538d...` to
+  `01723e...` while still `IN_PROGRESS` and `NO-SHIP`. The seven repository-only smart-home tests pass and both mutable
+  source integrations fail closed; the frozen exclusion and public starter remain unchanged until a new acceptance slice.
 - Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.

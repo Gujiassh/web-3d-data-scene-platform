@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -178,7 +179,7 @@ describe("smart-home starter contract", () => {
     await expect(validateLicenseAuthorization("relative-authorization.json")).rejects.toThrow(
       /must be absolute/,
     );
-    const directory = await mkdtemp("/home/cc/tmp/smart-home-license-test-");
+    const directory = await mkdtemp(resolve(tmpdir(), "smart-home-license-test-"));
     const licenseText = "Test-only redistribution terms. This is not an asset license.";
     const licenseTextPath = resolve(directory, "LICENSE.txt");
     await writeFile(licenseTextPath, licenseText);
