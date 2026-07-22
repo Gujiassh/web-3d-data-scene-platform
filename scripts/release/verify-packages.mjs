@@ -8,7 +8,9 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const releaseVersion = "0.1.0-rc.1";
-const repositoryUrl = "git+https://github.com/Gujiassh/web-3d-data-scene-platform.git";
+const repositoryUrl = "git+https://github.com/Gujiassh/sceneweave.git";
+const repositoryHomepage = "https://github.com/Gujiassh/sceneweave#readme";
+const repositoryIssues = "https://github.com/Gujiassh/sceneweave/issues";
 const requiredFiles = ["dist", "LICENSE", "THIRD_PARTY_NOTICES.md"];
 const packageDefinitions = [
   {
@@ -202,6 +204,12 @@ function verifySourceManifest(definition, manifest) {
   assert(
     manifest.repository?.directory === `packages/${definition.directory}`,
     `${definition.name} repository directory is invalid.`,
+  );
+  assert(manifest.homepage === repositoryHomepage, `${definition.name} homepage is invalid.`);
+  assert(manifest.bugs?.url === repositoryIssues, `${definition.name} issue URL is invalid.`);
+  assert(
+    Array.isArray(manifest.keywords) && manifest.keywords.length >= 5,
+    `${definition.name} discovery keywords are incomplete.`,
   );
   assert(manifest.engines?.node === ">=22.12.0", `${definition.name} Node engine is invalid.`);
   assert(manifest.sideEffects === false, `${definition.name} must declare sideEffects=false.`);

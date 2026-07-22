@@ -26,13 +26,13 @@ describe("BrandMark", () => {
     const markup = renderToStaticMarkup(
       createElement(BrandMark, {
         "aria-hidden": false,
-        "aria-label": "Web3D Studio",
+        "aria-label": "SceneWeave",
         size: 32,
       }),
     );
 
     expect(markup).toContain('aria-hidden="false"');
-    expect(markup).toContain('aria-label="Web3D Studio"');
+    expect(markup).toContain('aria-label="SceneWeave"');
     expect(markup).toContain('role="img"');
     expect(markup).toContain('height="32"');
     expect(markup).toContain('width="32"');
@@ -77,8 +77,10 @@ describe("brand assets", () => {
     expect(html).toContain('<meta name="color-scheme" content="light dark" />');
     expect(html).toContain('<meta name="theme-color" content="#F4F6F5" />');
     expect(html.match(/name="theme-color"/g)).toHaveLength(1);
-    expect(html).toContain('<meta name="application-name" content="Web3D Studio" />');
-    expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Web3D Studio" />');
+    expect(html).toContain('<meta name="application-name" content="SceneWeave" />');
+    expect(html).toContain('<meta name="apple-mobile-web-app-title" content="SceneWeave" />');
+    expect(html).toContain('name="description"');
+    expect(html).toContain("open-source, self-hosted editor for data-driven Three.js scenes");
     expect(html).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />');
     expect(html).toContain('<link rel="icon" href="/favicon.ico" sizes="any" />');
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" />');

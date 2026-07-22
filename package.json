@@ -1,9 +1,32 @@
 {
-  "name": "web-3d-data-scene-platform",
+  "name": "sceneweave",
   "version": "0.0.0",
+  "description": "Open-source, self-hosted editor and runtime for data-driven Three.js scenes, digital twins, IoT visualization, and embeddable WebGL viewers.",
   "private": true,
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gujiassh/sceneweave.git"
+  },
+  "homepage": "https://github.com/Gujiassh/sceneweave#readme",
+  "bugs": {
+    "url": "https://github.com/Gujiassh/sceneweave/issues"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "react",
+    "typescript",
+    "3d",
+    "scene-editor",
+    "digital-twin",
+    "iot",
+    "data-visualization",
+    "gltf",
+    "self-hosted",
+    "open-source"
+  ],
   "packageManager": "pnpm@10.33.4",
   "engines": {
     "node": ">=22.12.0"

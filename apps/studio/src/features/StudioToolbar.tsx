@@ -83,13 +83,13 @@ export function StudioToolbar(props: StudioToolbarProps) {
       <button
         aria-label={t.toolbar.openProjectMenu}
         className="studio-project project-menu-trigger"
-        title={props.projectName}
+        title={`${t.app.brandName} / ${props.projectName}`}
         type="button"
         onClick={props.onOpenProjectMenu}
       >
         <BrandMark className="project-symbol" size={28} />
         <span className="project-copy">
-          <strong>{props.projectName}</strong>
+          <strong>{`${t.app.brandName} / ${props.projectName}`}</strong>
           <span className="project-status-row">
             <small
               aria-live="polite"

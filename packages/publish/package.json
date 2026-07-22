@@ -5,9 +5,20 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gujiassh/web-3d-data-scene-platform.git",
+    "url": "git+https://github.com/Gujiassh/sceneweave.git",
     "directory": "packages/publish"
   },
+  "homepage": "https://github.com/Gujiassh/sceneweave#readme",
+  "bugs": {
+    "url": "https://github.com/Gujiassh/sceneweave/issues"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "3d-viewer",
+    "static-site",
+    "self-hosted"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },

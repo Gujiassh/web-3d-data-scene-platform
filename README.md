@@ -1,98 +1,127 @@
-# Web 3D Data Scene Platform
+# SceneWeave
 
-A domain-neutral, self-hostable Web 3D scene authoring and runtime platform for frontend teams. It
-loads existing 3D assets, binds stable scene targets to live data, evaluates declarative rules, and
-publishes the same versioned scene to an embeddable Three.js viewer.
+**Open-source, self-hosted 3D scene editor and runtime for data-driven Three.js experiences, digital twins, IoT visualization, and embeddable WebGL viewers.**
 
-## Status
+<p>
+  <a href="https://github.com/Gujiassh/sceneweave/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Gujiassh/sceneweave/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-0B7A68.svg"></a>
+  <a href="https://threejs.org/"><img alt="Three.js 0.185" src="https://img.shields.io/badge/Three.js-0.185-111111.svg"></a>
+  <a href="https://react.dev/"><img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA.svg"></a>
+</p>
 
-The MVP implementation is at `0.1.0-rc.1`. Studio covers editing, data-binding Run, layout, lighting, precise surface
-hotspots, declarative interactions and deterministic publish/embed artifacts on `SceneDocument 1.4.0`. The Document,
-Runtime, React and Publish packages emit ESM plus declarations and pass clean-consumer verification.
+SceneWeave turns existing glTF/GLB models into interactive web applications. Import and arrange a scene, map stable 3D targets to business data, express visual states as declarative rules, validate the result in Studio Run mode, and publish the same versioned scene to a framework-neutral or React host.
 
-This is a release candidate, not a production release. Real Safari, stable-Firefox reference evidence, the specified
-Iris Xe performance run, external target-developer testing, npm publication and public redistribution of the smart-home
-starter remain blocked or owner-operated gates. Controller automation is not reported as external-user evidence.
+![SceneWeave Studio running a data-bound 3D scene](artifacts/e2e/publish-parity-studio-run-1440x900.png)
 
-## Product Entry
+## Why SceneWeave
 
-Studio is the product frontend and the continuous Edit/Run workspace.
+General-purpose 3D editors focus on content creation. Enterprise digital-twin platforms often require a cloud stack or a domain-specific backend. SceneWeave covers the layer between them: turning prepared 3D assets and application data into a portable, self-hosted web experience.
+
+- **Author and run in one Studio:** edit hierarchy, transforms, lighting, hotspots, mappings, and rules without switching applications.
+- **Bind scenes to data:** connect stable targets to Mock data or host-provided adapters, then visualize ready, offline, alarm, color, visibility, label, and animation states.
+- **Keep scenes portable:** store authored intent in a validated `SceneDocument`; keep credentials, live values, selection, alarms, and host UI state out of persisted files.
+- **Embed without framework lock-in:** use the framework-neutral Three.js runtime directly or the thin React wrapper.
+- **Own the deployment:** export deterministic static bundles that can be reviewed, cached, versioned, and self-hosted.
+
+## Use Cases
+
+- Industrial digital twins and equipment monitoring
+- Smart-home and IoT device visualization
+- Warehouses, campuses, facilities, and operations dashboards
+- Interactive product, showroom, and spatial-data experiences
+- Three.js prototypes that need a durable scene contract and an embeddable viewer
+
+## Features
+
+### 3D Scene Studio
+
+- GLB and self-contained glTF import with validation and content-addressed storage
+- Scene hierarchy, grouping, reparenting, duplicate, delete, visibility, and locking
+- Translate, rotate, scale, snapping, alignment, undo, and redo
+- Theme-aware backgrounds, environment lighting, and authored point/spot lights
+- Precise surface hotspots with persisted content and declarative actions
+- Local-first IndexedDB projects plus deterministic JSON and ZIP import/export
+
+### Data-Driven Runtime
+
+- Versioned `SceneDocument 1.4.0` with standalone schema and semantic validation
+- Stable target resolution by asset SHA-256 and glTF node index
+- Snapshot/Patch ordering, stale and offline state, alarms, diagnostics, and recovery
+- Declarative rules for color, visibility, labels, alarms, and animation
+- Selection, focus, WebGL context restoration, and explicit resource disposal
+
+### Publish And Embed
+
+- Deterministic published-scene bundles and manifests
+- Framework-neutral ESM runtime for plain TypeScript/JavaScript hosts
+- React lifecycle wrapper and imperative viewer API
+- Static hosting model with no required SceneWeave backend
+- Reproducible package, asset, browser, and performance verification
+
+## Quick Start
 
 Prerequisites: Node.js `>=22.12.0` and pnpm `10.33.4`.
 
 ```bash
-pnpm install
+git clone https://github.com/Gujiassh/sceneweave.git
+cd sceneweave
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open Studio at <http://localhost:4173>. The development server uses strict port 4173 and exits instead
-of silently selecting another port when 4173 is occupied.
+Open <http://localhost:4173>. Studio requires a desktop viewport at least 1280 px wide. The development server uses strict port `4173` and exits instead of silently choosing another port.
 
 ### Smart-Home Starter
 
-The clean-profile default is a generated 90 m2 smart-home project when the owner-provided assets are available locally:
+The clean-profile reference project can be generated from the separately delivered owner assets:
 
 ```bash
 node scripts/smart-home/generate.mjs \
   --mode local-validation \
-  --output /home/cc/tmp/web3d-smart-home-starter
-ln -sfn /home/cc/tmp/web3d-smart-home-starter apps/studio/public/starter
+  --output /home/cc/tmp/sceneweave-smart-home-starter
+ln -sfn /home/cc/tmp/sceneweave-smart-home-starter apps/studio/public/starter
 pnpm dev
 ```
 
-Local output is deliberately restricted to `/home/cc/tmp`. Public generation additionally requires a hash-bound
-redistribution authorization; without it, the generator fails before writing public bytes. Existing IndexedDB projects
-and explicit **New Scene** remain unchanged by the starter.
+Unlicensed local output is deliberately restricted to `/home/cc/tmp`. Public generation requires a hash-bound redistribution authorization and fails closed without it. Existing IndexedDB projects and explicit **New Scene** behavior are unchanged by starter bootstrap.
 
-## Runtime Guarantees
+## Packages
 
-- A persisted `SceneDocument` can be structurally and semantically validated without runtime Three.js
-  or React state.
-- glTF targets resolve by asset hash and glTF node index rather than names or traversal order.
-- Snapshot/Patch ordering, stale/offline/recovery state, alarms, selection, focus, diagnostics, and
-  WebGL context restoration work in the browser slice.
-- Viewer teardown owns renderer, asset, adapter, timer, listener, observer, and pending-load lifecycles,
-  including React StrictMode remounts.
+The product is branded SceneWeave. The `@web3d/*` package scope remains the frozen `0.1.0-rc.1` SDK contract.
 
-The original M0 browser evidence used an independent Factory host. Feature 005 preserved those generic
-runtime invariants in Studio Run and automated tests, then removed that host.
+| Package           | Purpose                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `@web3d/document` | SceneDocument types, AJV validation, migration, commands, history, serialization, and archives             |
+| `@web3d/runtime`  | Framework-neutral Three.js viewer, asset loading, data ordering, rules, authoring, and lifecycle ownership |
+| `@web3d/react`    | React lifecycle and imperative API wrapper around the runtime                                              |
+| `@web3d/publish`  | Deterministic publish bundles, manifests, and host loading contracts                                       |
 
-## Studio Guarantees
+## Architecture
 
-- Local projects and content-addressed model assets are stored in IndexedDB without changing the
-  `SceneDocument 1.4.0` schema.
-- GLB and self-contained glTF files are inspected before confirmation and committed atomically with
-  their asset, entity, and target records.
-- Tree and viewport selection share stable entity IDs; rename, visibility, lock, transform, duplicate,
-  and delete edits flow through reversible document commands.
-- TransformControls preview does not change document revision; pointer release commits exactly one
-  command. Run mode blocks document commands.
-- JSON and ZIP import/export preserve the canonical local document, asset hashes, and `asset://` URI
-  contract.
+```text
+Studio (React)
+  -> SceneDocument + local asset repository
+  -> @web3d/runtime (Three.js)
+  -> data adapters + declarative rules
+  -> deterministic publish bundle
+  -> plain TypeScript/JavaScript or React host
+```
 
-## Roadmap
+The Studio is the only product frontend. Runtime values and host business state remain separate from authored document bytes. See the [architecture guide](docs/architecture.md), [protocol guide](docs/protocols.md), [Viewer API](specs/001-product-foundation/contracts/viewer-api.md), and [publish specification](specs/008-publish-embed/spec.md).
 
-1. `005-single-studio-data-binding`: single Studio, business mapping, rules, and Mock Run preview.
-2. `006-scene-layout`: scene layout, hierarchy, alignment, and snapping.
-3. `007-hotspots-interactions`: precise surface hotspots, annotations, and persisted interactions.
-4. `008-publish-embed`: publish artifacts, a minimal host example, and embed documentation.
-5. `009-performance-usability-open-source`: fixed benchmarks, external usability, and release gates.
+## Repository Layout
 
-## Workspace
+- `apps/studio`: local Edit/Run workspace
+- `packages/document`: scene contracts and deterministic archives
+- `packages/runtime`: Three.js runtime and authoring engine
+- `packages/react`: React integration
+- `packages/publish`: static publishing and loading
+- `scripts/smart-home`: hash-bound starter audit and generation
+- `benchmarks/009-release-performance`: fixed release-load benchmark
+- `examples/minimal-host`: framework-neutral embedding example
+- `tests/fixtures`: deterministic CC0 test assets and scene contracts
 
-- `apps/studio`: the sole product frontend and local Edit/Run workspace.
-- `packages/document`: SceneDocument types, standalone AJV validation, semantic checks, stable
-  serialization, document commands, history, and archive codecs.
-- `packages/runtime`: framework-neutral Three.js viewer, asset loading, data ordering, rules, alarms,
-  diagnostics, authoring controls, and lifecycle ownership.
-- `packages/react`: thin React lifecycle and imperative API wrappers around the runtime.
-- `packages/publish`: deterministic published-scene bundles and host loading contracts.
-- `scripts/smart-home`: hash-bound starter audit, layout and deterministic archive generation.
-- `benchmarks/009-release-performance`: fixed release-load fixture and evidence runner.
-- `tests/fixtures/m0-factory`: deterministic GLB, SceneDocument, manifest, generator, and license used as
-  test evidence; it is not a product application or production asset bundle.
-
-## Verify
+## Verification
 
 ```bash
 pnpm format:check
@@ -111,54 +140,40 @@ pnpm verify:smart-home
 RELEASE_PERF_SMOKE=1 RELEASE_PERF_ALLOW_SOFTWARE=1 pnpm bench:release-009
 ```
 
-The browser suite starts one isolated Studio server on 4173 and writes local screenshots to the ignored
-`artifacts/e2e/` directory. `verify:topology` rejects a second app/server, obsolete Factory package or
-preference keys, and non-strict Studio port configuration.
+GitHub CI runs the deterministic non-browser repository gates. Browser evidence uses isolated Studio and host servers and writes screenshots to ignored local artifact directories.
 
-## Product Documents
+## Project Status
+
+SceneWeave is an MVP release candidate at `0.1.0-rc.1`.
+
+> Release candidate; external production claims blocked.
+
+The implementation, package consumers, browser matrix, deterministic assets, and local smart-home reference flow are complete. Production release claims remain blocked by owner-asset redistribution authorization, reference Iris Xe performance evidence, stable Firefox and real Safari evidence, and qualifying external usability evidence. See [release readiness](docs/ssot/release-readiness.md) and the [Feature 009 acceptance matrix](specs/009-performance-usability-open-source/acceptance.md).
+
+## Documentation
 
 - [Product definition](docs/ssot/product-definition.md)
-- [Accepted product decisions](docs/ssot/product-decisions.md)
-- [Technology decisions](docs/ssot/technology-decisions.md)
-- [Market and positioning](docs/ssot/market-and-positioning.md)
-- [M0 verification](docs/ssot/m0-verification.md)
-- [M1 architecture](docs/ssot/m1-architecture.md)
-- [M1 verification](docs/ssot/m1-verification.md)
-- [MVP product requirements](specs/001-product-foundation/spec.md)
-- [Product and interaction design](specs/001-product-foundation/product-design.md)
-- [Technical design](specs/001-product-foundation/technical-design.md)
-- [Single Studio data-binding specification](specs/005-single-studio-data-binding/spec.md)
-- [Calibrated hotspot interaction design](specs/007-hotspots-interactions/technical-design.md)
-- [Hotspot implementation plan](specs/007-hotspots-interactions/plan.md)
-- [Publish and embed specification](specs/008-publish-embed/spec.md)
-- [Publish and embed technical design](specs/008-publish-embed/technical-design.md)
-- [Release readiness](docs/ssot/release-readiness.md)
-- [Architecture guide](docs/architecture.md)
-- [Protocol guide](docs/protocols.md)
-- [Smart-home starter tutorial](docs/tutorial-smart-home.md)
-- [Scene document contract](specs/001-product-foundation/contracts/scene-document.md)
+- [Product decisions](docs/ssot/product-decisions.md)
+- [Brand and discovery](docs/ssot/brand-and-discovery.md)
+- [Architecture](docs/architecture.md)
+- [Data and runtime protocols](docs/protocols.md)
+- [Smart-home tutorial](docs/tutorial-smart-home.md)
+- [SceneDocument contract](specs/001-product-foundation/contracts/scene-document.md)
 - [Archive manifest contract](specs/001-product-foundation/contracts/archive-manifest.md)
 - [Data adapter contract](specs/001-product-foundation/contracts/data-adapter.md)
-- [Viewer API contract](specs/001-product-foundation/contracts/viewer-api.md)
-- [Reference fixture strategy](docs/ssot/factory-asset-strategy.md)
-- [Validation plan](specs/001-product-foundation/validation-plan.md)
-- [Delivery plan](specs/001-product-foundation/delivery-plan.md)
+- [Publish and embed technical design](specs/008-publish-embed/technical-design.md)
+- [Performance and release specification](specs/009-performance-usability-open-source/spec.md)
 
-## Scope Boundary
+## Scope
 
-MVP excludes browser-based modeling, real industrial protocol integration, multiplayer collaboration,
-game systems, and physics simulation. Runtime values, connection state, alarms, current selection, and
-host business state never enter `SceneDocument` or archive content.
+SceneWeave imports prepared web 3D assets; it is not a browser modeling or CAD tool. The MVP does not include a managed cloud, accounts, multiplayer collaboration, physics, a game engine, or built-in PLC/OPC UA/MES gateways.
+
+## Contributing And Security
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md). The project also includes a [Code of Conduct](CODE_OF_CONDUCT.md) and [changelog](CHANGELOG.md).
 
 ## License
 
-Platform code is released under the [MIT License](LICENSE). The generated M0 reference fixture is
-released under CC0-1.0; see
-[tests/fixtures/m0-factory/LICENSE-CC0.txt](tests/fixtures/m0-factory/LICENSE-CC0.txt).
+SceneWeave code is available under the [MIT License](LICENSE). The deterministic M0 fixture is CC0-1.0; see [its license](tests/fixtures/m0-factory/LICENSE-CC0.txt).
 
-Owner-provided smart-home GLBs are not covered by the repository MIT license and are not tracked or released until a
-separate redistribution authorization identifies the copyright owner, license text and exact covered hashes.
-
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [CONTRIBUTING.md](CONTRIBUTING.md),
-[SECURITY.md](SECURITY.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [CHANGELOG.md](CHANGELOG.md) for release and
-project-participation details.
+Owner-provided smart-home GLBs are not covered by the repository MIT license and are not tracked or released until a separate authorization identifies the copyright owner, license text, and exact covered hashes. Dependency notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

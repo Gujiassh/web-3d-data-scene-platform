@@ -12,8 +12,11 @@ const requiredFiles = [
   "docs/architecture.md",
   "docs/protocols.md",
   "docs/tutorial-smart-home.md",
+  "docs/ssot/brand-and-discovery.md",
   "docs/ssot/release-readiness.md",
   "specs/009-performance-usability-open-source/acceptance.md",
+  "specs/010-sceneweave-brand-discovery/spec.md",
+  "specs/010-sceneweave-brand-discovery/acceptance.md",
 ];
 
 export async function auditReleaseDocs(root) {

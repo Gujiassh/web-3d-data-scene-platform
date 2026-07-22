@@ -4,6 +4,8 @@ All notable project changes are recorded here. The project follows Semantic Vers
 
 ## Unreleased
 
+- Branded the product and repository as SceneWeave and added clearer Three.js, WebGL, digital-twin, IoT, glTF, React,
+  and self-hosted discovery metadata while preserving the `@web3d/*` RC package contract.
 - Public smart-home starter, Pages deployment, GitHub release and npm publication remain gated by asset licensing,
   reference-environment evidence and owner credentials.
 

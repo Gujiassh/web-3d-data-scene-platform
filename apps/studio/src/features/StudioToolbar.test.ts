@@ -90,6 +90,14 @@ describe("StudioToolbar", () => {
     expect(mark?.querySelector('path[fill="#4CC4BA"]')).not.toBeNull();
   });
 
+  it("keeps SceneWeave visible beside the current project name", () => {
+    renderToolbar(null);
+
+    const projectMenu = container.querySelector<HTMLButtonElement>(".project-menu-trigger");
+    expect(projectMenu?.title).toBe("SceneWeave / Scene");
+    expect(projectMenu?.querySelector("strong")?.textContent).toBe("SceneWeave / Scene");
+  });
+
   it("exposes one explicit Publish command", () => {
     const onPublish = vi.fn();
     renderToolbar(null, () => undefined, true, false, onPublish);

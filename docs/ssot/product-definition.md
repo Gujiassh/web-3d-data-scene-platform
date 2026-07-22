@@ -1,4 +1,4 @@
-# 产品定义：Web 3D 数据场景平台
+# 产品定义：SceneWeave
 
 > 状态：Product Design Complete / Validation Pending
 > 初始日期：2026-07-13
@@ -7,7 +7,7 @@
 
 ## 一句话定位
 
-一个开源、可自托管、可嵌入的 Web 3D 场景搭建平台，让前端团队在一个 Studio 中导入
+SceneWeave 是一个开源、可自托管、可嵌入的 Web 3D 场景搭建平台，让前端团队在一个 Studio 中导入
 已有 GLB/GLTF 模型、绑定实时业务数据、预览规则结果，并发布可嵌入现有系统的 Viewer。
 
 ## 需要解决的问题

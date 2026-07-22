@@ -5,9 +5,20 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gujiassh/web-3d-data-scene-platform.git",
+    "url": "git+https://github.com/Gujiassh/sceneweave.git",
     "directory": "packages/document"
   },
+  "homepage": "https://github.com/Gujiassh/sceneweave#readme",
+  "bugs": {
+    "url": "https://github.com/Gujiassh/sceneweave/issues"
+  },
+  "keywords": [
+    "3d",
+    "scene-document",
+    "gltf",
+    "validation",
+    "digital-twin"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },

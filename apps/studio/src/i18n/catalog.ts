@@ -4,7 +4,8 @@ import type { StudioAppErrorDetailsByCode } from "../errors";
 
 export const english = {
   app: {
-    documentTitle: "Web3D Studio",
+    brandName: "SceneWeave",
+    documentTitle: "SceneWeave",
     sizeGate: "Studio requires a 1280px desktop viewport.",
     openingProject: "Opening project",
     openingLocalProject: "Opening local project",
@@ -737,7 +738,8 @@ export const english = {
 
 export const chinese: CatalogShape<typeof english> = {
   app: {
-    documentTitle: "Web3D Studio 编辑器",
+    brandName: "SceneWeave",
+    documentTitle: "SceneWeave 场景编辑器",
     sizeGate: "Studio 需要至少 1280px 的桌面视口。",
     openingProject: "正在打开项目",
     openingLocalProject: "正在打开本地项目",
