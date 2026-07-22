@@ -1,6 +1,6 @@
 # Release Readiness
 
-> 状态：Feature 009 engineering complete locally; external release gates blocked
+> 状态：Feature 009 engineering complete and pushed; external release gates blocked
 >
 > 当前对外口径：Release candidate; external production claims blocked.
 
@@ -13,9 +13,9 @@ covers the exact 38 owner GLB hashes. The content remains a template over SceneD
 contracts; the core stays domain-neutral. Existing projects and save semantics remain unchanged.
 
 Current hard external gaps are the explicit redistribution license for the 38 owner GLBs, five qualifying participants,
-actual Safari, stable Firefox E2, the specified Iris Xe reference device, npm/GitHub/Pages credentials and explicit push
-authorization. Engineering is locally verified with E1 controller evidence and exact blocking rulings, but
-production-ready claims remain prohibited until the named gates pass.
+actual Safari, stable Firefox E2, the specified Iris Xe reference device, npm/GitHub/Pages credentials and explicit
+publication authorization. Engineering is locally verified with E1 controller evidence and exact blocking rulings, and
+the source is pushed to `origin/main`; production-ready claims remain prohibited until the named gates pass.
 
 ## Accepted Local Evidence
 
@@ -29,12 +29,12 @@ production-ready claims remain prohibited until the named gates pass.
 
 ## Gate Status
 
-| Gate        | Status  | Residual risk                                                                                   |
-| ----------- | ------- | ----------------------------------------------------------------------------------------------- |
-| Product     | waived  | E3 participants unavailable; controller evidence is not external usability evidence.            |
-| Contract    | pass    | No known contract or save-semantic regression.                                                  |
-| Runtime     | pass    | Fixed fixture/dispose/state evidence passes; reference performance remains separate.            |
-| UI          | blocked | Linux WebKit Studio Blob persistence, stable Firefox E2 and Safari E2 are unavailable.          |
-| Performance | blocked | Iris Xe unavailable; software FPS/latency and forced-GC slope do not pass.                      |
-| Assets      | blocked | Owner redistribution authorization is missing; new recessed downlight remains explicit NO-SHIP. |
-| Open source | blocked | Public deployment/release/npm/push are not authorized or credentialed.                          |
+| Gate        | Status  | Residual risk                                                                                      |
+| ----------- | ------- | -------------------------------------------------------------------------------------------------- |
+| Product     | waived  | E3 participants unavailable; controller evidence is not external usability evidence.               |
+| Contract    | pass    | No known contract or save-semantic regression.                                                     |
+| Runtime     | pass    | Fixed fixture/dispose/state evidence passes; reference performance remains separate.               |
+| UI          | blocked | Linux WebKit Studio Blob persistence, stable Firefox E2 and Safari E2 are unavailable.             |
+| Performance | blocked | Iris Xe unavailable; software FPS/latency and forced-GC slope do not pass.                         |
+| Assets      | blocked | Owner redistribution authorization is missing; new recessed downlight remains explicit NO-SHIP.    |
+| Open source | blocked | Source is pushed; public deployment, GitHub Release and npm remain unauthorized or uncredentialed. |

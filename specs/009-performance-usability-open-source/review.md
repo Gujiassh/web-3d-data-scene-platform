@@ -65,5 +65,6 @@ Assume a production claim was made incorrectly:
 - Specification baseline: `c83cc9384a765354e7982ec9c4b901cf6928027a`.
 - Implementation: `main@a0222c8c9a05b2495303e7e37ea68624dcf39320`.
 - Worktree: `/home/cc/code1/web-3d-data-scene-platform`; no extra worktree.
-- Push state: local only, ahead of `origin/main`; no push/publication authorization was provided.
+- Push state: source push explicitly authorized and completed to `origin/main` through `a8d6637`; public deployment,
+  GitHub Release, npm and Pages remain unauthorized and blocked by T010/T045.
 - Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.

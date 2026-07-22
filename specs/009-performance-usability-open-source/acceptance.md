@@ -3,6 +3,8 @@
 ## Judgment
 
 Feature 009 engineering is complete locally at implementation commit `a0222c8c9a05b2495303e7e37ea68624dcf39320`.
+The Feature 009 source and acceptance baseline is pushed to `origin/main` through
+`a8d66377564ba30b65b753a84bad14424369b9fe`.
 The result is not production-ready because required E2/E3, redistribution and publication gates remain unresolved.
 
 > Release candidate; external production claims blocked.
@@ -20,7 +22,7 @@ it never upgrades E0/E1 evidence to E2/E3.
 | UI          | blocked | E1/E2    | Chromium 149 and Playwright Firefox 151 pass. Linux Playwright WebKit published host passes, but Studio Blob persistence is blocked; stable Firefox E2 and real Safari E2 are unavailable. |
 | Performance | blocked | E1/E2    | SwiftShader is ineligible; FPS and selection/Patch p95 fail in software, forced-GC heap slope is `+0.054822 bytes/ms`, and the required Iris Xe run is unavailable.                        |
 | Assets      | blocked | E0/E1    | Three tracked GLBs and font licenses pass. The local 38-asset smart-home archive is deterministic, but public redistribution authorization is unavailable.                                 |
-| Open source | blocked | E0/E1    | Packages, governance, docs and non-publishing CI pass. Pages, GitHub Release and npm publication remain blocked by license, credentials and explicit publish authorization.                |
+| Open source | blocked | E0/E1    | Source is pushed and non-publishing CI passes. Pages, GitHub Release and npm publication remain blocked by license, credentials and explicit publication authorization.                    |
 
 ## Requirement Coverage
 
@@ -100,4 +102,5 @@ it never upgrades E0/E1 evidence to E2/E3.
 2. Run the benchmark on the specified Iris Xe reference device and resolve any failed performance gate.
 3. Provide stable Firefox E2 and real Safari E2 environments.
 4. Replace the E3 Owner Waiver with the specified qualifying participant evidence if production usability is claimed.
-5. Explicitly authorize push/publication and provide GitHub/npm credentials only after the preceding gates allow release.
+5. Explicitly authorize GitHub Release, npm and Pages publication and provide the required credentials only after the
+   preceding gates allow release.

@@ -52,13 +52,13 @@
 - [x] T043 Add current README, architecture/protocol/tutorial, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT and CHANGELOG.
 - [x] T044 Add non-publishing CI/browser workflows and record the public Studio blocker: T010 is unresolved, so no
       owner-provided smart-home bytes may enter a public deployment.
-- [ ] T045 **BLOCKED** GitHub Release, npm publication and any release workflow require T010 plus explicit owner
-      publish/push authorization and registry credentials.
+- [ ] T045 **BLOCKED** GitHub Release, npm/Pages publication and any release workflow require T010 plus explicit owner
+      publication authorization and registry credentials. Source push is complete and does not satisfy this release gate.
 
 ## Acceptance
 
 - [x] T050 Run complete sequential contract, Runtime, UI, security, build, package, asset and single-worker browser gates.
 - [x] T051 Evaluate every validation-plan gate as pass/blocked/waived with evidence class and residual risk.
 - [x] T052 Complete Critical reverse review and close every implementation P0-P2 finding.
-- [ ] T053 **LOCAL COMPLETE / PUSH BLOCKED** Update SSoT, acceptance, review and delivery ledger and commit coherent local
-      slices. Push remains prohibited until the Owner explicitly requests it.
+- [x] T053 **PUSHED** Update SSoT, acceptance, review and delivery ledger, commit coherent slices and push the Feature 009
+      source/acceptance baseline to `origin/main` after explicit Owner authorization.

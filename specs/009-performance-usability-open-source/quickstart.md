@@ -58,4 +58,5 @@ Until every E2/E3 gate passes, use this exact status:
 - Redistribution authorization for the 38 selected owner GLB hashes is missing.
 - Iris Xe E2 performance, stable Firefox E2 and real Safari E2 environments are unavailable.
 - Five qualifying E3 participants are unavailable; the Owner Waiver does not prove usability.
-- npm/GitHub/Pages publication credentials and explicit push authorization are not present.
+- Source push is complete. npm/GitHub Release/Pages publication credentials and explicit publication authorization are
+  not present.
