@@ -1,6 +1,6 @@
 # Collision Geometry Visibility
 
-> Status: In verification
+> Status: Accepted
 > Updated: 2026-07-22
 
 SceneWeave supports glTF assets that separate visible geometry from collision and picking geometry through a strict

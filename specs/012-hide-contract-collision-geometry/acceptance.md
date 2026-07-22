@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress.
+Accepted.
 
 ## Semantic Oracle
 
@@ -21,6 +21,7 @@ raycast. Assets that do not prove the complete unique structure retain their aut
   focused loader/runtime coverage, release changelog/docs audit, and Feature 012 SSoT.
 - Frozen scope: SceneDocument/schema/save/archive contracts, asset bytes/hashes, formal target indexes, transforms,
   animations, hierarchy, and raycast/picking availability.
+- Repair commit: `6d75dfb65119d3bc14990144acbc13dcfff7f710` (`Prevent collision proxy z-fighting`).
 - Delivery target: `origin/main`; no downstream merge or cherry-pick is required.
 
 ## Baseline Evidence
@@ -53,7 +54,7 @@ raycast. Assets that do not prove the complete unique structure retain their aut
   `pnpm verify:packages` passed.
 - `pnpm verify:smart-home` retained 6 passing tests and failed 3 owner-source integration tests before generation because
   the external `floorplan.json` and `asset_registry.json` hashes differ from the repository's frozen snapshot. This
-  task does not update or accept mutable owner bytes.
+  task does not update or accept mutable owner bytes. The clean GitHub runner's conditional smart-home gate passed.
 - The existing IndexedDB project reloaded as `90 m2 Smart Home`, revision 1, on the same asset/document state. A same-
   view screenshot removed the dense black diagonal interference from furniture and appliances; the canvas crop's
   below-12%-luma pixel fraction dropped from 0.0918455 to 0.0139006.
@@ -91,6 +92,11 @@ raycast. Assets that do not prove the complete unique structure retain their aut
   no other defect. Residual gaps are automated production-picking and real-renderer regression coverage; direct
   Raycaster geometry, real smart-home browser screenshots, and a real camera drag provide the current evidence.
 
-### Pending
+## Delivery Result
 
-- Commit, push, final CI, SHA parity, and task closeout.
+- GitHub Actions CI run `29905243606` passed all project verification steps for the repair commit, including
+  `verify:smart-home` on its clean runner.
+- Local `HEAD`, `origin/main` tracking state, and `git ls-remote origin refs/heads/main` matched
+  `6d75dfb65119d3bc14990144acbc13dcfff7f710` after the repair push.
+- The implementation and evidence are accepted. The remaining local owner-source hash drift is external input state,
+  not an unaccepted repository change or a reason to rewrite the frozen source contract.

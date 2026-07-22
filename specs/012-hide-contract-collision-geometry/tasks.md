@@ -8,4 +8,4 @@
 - [x] T005 Add collision visibility SSoT, Feature 012 specification, acceptance record, changelog, and docs audit coverage.
 - [x] T006 Run full static, unit, build, package, documentation, asset, design, topology, and i18n verification.
 - [x] T007 Reload the existing smart-home project, capture after evidence, and verify the browser console/runtime.
-- [ ] T008 Complete reverse review, commit, push, verify CI/SHA parity, and close the workbench task.
+- [x] T008 Complete reverse review, commit, push, verify CI/SHA parity, and close the workbench task.
