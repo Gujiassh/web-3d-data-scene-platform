@@ -65,7 +65,7 @@ Assume a production claim was made incorrectly:
 - Specification baseline: `c83cc9384a765354e7982ec9c4b901cf6928027a`.
 - Implementation: `main@a0222c8c9a05b2495303e7e37ea68624dcf39320`.
 - Worktree: `/home/cc/code1/web-3d-data-scene-platform`; no extra worktree.
-- Push state: source push explicitly authorized and completed to `origin/main` through `a8d6637`; public deployment,
+- Push state: source push explicitly authorized and completed to `origin/main` through `9839fe7`; public deployment,
   GitHub Release, npm and Pages remain unauthorized and blocked by T010/T045.
 - CI follow-up: push run `29887006267` passed install, format, lint, typecheck, unit, build, docs, i18n, assets and
   topology, then exposed that `ubuntu-latest` did not provide the verifier's required `rg` command. The workflow now
@@ -78,4 +78,6 @@ Assume a production claim was made incorrectly:
 - A concurrent local owner-source rerun found `recessed_downlight` had advanced from frozen hash `2b538d...` to
   `01723e...` while still `IN_PROGRESS` and `NO-SHIP`. The seven repository-only smart-home tests pass and both mutable
   source integrations fail closed; the frozen exclusion and public starter remain unchanged until a new acceptance slice.
+- Final CI run `29888155657` passes every repository gate on `9839fe7`; the remaining blockers are external release gates,
+  not implementation or CI failures.
 - Downstream: public Pages/Release/npm work is blocked by T010/T045 and must start from an explicitly authorized later commit.

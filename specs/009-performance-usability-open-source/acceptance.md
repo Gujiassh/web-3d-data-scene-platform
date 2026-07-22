@@ -4,7 +4,7 @@
 
 Feature 009 engineering is complete locally at implementation commit `a0222c8c9a05b2495303e7e37ea68624dcf39320`.
 The Feature 009 source and acceptance baseline is pushed to `origin/main` through
-`a8d66377564ba30b65b753a84bad14424369b9fe`.
+`9839fe7`.
 The result is not production-ready because required E2/E3, redistribution and publication gates remain unresolved.
 
 > Release candidate; external production claims blocked.
@@ -95,6 +95,7 @@ it never upgrades E0/E1 evidence to E2/E3.
 - `pnpm test:e2e`: PASS, 62 passed / 3 exact WebKit Studio skips, 65 tests using one worker.
 - `pnpm verify:docs`, `verify:i18n`, `verify:assets`, `verify:topology`, `verify:design`, `verify:smart-home`: PASS.
 - `pnpm verify:packages`: PASS, four deterministic tarballs plus framework-neutral/React clean consumers.
+- GitHub Actions CI run `29888155657`: PASS, all repository gates green on `9839fe7`.
 
 ## Blocking Owner Actions
 
