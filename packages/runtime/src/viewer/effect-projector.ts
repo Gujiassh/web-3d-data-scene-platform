@@ -6,7 +6,9 @@ import type { RuntimeTarget } from "./runtime-generation";
 export function applyRuleEffects(target: RuntimeTarget, effects: readonly RuleEffect[]): void {
   for (const effect of effects) {
     if (effect.type === "color") applyColor(target.materials, effect.value);
-    if (effect.type === "visibility") target.object.visible = effect.value;
+    if (effect.type === "visibility") {
+      target.object.visible = target.visibilityLockedHidden ? false : effect.value;
+    }
   }
 }
 
@@ -18,7 +20,7 @@ export function resetRuleEffects(target: RuntimeTarget, writes?: readonly Effect
     });
   }
   if (writes === undefined || writes.includes("visibility")) {
-    target.object.visible = target.baseline.visible;
+    target.object.visible = target.visibilityLockedHidden ? false : target.baseline.visible;
   }
 }
 

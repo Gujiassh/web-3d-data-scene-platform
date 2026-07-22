@@ -15,6 +15,7 @@ export interface RuntimeTarget {
   readonly object: Object3D;
   readonly materials: readonly Material[];
   readonly baseline: RuntimeTargetBaseline;
+  readonly visibilityLockedHidden: boolean;
 }
 
 export interface RuntimeTargetBaseline {
@@ -172,6 +173,8 @@ export async function buildRuntimeGeneration(
           visible: targetObject.visible,
           colors: materials.map((material) => (hasColor(material) ? material.color.clone() : null)),
         },
+        visibilityLockedHidden:
+          entityObject !== undefined && targetObject === objectContractCollisionRoot(entityObject),
       };
       targetObjects.set(target.id, runtimeTarget);
       targetObject.traverse((object) => objectTargets.set(object, target.id));
@@ -269,6 +272,7 @@ async function createAssetEntity(
       ...loaded.root.userData,
       web3dNodesByIndex: loaded.nodesByIndex,
       web3dNodeIndexByObject: loaded.nodeIndexByObject,
+      web3dContractCollisionRoot: loaded.contractCollisionRoot,
     },
   });
 }
@@ -295,6 +299,11 @@ function objectNodes(object: Object3D): ReadonlyMap<number, Object3D> {
 function objectNodeAssociations(object: Object3D): ReadonlyMap<Object3D, number> {
   return ((object.userData as { web3dNodeIndexByObject?: ReadonlyMap<Object3D, number> })
     .web3dNodeIndexByObject ?? new Map()) as ReadonlyMap<Object3D, number>;
+}
+
+function objectContractCollisionRoot(object: Object3D): Object3D | null {
+  return ((object.userData as { web3dContractCollisionRoot?: Object3D | null })
+    .web3dContractCollisionRoot ?? null) as Object3D | null;
 }
 
 function collectMaterials(root: Object3D, output: Set<Material>): void {

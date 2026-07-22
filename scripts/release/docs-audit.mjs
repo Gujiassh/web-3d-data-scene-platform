@@ -13,6 +13,7 @@ const requiredFiles = [
   "docs/protocols.md",
   "docs/tutorial-smart-home.md",
   "docs/ssot/brand-and-discovery.md",
+  "docs/ssot/collision-geometry-visibility.md",
   "docs/ssot/release-readiness.md",
   "docs/ssot/validator-generation.md",
   "specs/009-performance-usability-open-source/acceptance.md",
@@ -20,6 +21,9 @@ const requiredFiles = [
   "specs/010-sceneweave-brand-discovery/acceptance.md",
   "specs/011-atomic-validator-generation/spec.md",
   "specs/011-atomic-validator-generation/acceptance.md",
+  "specs/012-hide-contract-collision-geometry/spec.md",
+  "specs/012-hide-contract-collision-geometry/tasks.md",
+  "specs/012-hide-contract-collision-geometry/acceptance.md",
 ];
 
 export async function auditReleaseDocs(root) {

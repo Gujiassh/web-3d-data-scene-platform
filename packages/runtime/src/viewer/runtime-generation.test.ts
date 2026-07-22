@@ -5,6 +5,7 @@ import {
   Box3,
   BufferGeometry,
   Color,
+  Group,
   Mesh,
   MeshStandardMaterial,
   PointLight,
@@ -12,8 +13,10 @@ import {
   Vector3,
   type Material,
 } from "three";
+import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { describe, expect, it, vi } from "vitest";
 
+import { sha256Hex } from "../assets/asset-loader";
 import { applyRuleEffects, resetRuleEffects } from "./effect-projector";
 import { buildRuntimeGeneration } from "./runtime-generation";
 
@@ -151,6 +154,85 @@ describe("buildRuntimeGeneration", () => {
     expect(target.object.visible).toBe(baselineVisibility);
     expect(materialColorHex(target.materials[0])).toBe(baselineColor);
     generation.dispose();
+  });
+
+  it("keeps a targeted contract collision root hidden across visibility effects", async () => {
+    const sceneJson = await readFile(sceneUrl, "utf8");
+    const parsed = parseSceneDocument(sceneJson);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const sourceEntity = parsed.value.entities.find((entity) => entity.type === "asset");
+    const sourceTarget = parsed.value.targets[0];
+    expect(sourceEntity?.type).toBe("asset");
+    expect(sourceTarget).toBeDefined();
+    if (sourceEntity?.type !== "asset" || sourceTarget === undefined) return;
+
+    const scene = new Group();
+    const root = namedGroup("ROOT");
+    const visual = namedGroup("VISUAL");
+    visual.add(new Mesh(new BufferGeometry(), new MeshStandardMaterial()));
+    const collision = namedGroup("COLLISION");
+    collision.add(new Mesh(new BufferGeometry(), new MeshStandardMaterial()));
+    root.add(visual, collision);
+    scene.add(root);
+    const associations = new Map([
+      [root, { nodes: 0 }],
+      [visual, { nodes: 1 }],
+      [collision, { nodes: 2 }],
+    ]);
+    const parse = vi.spyOn(GLTFLoader.prototype, "parseAsync").mockResolvedValue({
+      parser: { associations },
+      scene,
+      scenes: [scene],
+    } as unknown as GLTF);
+    const bytes = new TextEncoder().encode("contract-collision-runtime");
+    const sha256 = await sha256Hex(bytes.buffer);
+
+    try {
+      const generation = await buildRuntimeGeneration(
+        {
+          ...parsed.value,
+          assets: [
+            {
+              ...parsed.value.assets[0]!,
+              id: "contract-asset",
+              sha256,
+              byteLength: bytes.byteLength,
+            },
+          ],
+          entities: [{ ...sourceEntity, id: "contract-entity", assetId: "contract-asset" }],
+          targets: [
+            {
+              ...sourceTarget,
+              id: "contract-collision-target",
+              entityId: "contract-entity",
+              assetHash: sha256,
+              nodeIndex: 2,
+            },
+          ],
+          dataSources: [],
+          bindings: [],
+          ruleSets: [],
+          annotations: [],
+        },
+        { resolve: () => Promise.resolve(new Blob([bytes])) },
+        new AbortController().signal,
+      );
+      const target = generation.targets.get("contract-collision-target");
+      expect(target).toBeDefined();
+      if (target === undefined) return;
+      expect(target.object).toBe(collision);
+      expect(target.baseline.visible).toBe(false);
+      expect(target.visibilityLockedHidden).toBe(true);
+
+      applyRuleEffects(target, [{ type: "visibility", value: true }]);
+      expect(collision.visible).toBe(false);
+      resetRuleEffects(target);
+      expect(collision.visible).toBe(false);
+      generation.dispose();
+    } finally {
+      parse.mockRestore();
+    }
   });
 
   it("disposes an earlier unattached asset when a later asset fails", async () => {
@@ -303,6 +385,12 @@ function materialColorHex(material: Material | undefined): string | undefined {
     return undefined;
   }
   return material.color.getHexString();
+}
+
+function namedGroup(name: string): Group {
+  const group = new Group();
+  group.name = name;
+  return group;
 }
 
 function pointLight(id: string): LightEntity {

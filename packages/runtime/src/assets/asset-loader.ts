@@ -15,6 +15,7 @@ export interface LoadedGltfAsset {
   readonly root: Object3D;
   readonly nodesByIndex: ReadonlyMap<number, Object3D>;
   readonly nodeIndexByObject: ReadonlyMap<Object3D, number>;
+  readonly contractCollisionRoot: Object3D | null;
   readonly diagnostics: readonly Diagnostic[];
 }
 
@@ -107,6 +108,7 @@ export async function loadGltfAsset(
       nodesByIndex,
       nodeIndexByObject,
     );
+    const contractCollisionRoot = hideContractCollisionGeometry(nodesByIndex);
     const diagnostics =
       punctualLights.total === 0
         ? []
@@ -120,13 +122,52 @@ export async function loadGltfAsset(
             ),
           ];
 
-    return { gltf, root: gltf.scene, nodesByIndex, nodeIndexByObject, diagnostics };
+    return {
+      gltf,
+      root: gltf.scene,
+      nodesByIndex,
+      nodeIndexByObject,
+      contractCollisionRoot,
+      diagnostics,
+    };
   } catch (error) {
     const cleanupRoot = new Group();
     gltf.scenes.forEach((scene) => cleanupRoot.add(scene));
     disposeObject3D(cleanupRoot);
     throw error;
   }
+}
+
+function hideContractCollisionGeometry(
+  nodesByIndex: ReadonlyMap<number, Object3D>,
+): Object3D | null {
+  const formalNodes = [...nodesByIndex.values()];
+  const roots = formalNodes.filter((object) => object.name === "ROOT");
+  const visuals = formalNodes.filter((object) => object.name === "VISUAL");
+  const collisions = formalNodes.filter((object) => object.name === "COLLISION");
+  if (roots.length !== 1 || visuals.length !== 1 || collisions.length !== 1) return null;
+
+  const root = roots[0]!;
+  const visual = visuals[0]!;
+  const collision = collisions[0]!;
+  if (
+    !isDescendantOf(visual, root) ||
+    !isDescendantOf(collision, root) ||
+    isDescendantOf(visual, collision) ||
+    isDescendantOf(collision, visual)
+  ) {
+    return null;
+  }
+
+  collision.visible = false;
+  return collision;
+}
+
+function isDescendantOf(object: Object3D, ancestor: Object3D): boolean {
+  for (let parent = object.parent; parent !== null; parent = parent.parent) {
+    if (parent === ancestor) return true;
+  }
+  return false;
 }
 
 function collectFormalNodeEvidence(

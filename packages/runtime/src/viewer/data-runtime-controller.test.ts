@@ -16,6 +16,7 @@ describe("ViewerDataRuntimeController", () => {
       object: new Mesh(undefined, material),
       materials: [material],
       baseline: { visible: true, colors: [material.color.clone()] },
+      visibilityLockedHidden: false,
     };
     const controller = createController(events, diagnostics, () => 0);
     controller.attach(document(), generation(target));
@@ -76,6 +77,7 @@ describe("ViewerDataRuntimeController", () => {
       object: new Mesh(undefined, material),
       materials: [material],
       baseline: { visible: true, colors: [material.color.clone()] },
+      visibilityLockedHidden: false,
     };
     const controller = createController(events, [], () => now);
     controller.attach(document(), generation(target));
@@ -117,6 +119,7 @@ describe("ViewerDataRuntimeController", () => {
       object: new Mesh(undefined, material),
       materials: [material],
       baseline: { visible: true, colors: [material.color.clone()] },
+      visibilityLockedHidden: false,
     };
     const controller = createController(events, [], () => 0);
     const initial = document();

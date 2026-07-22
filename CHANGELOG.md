@@ -4,6 +4,8 @@ All notable project changes are recorded here. The project follows Semantic Vers
 
 ## Unreleased
 
+- Stopped contract-compliant glTF collision proxies from rendering over visible geometry or being re-enabled by runtime
+  visibility effects while preserving their formal node indexes, hierarchy, and raycast availability for picking.
 - Prevented contract generation from exposing temporarily empty AJV validator modules to a running Vite server by
   skipping unchanged files and atomically replacing changed generated output.
 - Branded the product and repository as SceneWeave and added clearer Three.js, WebGL, digital-twin, IoT, glTF, React,
