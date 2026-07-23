@@ -11,4 +11,4 @@
 - [x] T007 Run full static, unit, build, package, documentation, asset, design, topology, and i18n verification.
 - [x] T008 Reload the existing smart-home project and capture rotated-camera evidence for affected assets and the
       corrected kitchen assembly.
-- [ ] T009 Complete commit, push, CI/SHA parity, temporary-test cleanup, and workbench closeout.
+- [x] T009 Complete commit, push, CI/SHA parity, temporary-test cleanup, and workbench closeout.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted locally. Commit, push, CI parity, and final workbench closeout remain pending.
+Accepted and delivered.
 
 ## Delivery Lineage
 
@@ -19,7 +19,8 @@ Accepted locally. Commit, push, CI parity, and final workbench closeout remain p
 - Frozen scope: SceneDocument/schema/save/archive contracts, asset bytes/hashes, formal target indexes, transforms,
   animations, hierarchy, source vertices/index order, face indexes, and raycast/picking availability. Existing project
   coordinates are not migrated automatically.
-- Repair commit: pending.
+- Repair commit: `fb01bd4611b8443a8ed92dd57e4abefd92a1bd1e`, pushed to `origin/main`.
+- GitHub CI: run `29979566704` passed the complete verify job.
 - Delivery target: `origin/main`; no downstream merge or cherry-pick is planned.
 
 ## Review Matrix
@@ -61,3 +62,7 @@ Accepted locally. Commit, push, CI parity, and final workbench closeout remain p
 - Smart-home verification: 8 tests passed. Three owner-source tests fail closed on pre-existing external drift:
   `asset_registry.json` expected `d0561997...`, actual `9f65def8...`; `floorplan.json` expected `11acb6ad...`, actual
   `b5f8d69c...`. Frozen hashes were not updated.
+- Temporary Feature 013 browser, Vitest, archive-builder, and Python audit source files were moved to the desktop trash;
+  no temporary test source remains under `/home/cc/tmp` or the repository.
+- GitHub clean-runner CI `29979566704` passed format, lint, typecheck, tests, build, docs, i18n, tracked assets,
+  topology, design, package clean consumers, and the conditional smart-home gate.
