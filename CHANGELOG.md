@@ -4,6 +4,10 @@ All notable project changes are recorded here. The project follows Semantic Vers
 
 ## Unreleased
 
+- Resolved exact and high-coverage coplanar visual faces at runtime, separated the default master-bedroom air
+  conditioner from the wardrobe, and removed the remaining visible kitchen instance-plane overlaps, eliminating
+  localized z-fighting while preserving asset hashes, face-index raycasts, authored colors, animation boundaries, and
+  save contracts.
 - Stopped contract-compliant glTF collision proxies from rendering over visible geometry or being re-enabled by runtime
   visibility effects while preserving their formal node indexes, hierarchy, and raycast availability for picking.
 - Prevented contract generation from exposing temporarily empty AJV validator modules to a running Vite server by

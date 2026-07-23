@@ -232,7 +232,7 @@ export const SMART_HOME_INSTANCES = Object.freeze([
     "wall_air_conditioner",
     "Master Bedroom Air Conditioner",
     "master-bedroom",
-    [-1.5, 2.25, -2.35],
+    [-1.5, 2.57, -2.35],
     YAW_NEG_90,
   ),
   instance(
@@ -296,7 +296,7 @@ export const SMART_HOME_INSTANCES = Object.freeze([
     "kitchen_cabinet",
     "Kitchen Cabinet",
     "kitchen",
-    [4.05, 0, -3.15],
+    [4.06, 0, -3.15],
     YAW_180,
   ),
   instance(
@@ -307,7 +307,14 @@ export const SMART_HOME_INSTANCES = Object.freeze([
     [5.3, 0, -1.4],
     YAW_NEG_90,
   ),
-  instance("kitchen-dishwasher", "dishwasher", "Dishwasher", "kitchen", [4.65, 0, -3.05], YAW_180),
+  instance(
+    "kitchen-dishwasher",
+    "dishwasher",
+    "Dishwasher",
+    "kitchen",
+    [4.65, 0.006, -3.04],
+    YAW_180,
+  ),
   instance(
     "kitchen-washer-dryer",
     "washer_dryer",
@@ -321,7 +328,7 @@ export const SMART_HOME_INSTANCES = Object.freeze([
     "induction_cooktop",
     "Induction Cooktop",
     "kitchen",
-    [3.35, 0.9, -3.2],
+    [3.35, 0.9, -3.19],
     YAW_180,
   ),
   instance(
@@ -345,7 +352,7 @@ export const SMART_HOME_INSTANCES = Object.freeze([
     "smart_sink_faucet",
     "Smart Sink Faucet",
     "kitchen",
-    [4.85, 0.92, -3.2],
+    [4.85, 0.925, -3.2],
     YAW_180,
   ),
   instance("kitchen-trash-bin", "smart_trash_bin", "Smart Trash Bin", "kitchen", [2.65, 0, -1.35]),

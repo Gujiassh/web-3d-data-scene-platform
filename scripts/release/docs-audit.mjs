@@ -24,6 +24,9 @@ const requiredFiles = [
   "specs/012-hide-contract-collision-geometry/spec.md",
   "specs/012-hide-contract-collision-geometry/tasks.md",
   "specs/012-hide-contract-collision-geometry/acceptance.md",
+  "specs/013-eliminate-remaining-coplanar-overlap/spec.md",
+  "specs/013-eliminate-remaining-coplanar-overlap/tasks.md",
+  "specs/013-eliminate-remaining-coplanar-overlap/acceptance.md",
 ];
 
 export async function auditReleaseDocs(root) {

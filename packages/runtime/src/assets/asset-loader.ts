@@ -7,6 +7,7 @@ import {
   describeImportedPunctualLights,
   replaceImportedPunctualLights,
 } from "./imported-punctual-lights";
+import { resolveVisualCoplanarOverlaps } from "./visual-coplanar-overlaps";
 import { diagnostic, diagnosticError } from "../diagnostics";
 import type { AssetResolver, Diagnostic } from "../types";
 
@@ -108,7 +109,17 @@ export async function loadGltfAsset(
       nodesByIndex,
       nodeIndexByObject,
     );
-    const contractCollisionRoot = hideContractCollisionGeometry(nodesByIndex);
+    const contract = recognizeGeometryContract(nodesByIndex);
+    const contractCollisionRoot = contract?.collision ?? null;
+    if (contract !== null) {
+      contract.collision.visible = false;
+      resolveVisualCoplanarOverlaps(
+        contract.visual,
+        nodesByIndex,
+        nodeIndexByObject,
+        gltf.parser.json,
+      );
+    }
     const diagnostics =
       punctualLights.total === 0
         ? []
@@ -138,9 +149,9 @@ export async function loadGltfAsset(
   }
 }
 
-function hideContractCollisionGeometry(
+function recognizeGeometryContract(
   nodesByIndex: ReadonlyMap<number, Object3D>,
-): Object3D | null {
+): { readonly visual: Object3D; readonly collision: Object3D } | null {
   const formalNodes = [...nodesByIndex.values()];
   const roots = formalNodes.filter((object) => object.name === "ROOT");
   const visuals = formalNodes.filter((object) => object.name === "VISUAL");
@@ -159,8 +170,7 @@ function hideContractCollisionGeometry(
     return null;
   }
 
-  collision.visible = false;
-  return collision;
+  return { visual, collision };
 }
 
 function isDescendantOf(object: Object3D, ancestor: Object3D): boolean {

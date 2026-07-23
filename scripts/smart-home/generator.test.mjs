@@ -35,6 +35,10 @@ import {
 
 const sourceRoot = "/mnt/e/data/model/smart_home_90sqm";
 const hasOwnerSource = existsSync(sourceRoot);
+const WARDROBE_HEIGHT_M = 2.4;
+const WALL_AC_HALF_HEIGHT_M = 0.15;
+const MIN_MASTER_AC_WARDROBE_CLEARANCE_M = 0.02;
+const MIN_VISIBLE_COPLANAR_SEPARATION_M = 0.005;
 
 describe("smart-home starter contract", () => {
   it("freezes complete SHIP placement and explicit semantic node keys", () => {
@@ -65,6 +69,40 @@ describe("smart-home starter contract", () => {
       expect.objectContaining({ semanticTargetId: "STATE_SCREEN", nodeIndex: 102 }),
       expect.objectContaining({ semanticTargetId: "STATE_MOTION", nodeIndex: 64 }),
     ]);
+  });
+
+  it("keeps the master air conditioner clear of the wardrobe top", () => {
+    const wardrobe = SMART_HOME_INSTANCES.find((item) => item.id === "master-wardrobe");
+    const airConditioner = SMART_HOME_INSTANCES.find((item) => item.id === "master-ac");
+    if (wardrobe === undefined || airConditioner === undefined) {
+      throw new Error("Master bedroom layout fixtures are missing.");
+    }
+
+    const wardrobeTop = wardrobe.position[1] + WARDROBE_HEIGHT_M;
+    const airConditionerBottom = airConditioner.position[1] - WALL_AC_HALF_HEIGHT_M;
+    expect(airConditionerBottom - wardrobeTop).toBeGreaterThanOrEqual(
+      MIN_MASTER_AC_WARDROBE_CLEARANCE_M,
+    );
+  });
+
+  it("keeps visible kitchen instance surfaces off audited coplanar planes", () => {
+    const cabinet = requireInstance("kitchen-cabinet");
+    const dishwasher = requireInstance("kitchen-dishwasher");
+    const cooktop = requireInstance("kitchen-cooktop");
+    const faucet = requireInstance("kitchen-faucet");
+    const separations = [
+      separation(cabinet.position[0] - 1.8, 2.25),
+      separation(faucet.position[1], cabinet.position[1] + 0.92),
+      separation(dishwasher.position[1] + 0.15, cabinet.position[1] + 0.15),
+      separation(dishwasher.position[2] + 0.08, cabinet.position[2] + 0.18),
+      separation(cooktop.position[2] - 0.26, cabinet.position[2] - 0.31),
+      separation(cooktop.position[0] + 0.091, cabinet.position[0] - 0.609),
+      separation(cooktop.position[0] + 0.109, cabinet.position[0] - 0.591),
+    ];
+
+    for (const value of separations) {
+      expect(value).toBeGreaterThanOrEqual(MIN_VISIBLE_COPLANAR_SEPARATION_M);
+    }
   });
 
   it("builds an ordinary SceneDocument 1.4 with runtime-backed state pointers", () => {
@@ -336,6 +374,16 @@ function syntheticAudit() {
       },
     },
   };
+}
+
+function requireInstance(id) {
+  const value = SMART_HOME_INSTANCES.find((item) => item.id === id);
+  if (value === undefined) throw new Error(`Smart-home layout fixture ${id} is missing.`);
+  return value;
+}
+
+function separation(left, right) {
+  return Math.abs(left - right);
 }
 
 function sha256(value) {
